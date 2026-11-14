@@ -1,0 +1,96 @@
+{
+  "analyzedAt": "2026-11-14T13:13:53.607Z",
+  "sampleVideo": {
+    "clipId": "video-m-u",
+    "filePath": "assets/footage/Video-m-u.mp4",
+    "durationSec": 38,
+    "width": 1920,
+    "height": 1080,
+    "fps": 25,
+    "hasAudio": true
+  },
+  "targetReplacement": {
+    "productId": "sample-product",
+    "productName": "Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml",
+    "characterId": "sample-kol",
+    "characterName": "Minh Anh (Đại sứ thương hiệu)"
+  },
+  "extractedIdea": "Lấy cấu trúc từ Video mẫu \"video-m-u\" (38s, 1920×1080, 4 phân cảnh nhịp 9s–12s–10s–7s): Thay thế nhân vật và sản phẩm trong video mẫu bằng \"Minh Anh (Đại sứ thương hiệu)\" và \"Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml\" (Inox 304 chuẩn y tế, giữ nhiệt 24h, Sơn nhám tĩnh điện chống bám vân tay, ưu đãi 249.000đ).",
+  "sampleStructureSummary": "Video mẫu dài 38s (1920×1080, 25fps) gồm 4 nhịp chuyển đổi: Mở đầu giữ chân (9s) → Trải nghiệm giải quyết vấn đề (12s) → Cận cảnh chứng minh chất lượng (10s) → Chốt ưu đãi CTA (7s).",
+  "sceneBlueprints": [
+    {
+      "sceneIndex": 1,
+      "id": "scene-1-hook",
+      "role": "Mở đầu (Hook 3s đầu)",
+      "sampleStartSec": 0,
+      "sampleEndSec": 9,
+      "durationSec": 9,
+      "sampleThumbnailUrl": "/assets/footage/analysis/video-m-u/scene-1.jpg?t=1794662033238",
+      "samplePattern": "Cảnh 1 (Mở đầu): Nhân vật trong video mẫu xuất hiện trực diện cùng sản phẩm để giữ chân người xem trong 3 giây đầu.",
+      "replacementMethod": "Thay bằng hình ảnh \"Minh Anh (Đại sứ thương hiệu)\" + \"Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml\" (bám sát nhịp 9s của video mẫu, giữ 100% chi tiết gốc).",
+      "suggestedVisualAction": "[Thay thế theo nhịp Cảnh 1 Video Mẫu (0s→9s)]: Minh Anh (Đại sứ thương hiệu) cầm trực diện Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml, giữ nguyên 100% khuôn mặt người thật & hình dáng sản phẩm thật.",
+      "suggestedSubtitle": "Đừng mua Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml nếu bạn chưa kiểm tra 3 chi tiết thực tế này!"
+    },
+    {
+      "sceneIndex": 2,
+      "id": "scene-2-experience",
+      "role": "Tình huống & Trải nghiệm",
+      "sampleStartSec": 9,
+      "sampleEndSec": 21,
+      "durationSec": 12,
+      "sampleThumbnailUrl": "/assets/footage/analysis/video-m-u/scene-2.jpg?t=1794662033341",
+      "samplePattern": "Cảnh 2 (Trải nghiệm/Vấn đề): Video mẫu chuyển góc trung cảnh thể hiện thao tác sử dụng thực tế và giải quyết nỗi đau khách hàng.",
+      "replacementMethod": "Thay bằng cảnh \"Minh Anh (Đại sứ thương hiệu)\" trải nghiệm \"Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml\" trên nền chuyển động mượt theo đúng thời lượng 12s của video mẫu.",
+      "suggestedVisualAction": "[Thay thế theo nhịp Cảnh 2 Video Mẫu (9s→21s)]: Minh Anh (Đại sứ thương hiệu) thao tác sử dụng Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml, làm nổi bật ưu điểm \"Inox 304 chuẩn y tế, giữ nhiệt 24h\" và \"Sơn nhám tĩnh điện chống bám vân tay\".",
+      "suggestedSubtitle": "Khác biệt hoàn toàn với hàng trôi nổi: Inox 304 chuẩn y tế, giữ nhiệt 24h, kết hợp sơn nhám tĩnh điện chống bám vân tay cực kỳ tiện lợi."
+    },
+    {
+      "sceneIndex": 3,
+      "id": "scene-3-product-truth",
+      "role": "Cận cảnh Chi tiết Sản phẩm",
+      "sampleStartSec": 21,
+      "sampleEndSec": 31,
+      "durationSec": 10,
+      "sampleThumbnailUrl": "/assets/footage/analysis/video-m-u/scene-3.jpg?t=1794662033458",
+      "samplePattern": "Cảnh 3 (Chứng minh chất lượng): Video mẫu zoom cận cảnh vào chất liệu, logo và chi tiết hoàn thiện của sản phẩm.",
+      "replacementMethod": "Thay hoàn toàn bằng Ảnh Sản Phẩm Thật 100% của \"Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml\" + 3 thông số chuẩn từ product.json (không biến dạng chữ/logo).",
+      "suggestedVisualAction": "[Thay thế theo nhịp Cảnh 3 Video Mẫu (21s→31s)]: Cận cảnh 100% ảnh gốc Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml sắc nét: Inox 304 chuẩn y tế, giữ nhiệt 24h • Sơn nhám tĩnh điện chống bám vân tay • Nắp khóa chống tràn 360 độ.",
+      "suggestedSubtitle": "Nhìn cận cảnh từng chi tiết thật: Inox 304 chuẩn y tế, giữ nhiệt 24h; Sơn nhám tĩnh điện chống bám vân tay; và Nắp khóa chống tràn 360 độ."
+    },
+    {
+      "sceneIndex": 4,
+      "id": "scene-4-cta",
+      "role": "Kết quả & Báo giá CTA",
+      "sampleStartSec": 31,
+      "sampleEndSec": 38,
+      "durationSec": 7,
+      "sampleThumbnailUrl": "/assets/footage/analysis/video-m-u/scene-4.jpg?t=1794662033606",
+      "samplePattern": "Cảnh 4 (Chốt đơn / CTA): Video mẫu tổng kết lợi ích và thúc đẩy hành động mua hàng ở cuối video.",
+      "replacementMethod": "Thay bằng thẻ giá thật của shop (399.000đ → 249.000đ) kèm hình \"Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml\" và lời kêu gọi đặt hàng.",
+      "suggestedVisualAction": "[Thay thế theo nhịp Cảnh 4 Video Mẫu (31s→38s)]: Hiển thị Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml nguyên bản + Bảng giá ưu đãi 249.000đ (-38% FLASH SALE).",
+      "suggestedSubtitle": "Giá gốc 399.000đ nay ưu đãi chỉ còn 249.000đ — bấm giỏ hàng chốt ngay hôm nay!"
+    }
+  ],
+  "hookIdeaPresets": {
+    "same-as-sample": {
+      "label": "🎯 Giống Video Mẫu (Chỉ thay SP & Nhân vật của mình)",
+      "ideaTemplate": "Bám sát nhịp mở đầu 9s của video mẫu \"video-m-u\", thay bằng Minh Anh (Đại sứ thương hiệu) cầm Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml trực diện."
+    },
+    "new-pain-point": {
+      "label": "🔄 Đổi Nỗi Đau Mới (Làm khác video mẫu)",
+      "ideaTemplate": "Làm khác video mẫu: Mở đầu bằng nỗi đau thực tế khi dùng sản phẩm kém chất lượng trước khi đưa Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml ra giải quyết."
+    },
+    "reverse-shock": {
+      "label": "🔥 Đảo Ngược Tình Huống / Bóc Sự Thật (Làm khác video mẫu)",
+      "ideaTemplate": "Làm khác video mẫu: Mở đầu bằng câu phản biện ngược gây tò mò mạnh về Inox 304 chuẩn y tế, giữ nhiệt 24h của Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml."
+    },
+    "live-test-proof": {
+      "label": "🧪 Test Thực Tế Cận Cảnh Ngay 3s Đầu (Làm khác video mẫu)",
+      "ideaTemplate": "Làm khác video mẫu: Không nói lý thuyết, đưa thẳng cảnh test Nắp khóa chống tràn 360 độ của Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml lên 3 giây đầu tiên."
+    },
+    "flash-deal-first": {
+      "label": "🎁 Đập Ngay Giá Sốc / Deal Hời Đầu Video (Làm khác video mẫu)",
+      "ideaTemplate": "Làm khác video mẫu: Đánh thẳng vào mức giảm giá -38% FLASH SALE của Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml cho người săn sale."
+    }
+  }
+}

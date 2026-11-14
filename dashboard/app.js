@@ -156,6 +156,20 @@ function openCurrentCampaignFile(subPath, openDirect = false) {
   openProjectFile(`campaigns/${cid}/${subPath}`, openDirect);
 }
 
+function openSampleAnalysisFile() {
+  const sampleClipId =
+    document.getElementById('inp-sample-video')?.value ||
+    appState.sampleAnalysis?.sampleVideo?.clipId ||
+    appState.catalog?.clips?.[0]?.id ||
+    'video-m-u';
+  openProjectFile(`assets/footage/analysis/${sampleClipId}/analysis.json`);
+}
+
+function getSelectedCharacter() {
+  const cid = document.getElementById('inp-character')?.value;
+  return appState.characters.find((c) => c.id === cid) || appState.characters[0] || { id: 'sample-kol', name: 'Nhân vật của bạn' };
+}
+
 function scrollToSlide(id) {
   const el = document.getElementById(id);
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -191,7 +205,8 @@ async function initDashboard() {
         characters: data.characters?.length ? data.characters : FALLBACK_STATE.characters,
         catalog: data.catalog || { clips: [] },
         campaigns: data.campaigns || [],
-        sheet: data.sheet?.reels?.length ? data.sheet : FALLBACK_STATE.sheet
+        sheet: data.sheet?.reels?.length ? data.sheet : FALLBACK_STATE.sheet,
+        sampleAnalysis: data.sampleAnalysis || null
       };
       syncAiConfigToUi();
       serverOnline = true;
@@ -236,7 +251,155 @@ function populateSelectors() {
       .map((c) => `<option value="${c.id}">${c.filePath} (${c.durationSec}s)</option>`)
       .join('');
   }
+
+  const sampleSel = document.getElementById('inp-sample-video');
+  if (sampleSel) {
+    const clips = appState.catalog?.clips || [];
+    if (clips.length > 0) {
+      sampleSel.innerHTML = clips
+        .map((c) => `<option value="${c.id}">${c.id} — ${c.filePath} (${c.durationSec}s, ${c.width}×${c.height})</option>`)
+        .join('');
+    } else {
+      sampleSel.innerHTML = `<option value="video-mau-tham-chieu">Video mẫu mặc định (Kéo thả video mẫu mới ở Mục 05)</option>`;
+    }
+  }
+
+  renderExistingAssetPreviews();
+  renderSampleAnalysisCard();
   renderTruthLockSummary();
+}
+
+function renderExistingAssetPreviews() {
+  const p = getSelectedProduct();
+  const c = getSelectedCharacter();
+  const clip = (appState.catalog?.clips || [])[0];
+
+  const prodImgRel = Object.values(p?.referenceImages || {}).find(Boolean);
+  const charImgRel = Object.values(c?.referenceImages || {}).find(Boolean);
+
+  const prevProd = document.getElementById('preview-product');
+  const statProd = document.getElementById('status-product');
+  if (prevProd && prodImgRel && !prevProd.querySelector('img')) {
+    prevProd.innerHTML = `<img src="/${prodImgRel}" alt="${p.name}" onerror="this.style.display='none'" />`;
+    if (statProd) statProd.textContent = `✅ Đang dùng ảnh SP: ${prodImgRel}`;
+  }
+
+  const prevChar = document.getElementById('preview-character');
+  const statChar = document.getElementById('status-character');
+  if (prevChar && charImgRel && !prevChar.querySelector('img')) {
+    prevChar.innerHTML = `<img src="/${charImgRel}" alt="${c.name}" onerror="this.style.display='none'" />`;
+    if (statChar) statChar.textContent = `✅ Đang dùng ảnh Nhân vật: ${charImgRel}`;
+  }
+
+  const prevFoot = document.getElementById('preview-footage');
+  const statFoot = document.getElementById('status-footage');
+  if (prevFoot && clip?.filePath && !prevFoot.querySelector('video')) {
+    prevFoot.innerHTML = `<video src="/${clip.filePath}" controls muted playsinline></video>`;
+    if (statFoot) statFoot.textContent = `✅ Video mẫu đang phân tích: ${clip.filePath} (${clip.durationSec}s)`;
+  }
+}
+
+function renderSampleAnalysisCard() {
+  const box = document.getElementById('sample-analysis-container');
+  if (!box) return;
+  const p = getSelectedProduct();
+  const c = getSelectedCharacter();
+  const ana = appState.sampleAnalysis;
+
+  if (!ana || !ana.sampleVideo) {
+    box.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div>
+          <strong style="color:var(--orange);">🎬 CHƯA PHÂN TÍCH VIDEO MẪU:</strong>
+          <span style="font-size:13px;">Hãy bấm nút <strong>"🔍 1. Phân Tích Video Mẫu & Lấy Ý Tưởng"</strong> hoặc kéo thả Video Mẫu vào Mục 05 để hệ thống trích xuất nhịp cảnh và thay thế bằng <strong>${p.name}</strong> + <strong>${c.name}</strong>.</span>
+        </div>
+        <button class="btn btn-orange" onclick="triggerSampleVideoAnalysis()">🔍 Phân Tích Video Mẫu Ngay</button>
+      </div>
+    `;
+    return;
+  }
+
+  const ideaInput = document.getElementById('inp-raw-idea');
+  if (ideaInput && (!ideaInput.value || ideaInput.value.startsWith('Đang phân tích') || ideaInput.value.startsWith('Lấy cấu trúc từ Video mẫu'))) {
+    ideaInput.value = ana.extractedIdea || '';
+  }
+
+  const blueprints = ana.sceneBlueprints || [];
+  box.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <div>
+          <span style="font-size:11px;font-weight:900;color:var(--orange);text-transform:uppercase;">🔍 KẾT QUẢ PHÂN TÍCH VIDEO MẪU & SƠ ĐỒ THAY THẾ BẰNG TÀI SẢN CỦA BẠN</span>
+          <div style="font-size:14px;font-weight:800;margin-top:2px;">
+            Video mẫu: <code>${ana.sampleVideo.filePath}</code> (${ana.sampleVideo.durationSec}s • ${ana.sampleVideo.width}×${ana.sampleVideo.height} • ${ana.sampleVideo.fps}fps)
+            ➔ Thay bằng: <strong style="color:var(--orange);">${p.name}</strong> + <strong style="color:var(--orange);">${c.name}</strong>
+          </div>
+        </div>
+        <button class="icon-pill-btn" onclick="openSampleAnalysisFile()">📂 Mở file \`analysis.json\`</button>
+      </div>
+
+      <div style="font-size:12px;color:var(--text-dark);background:#FFF5ED;padding:10px 14px;border-radius:10px;border:1px solid var(--orange-border);">
+        <strong>📌 Cấu trúc rút ra từ Video mẫu:</strong> ${ana.sampleStructureSummary || ana.extractedIdea}
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;">
+        ${blueprints
+          .map(
+            (bp) => `
+            <div style="background:#FFFFFF;border:1px solid var(--border);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="badge-mech">Cảnh ${bp.sceneIndex} (${bp.sampleStartSec}s→${bp.sampleEndSec}s)</span>
+                <strong style="font-size:11px;color:var(--orange);">${bp.durationSec}s</strong>
+              </div>
+              ${
+                bp.sampleThumbnailUrl
+                  ? `<img src="${bp.sampleThumbnailUrl}" alt="Cảnh mẫu ${bp.sceneIndex}" style="width:100%;height:110px;object-fit:cover;border-radius:8px;border:1px solid var(--border);" />`
+                  : ''
+              }
+              <div style="font-size:11px;color:var(--text-muted);"><strong>Mẫu gốc:</strong> ${bp.samplePattern}</div>
+              <div style="font-size:11px;color:var(--green);font-weight:700;">🔄 <strong>Thay thế:</strong> ${bp.replacementMethod}</div>
+            </div>
+          `
+          )
+          .join('')}
+      </div>
+    </div>
+  `;
+}
+
+async function triggerSampleVideoAnalysis() {
+  const clipId = document.getElementById('inp-sample-video')?.value || '';
+  const productId = getSelectedProduct()?.id || 'sample-product';
+  const characterId = getSelectedCharacter()?.id || 'sample-kol';
+
+  if (!serverOnline) {
+    logConsole('Hãy mở http://localhost:4173 để chạy phân tích video mẫu bằng ffprobe & ffmpeg.');
+    return;
+  }
+
+  const t0 = startJobProgress('Đang phân tích Video Mẫu (ffprobe + trích 4 khung hình mẫu + lập phương án thay thế)...', 4);
+  const res = await fetch('/api/analyze-sample-video', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ clipId, productId, characterId })
+  });
+  const data = await res.json();
+  if (data.state) {
+    appState = data.state;
+  }
+  if (data.sampleAnalysis) {
+    appState.sampleAnalysis = data.sampleAnalysis;
+    const ideaInput = document.getElementById('inp-raw-idea');
+    if (ideaInput) ideaInput.value = data.sampleAnalysis.extractedIdea;
+  }
+  renderSampleAnalysisCard();
+  runAllAssistants();
+  finishJobProgress(Boolean(data.ok), data.ok ? 'Đã phân tích Video Mẫu & cập nhật kịch bản thay thế!' : 'Lỗi phân tích video mẫu', t0);
+  logConsole(data.output || 'Đã phân tích xong video mẫu.');
+}
+
+function onSampleVideoSelectChange() {
+  triggerSampleVideoAnalysis();
 }
 
 function renderTruthLockSummary() {
@@ -280,9 +443,88 @@ function onProductChange() {
   runAllAssistants();
 }
 
-// 2. Trợ lý 01 - 02 - 03: Sinh 15 Hook theo 5 cơ chế & Chấm điểm 5 tiêu chí
+// 2. Trợ lý 01 - 02 - 03: Sinh 15 Hook theo 5 cơ chế + Bảng Thay Đổi Ý Tưởng Cho Từng Hook (So với Video Mẫu)
+const HOOK_ANGLE_MODES = [
+  { value: 'same-as-sample', label: '🎯 Giống Video Mẫu (Chỉ thay SP & Nhân vật của mình)' },
+  { value: 'new-pain-point', label: '🔄 Đổi Nỗi Đau Mới (Làm khác video mẫu)' },
+  { value: 'reverse-shock', label: '🔥 Đảo Ngược Tình Huống / Bóc Sự Thật (Làm khác mẫu)' },
+  { value: 'live-test-proof', label: '🧪 Test Thực Tế Ngay 3s Đầu (Làm khác mẫu)' },
+  { value: 'flash-deal-first', label: '🎁 Đập Giá Sốc / Deal Hời Đầu Video (Làm khác mẫu)' },
+  { value: 'custom-idea', label: '✍️ Tự Nhập Ý Tưởng Mới Hoàn Toàn' }
+];
+
+function getDefaultHookIdeaForMode(angleMode, mech) {
+  const p = getSelectedProduct();
+  const c = getSelectedCharacter();
+  const sampleClipId = appState.sampleAnalysis?.sampleVideo?.clipId || 'video-m-u';
+  const h1 = p.highlights?.[0] || 'Chất liệu chuẩn cao cấp';
+  const h2 = p.highlights?.[1] || 'Hoàn thiện tỉ mỉ từng chi tiết';
+  const h3 = p.highlights?.[2] || 'Thiết kế tiện lợi mỗi ngày';
+  const sale = p.salePrice || p.price;
+
+  switch (angleMode) {
+    case 'new-pain-point':
+      return `Làm khác video mẫu: Mở đầu bằng nỗi đau mua phải hàng trôi nổi nhanh hỏng, sau đó ${c.name} đưa ${p.name} (${h1}) ra giải quyết dứt điểm.`;
+    case 'reverse-shock':
+      return `Làm khác video mẫu: ${c.name} phản biện ngược gây tò mò mạnh ("Đừng vội tin quảng cáo nếu chưa nhìn thấy lõi ${h1} của ${p.name}").`;
+    case 'live-test-proof':
+      return `Làm khác video mẫu: Không giới thiệu dài dòng, 3 giây đầu ${c.name} test trực tiếp khả năng "${h3}" và "${h2}" của ${p.name} ngay trước ống kính.`;
+    case 'flash-deal-first':
+      return `Làm khác video mẫu: Đánh thẳng vào ưu đãi ${p.discountBadge || ''} chỉ còn ${sale} cho mẫu ${p.name} chính hãng ngay câu mở đầu.`;
+    case 'custom-idea':
+      return `Tự thiết kế tình huống riêng cho cơ chế ${mech}: ${c.name} giới thiệu điểm ăn tiền nhất của ${p.name} theo phong cách riêng của shop.`;
+    case 'same-as-sample':
+    default:
+      return `Bám sát nhịp mở đầu của Video Mẫu "${sampleClipId}": Thay thế bằng ${c.name} xuất hiện cùng ${p.name} theo đúng bố cục mẫu.`;
+  }
+}
+
+function buildHookTextFromIdea(h, p, c) {
+  const h1 = p.highlights?.[0] || 'Chất liệu chuẩn cao cấp';
+  const h2 = p.highlights?.[1] || 'Hoàn thiện tỉ mỉ từng chi tiết';
+  const h3 = p.highlights?.[2] || 'Thiết kế tiện lợi mỗi ngày';
+  const sale = p.salePrice || p.price;
+  const ideaStr = (h.customIdea || '').trim();
+
+  if (h.angleMode === 'new-pain-point') {
+    return {
+      text: `Mua nhầm bình kém chất lượng vừa mất tiền vừa bực mình — xem ngay cách ${p.name} khắc phục hoàn toàn bằng ${h1.toLowerCase()}!`,
+      visualHookAction: `[Làm khác Video Mẫu - Đổi nỗi đau]: ${c.name} chỉ rõ điểm yếu hàng thường rồi giơ cao ${p.name} nguyên bản.`
+    };
+  }
+  if (h.angleMode === 'reverse-shock') {
+    return {
+      text: `Đừng tin bất kỳ lời quảng cáo nào cho tới khi bạn nhìn tận mắt lõi ${h1.toLowerCase()} bên trong ${p.name}!`,
+      visualHookAction: `[Làm khác Video Mẫu - Đảo ngược tình huống]: Cận cảnh ${c.name} mở nắp ${p.name} khoe trọn cấu tạo thật bên trong.`
+    };
+  }
+  if (h.angleMode === 'live-test-proof') {
+    return {
+      text: `Thử thách kiểm chứng trực tiếp trong 3 giây: ${h3} và ${h1} trên ${p.name} có thật sự đỉnh như lời đồn?`,
+      visualHookAction: `[Làm khác Video Mẫu - Test thực tế 3s đầu]: ${c.name} thực hiện bài test thực tế với ${p.name} ngay giây đầu tiên.`
+    };
+  }
+  if (h.angleMode === 'flash-deal-first') {
+    return {
+      text: `Sốc thật sự: ${p.name} chuẩn ${h1.toLowerCase()} đang giảm từ ${p.price} xuống chỉ còn ${sale} duy nhất hôm nay!`,
+      visualHookAction: `[Làm khác Video Mẫu - Đập giá sốc đầu video]: Hiển thị ${c.name} cầm ${p.name} kèm bảng giá ${sale} nổi bật ngay cảnh 1.`
+    };
+  }
+  if (h.angleMode === 'custom-idea' && ideaStr) {
+    return {
+      text: `${p.name}: ${ideaStr.replace(/^Làm khác video mẫu:\s*/i, '')}`,
+      visualHookAction: `[Ý tưởng riêng khác Video Mẫu]: ${c.name} + ${p.name} thể hiện tình huống: ${ideaStr}`
+    };
+  }
+  return {
+    text: h.originalText || h.text,
+    visualHookAction: `[Bám sát nhịp Cảnh 1 Video Mẫu]: Thay thế bằng ${c.name} cầm ${p.name} trực diện (giữ 100% chi tiết gốc).`
+  };
+}
+
 function generate15Hooks() {
   const p = getSelectedProduct();
+  const c = getSelectedCharacter();
   const h1 = p.highlights?.[0] || 'Chất liệu chuẩn cao cấp';
   const h2 = p.highlights?.[1] || 'Hoàn thiện tỉ mỉ từng chi tiết';
   const h3 = p.highlights?.[2] || 'Thiết kế tiện lợi mỗi ngày';
@@ -299,7 +541,7 @@ function generate15Hooks() {
     { mech: 'Công nhận', text: `Ai hay mang đồ uống đi làm chắc chắn từng khó chịu vì vỏ bình trơn trượt, bám vân tay.`, scores: [15, 16, 14, 16, 14] },
     { mech: 'Công nhận', text: `Một chiếc bình tốt dùng bền cả năm thay vì mua 3 chiếc rẻ tiền rồi bỏ xó.`, scores: [13, 14, 12, 14, 13] },
     // Cơ chế 3: Tò mò (3)
-    { mech: 'Tò mò', text: `Bên trong lớp vỏ nhám của ${name} có gì mà giữ nhiệt tới 24 giờ?`, scores: [17, 15, 18, 17, 16] },
+    { mech: 'Tò mò', text: `Bên trong lớp vỏ của ${name} có gì mà giữ nhiệt tới 24 giờ?`, scores: [17, 15, 18, 17, 16] },
     { mech: 'Tò mò', text: `Thử dốc ngược chiếc bình này suốt 5 phút xem nắp chống tràn 360 độ có rỉ 1 giọt nào không?`, scores: [18, 16, 18, 17, 16] },
     { mech: 'Tò mò', text: `Tại sao dân văn phòng lại truyền tay nhau mẫu ${p.sku || name} này suốt tuần qua?`, scores: [12, 13, 13, 12, 13] },
     // Cơ chế 4: Đối lập (3)
@@ -315,7 +557,16 @@ function generate15Hooks() {
   hooksPool = rawHooks
     .map((h, idx) => {
       const total = h.scores.reduce((a, b) => a + b, 0);
-      return { id: idx + 1, ...h, total };
+      const angleMode = 'same-as-sample';
+      return {
+        id: idx + 1,
+        ...h,
+        originalText: h.text,
+        total,
+        angleMode,
+        customIdea: getDefaultHookIdeaForMode(angleMode, h.mech),
+        visualHookAction: `[Bám sát nhịp Cảnh 1 Video Mẫu]: Thay thế bằng ${c.name} cầm ${p.name} trực diện (giữ 100% chi tiết gốc).`
+      };
     })
     .sort((a, b) => b.total - a.total);
 
@@ -336,6 +587,144 @@ function selectWinnerHook(idx) {
   syncScriptToScenes();
 }
 
+function onHookAngleModeChange(idx, newMode) {
+  const h = hooksPool[idx];
+  if (!h) return;
+  const p = getSelectedProduct();
+  const c = getSelectedCharacter();
+  h.angleMode = newMode;
+  h.customIdea = getDefaultHookIdeaForMode(newMode, h.mech);
+  const built = buildHookTextFromIdea(h, p, c);
+  h.text = built.text;
+  h.visualHookAction = built.visualHookAction;
+
+  renderHooksFunnel();
+  if (idx === winnerHookIndex) {
+    buildSixScriptBlocks();
+    syncScriptToScenes();
+  }
+}
+
+function onHookCustomIdeaEdit(idx, newIdea) {
+  const h = hooksPool[idx];
+  if (!h) return;
+  h.customIdea = newIdea;
+  if (h.angleMode === 'same-as-sample' && newIdea.trim()) {
+    h.angleMode = 'custom-idea';
+  }
+}
+
+function onHookTextDirectEdit(idx, newText) {
+  const h = hooksPool[idx];
+  if (!h) return;
+  h.text = newText;
+  renderHooksFunnel();
+  if (idx === winnerHookIndex) {
+    buildSixScriptBlocks();
+    syncScriptToScenes();
+  }
+}
+
+function regenerateSingleHookFromIdea(idx) {
+  const h = hooksPool[idx];
+  if (!h) return;
+  const p = getSelectedProduct();
+  const c = getSelectedCharacter();
+  const built = buildHookTextFromIdea(h, p, c);
+  h.text = built.text;
+  h.visualHookAction = built.visualHookAction;
+  winnerHookIndex = idx;
+  renderHooksFunnel();
+  buildSixScriptBlocks();
+  syncScriptToScenes();
+  logConsole(`Đã tạo lại Hook #${h.id} theo ý tưởng "${h.angleMode}" và áp dụng xuống Kịch bản & Phân cảnh!`);
+}
+
+function resetAllHooksToSampleIdea() {
+  const p = getSelectedProduct();
+  const c = getSelectedCharacter();
+  hooksPool.forEach((h) => {
+    h.angleMode = 'same-as-sample';
+    h.customIdea = getDefaultHookIdeaForMode('same-as-sample', h.mech);
+    h.text = h.originalText || h.text;
+    h.visualHookAction = `[Bám sát nhịp Cảnh 1 Video Mẫu]: Thay thế bằng ${c.name} cầm ${p.name} trực diện (giữ 100% chi tiết gốc).`;
+  });
+  renderHooksFunnel();
+  buildSixScriptBlocks();
+  syncScriptToScenes();
+  logConsole('Đã đặt lại toàn bộ 15 Hook bám sát theo cấu trúc Video Mẫu.');
+}
+
+function regenerateAllCustomizedHooks() {
+  const p = getSelectedProduct();
+  const c = getSelectedCharacter();
+  hooksPool.forEach((h) => {
+    const built = buildHookTextFromIdea(h, p, c);
+    h.text = built.text;
+    h.visualHookAction = built.visualHookAction;
+  });
+  renderHooksFunnel();
+  buildSixScriptBlocks();
+  syncScriptToScenes();
+  logConsole('Đã sinh lại toàn bộ các Hook theo bảng ý tưởng tùy chỉnh và đồng bộ xuống kịch bản!');
+}
+
+function applyWinnerHookIdeaToScriptAndScenes() {
+  buildSixScriptBlocks();
+  syncScriptToScenes();
+  scrollToSlide('slide-04');
+  logConsole('Đã áp dụng ý tưởng của Hook Thắng xuống 6 khối kịch bản (Mục 04) và Bảng phân cảnh thay thế (Mục 05).');
+}
+
+function renderHookIdeaTable() {
+  const tbody = document.getElementById('hook-idea-table-tbody');
+  if (!tbody) return;
+  const displayList = showOnlyQualifiedHooks ? hooksPool.filter((h) => h.total >= 70) : hooksPool.slice(0, 8);
+
+  tbody.innerHTML = displayList
+    .map((h) => {
+      const realIdx = hooksPool.indexOf(h);
+      const isWinner = realIdx === winnerHookIndex;
+      const isDifferent = h.angleMode && h.angleMode !== 'same-as-sample';
+      return `
+        <tr style="${isWinner ? 'background:#FFF5ED;' : ''}">
+          <td style="min-width:130px;">
+            <div style="font-weight:900;color:${isWinner ? 'var(--orange)' : 'var(--text-dark)'};">
+              ${isWinner ? '🏆 ' : ''}#${h.id} • ${h.mech}
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Điểm QC: <strong>${h.total}/100đ</strong></div>
+            <span class="badge-mech" style="display:inline-block;margin-top:4px;background:${isDifferent ? '#FEF3C7' : '#DCFCE7'};color:${isDifferent ? '#B45309' : '#15803D'};">
+              ${isDifferent ? '✨ Khác Video Mẫu' : '🎯 Giống Video Mẫu'}
+            </span>
+          </td>
+          <td style="min-width:210px;">
+            <select onchange="onHookAngleModeChange(${realIdx}, this.value)">
+              ${HOOK_ANGLE_MODES.map(
+                (m) => `<option value="${m.value}" ${h.angleMode === m.value ? 'selected' : ''}>${m.label}</option>`
+              ).join('')}
+            </select>
+          </td>
+          <td style="min-width:240px;">
+            <textarea style="min-height:58px;font-size:12px;" onchange="onHookCustomIdeaEdit(${realIdx}, this.value)" placeholder="Nhập ý tưởng/tình huống riêng nếu muốn làm khác video mẫu...">${h.customIdea || ''}</textarea>
+          </td>
+          <td style="min-width:250px;">
+            <textarea style="min-height:58px;font-size:12px;font-weight:700;" onchange="onHookTextDirectEdit(${realIdx}, this.value)">${h.text}</textarea>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">🎥 ${h.visualHookAction || ''}</div>
+          </td>
+          <td style="min-width:145px;">
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <button class="btn ${isWinner ? 'btn-orange' : 'btn-outline'}" style="padding:6px 10px;font-size:11px;" onclick="selectWinnerHook(${realIdx})">
+                ${isWinner ? '🏆 Đang Chọn' : 'Chọn & Áp Dụng'}
+              </button>
+              <button class="icon-pill-btn" style="justify-content:center;" onclick="regenerateSingleHookFromIdea(${realIdx})">⚡ Tạo lại Hook</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    })
+    .join('');
+}
+
 function renderHooksFunnel() {
   const qualified = hooksPool.filter((h) => h.total >= 70);
   document.getElementById('cnt-hook-15').textContent = hooksPool.length;
@@ -347,9 +736,12 @@ function renderHooksFunnel() {
   if (winner) {
     const words = winner.text.trim().split(/\s+/).length;
     const readSec = (words / 4.2).toFixed(1);
+    const modeTag = winner.angleMode && winner.angleMode !== 'same-as-sample' ? '✨ Ý tưởng mới khác Video mẫu' : '🎯 Bám sát cấu trúc Video mẫu';
     document.getElementById('winner-hook-readtime').textContent =
-      `🏆 Hook thắng (#${winner.id}): ${words} chữ (~${readSec}s đọc) — Đạt chuẩn đọc trong 3 giây đầu`;
+      `🏆 Hook thắng (#${winner.id} • ${modeTag}): ${words} chữ (~${readSec}s đọc)`;
   }
+
+  renderHookIdeaTable();
 
   const container = document.getElementById('hook-list-container');
   const displayList = showOnlyQualifiedHooks ? hooksPool.filter((h) => h.total >= 70) : hooksPool;
@@ -359,6 +751,7 @@ function renderHooksFunnel() {
       const realIdx = hooksPool.indexOf(h);
       const isWinner = realIdx === winnerHookIndex;
       const isLow = h.total < 70;
+      const isDiff = h.angleMode && h.angleMode !== 'same-as-sample';
       const rankBadge =
         realIdx === winnerHookIndex
           ? '🏆 HOOK THẮNG'
@@ -373,30 +766,46 @@ function renderHooksFunnel() {
       return `
         <div class="hook-item ${isWinner ? 'selected-winner' : ''} ${isLow ? 'eliminated' : ''}" onclick="selectWinnerHook(${realIdx})">
           <div class="hook-meta">
-            <span class="badge-mech">#${h.id} • ${h.mech}</span>
+            <span class="badge-mech">#${h.id} • ${h.mech} ${isDiff ? '• ✨ Đã đổi ý tưởng' : ''}</span>
             <span class="badge-score ${isLow ? 'low' : ''}">${h.total}/100đ • ${rankBadge}</span>
           </div>
           <div style="font-size:13px;font-weight:700;">"${h.text}"</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">💡 Ý tưởng: ${h.customIdea || ''}</div>
         </div>
       `;
     })
     .join('');
 }
 
-// 3. Trợ lý 04: Biên tập kịch bản 6 khối
+// 3. Trợ lý 04: Biên tập kịch bản 6 khối (Tự động điều chỉnh theo Video Mẫu hoặc theo Ý tưởng Hook đã đổi)
 function buildSixScriptBlocks() {
   const p = getSelectedProduct();
-  const winner = hooksPool[winnerHookIndex] || { text: 'Đừng mua nếu bạn chưa xem 3 chi tiết này!' };
+  const c = getSelectedCharacter();
+  const winner = hooksPool[winnerHookIndex] || { text: 'Đừng mua nếu bạn chưa xem 3 chi tiết này!', angleMode: 'same-as-sample' };
   const h1 = p.highlights?.[0] || 'Chất liệu chuẩn cao cấp';
   const h2 = p.highlights?.[1] || 'Bề mặt hoàn thiện chống bám vân tay';
   const h3 = p.highlights?.[2] || 'Nắp khóa kín khít chống tràn';
 
+  const isDiffFromSample = winner.angleMode && winner.angleMode !== 'same-as-sample';
+  const vanDeText =
+    winner.angleMode === 'new-pain-point'
+      ? `Rất nhiều người mua phải hàng trôi nổi chỉ giữ nhiệt được 1–2 tiếng, vỏ ngoài đọng nước làm ướt sạch túi xách và giấy tờ.`
+      : winner.angleMode === 'live-test-proof'
+      ? `Thông thường các loại bình giá rẻ khi dốc ngược hoặc đựng nước đá cả ngày sẽ bị rỉ nước và mất nhiệt cực nhanh.`
+      : winner.angleMode === 'flash-deal-first'
+      ? `Bình chuẩn ${h1.toLowerCase()} ngoài thị trường thường có giá rất cao khiến nhiều người đắn đo chưa dám xuống tiền.`
+      : `Mang đồ uống đi làm cả ngày mà chỉ vài tiếng đã nguội lạnh, vỏ bình lại trơn trượt bám vân tay gây bất tiện.`;
+
+  const latYText = isDiffFromSample
+    ? `Theo đúng hướng mở đầu mới (${winner.customIdea || ''}): ${c.name} trực tiếp kiểm chứng kết cấu ${h1} kết hợp ${h2.toLowerCase()} trên ${p.name}.`
+    : `Khác biệt của ${p.name} nằm ở kết cấu: ${h1} kết hợp lớp ${h2.toLowerCase()}.`;
+
   scriptBlocks = [
-    { num: 1, key: 'HOOK', title: 'HOOK', note: 'Dùng nguyên hook đã thắng', sec: 4, text: winner.text },
-    { num: 2, key: 'VAN_DE', title: 'VẤN ĐỀ', note: 'Nỗi đau người xem nhận ra', sec: 4, text: `Mang nước đi làm mà chỉ 2 tiếng đã hết lạnh, vỏ bình lại đọng nước ướt hết giấy tờ trong balo.` },
-    { num: 3, key: 'LAT_Y', title: 'LẬT Ý', note: 'Đổi cách nhìn trong 15s đầu', sec: 4, text: `Khác biệt nằm ở kết cấu: ${h1} kết hợp lớp ${h2.toLowerCase()}.` },
-    { num: 4, key: 'BANG_CHUNG', title: 'BẰNG CHỨNG', note: '2–3 ý đúng dữ liệu product.json', sec: 5, text: `Nhìn cận cảnh: ${h1}; ${h2}; và ${h3}.` },
-    { num: 5, key: 'KET_QUA', title: 'KẾT QUẢ', note: 'Cái người xem nhận được', sec: 4, text: `Cầm chắc tay, sang trọng trên bàn làm việc, giữ trọn hương vị đồ uống suốt cả ngày dài.` },
+    { num: 1, key: 'HOOK', title: 'HOOK', note: isDiffFromSample ? '✨ Theo ý tưởng Hook đã đổi khác mẫu' : '🎯 Theo nhịp mở đầu Video Mẫu', sec: 4, text: winner.text },
+    { num: 2, key: 'VAN_DE', title: 'VẤN ĐỀ', note: 'Nỗi đau người xem nhận ra', sec: 4, text: vanDeText },
+    { num: 3, key: 'LAT_Y', title: 'LẬT Ý', note: 'Đổi cách nhìn trong 15s đầu', sec: 4, text: latYText },
+    { num: 4, key: 'BANG_CHUNG', title: 'BẰNG CHỨNG', note: '2–3 ý đúng dữ liệu product.json', sec: 5, text: `Nhìn cận cảnh ${p.name}: ${h1}; ${h2}; và ${h3}.` },
+    { num: 5, key: 'KET_QUA', title: 'KẾT QUẢ', note: 'Cái người xem nhận được', sec: 4, text: `Cầm chắc tay, nhỏ gọn sang trọng khi mang đi làm mỗi ngày, giữ trọn hương vị đồ uống suốt 24 giờ.` },
     { num: 6, key: 'CTA', title: 'CTA', note: 'Đúng giá & ưu đãi có thật', sec: 3, text: `Giá gốc ${p.price} giảm chỉ còn ${p.salePrice || p.price} (${p.discountBadge || 'Ưu đãi hôm nay'}) — bấm giỏ hàng đặt ngay!` }
   ];
 
@@ -427,19 +836,36 @@ function renderScriptBlocks() {
 
 function onScriptBlockEdit(idx, val) {
   if (idx === 0) {
-    alert('Quy tắc Trợ lý 04: Giữ nguyên Hook thắng, không tự đổi Hook tại bước kịch bản!');
+    alert('Quy tắc Trợ lý 04: Để đổi câu Hook hoặc đổi ý tưởng mở đầu, hãy chỉnh ngay tại Bảng Thay Đổi Ý Tưởng Cho Từng Hook ở Mục 03!');
     renderScriptBlocks();
     return;
   }
   scriptBlocks[idx].text = val;
 }
 
-// 4. Trợ lý 05: Đạo diễn hình ảnh & 3 phương án bìa
+// 4. Trợ lý 05: Đạo diễn hình ảnh (Thay thế Sản phẩm & Nhân vật của bạn vào cấu trúc Video Mẫu) & 3 phương án bìa
 function syncScriptToScenes() {
   const mode = getSelectedMode();
+  const p = getSelectedProduct();
+  const c = getSelectedCharacter();
+  const winner = hooksPool[winnerHookIndex] || {};
   const clips = appState.catalog?.clips || [];
-  const defaultClip1 = clips[0]?.id || 'clip-quay-that-01';
-  const defaultClip2 = clips[1]?.id || defaultClip1;
+  const sampleClipId = document.getElementById('inp-sample-video')?.value || clips[0]?.id || 'video-m-u';
+  const bps = appState.sampleAnalysis?.sceneBlueprints || [];
+
+  const s1Action =
+    winner.visualHookAction ||
+    bps[0]?.suggestedVisualAction ||
+    `[Thay thế theo Cảnh 1 Video Mẫu]: Ghép ${c.name} + ${p.name} trực diện (giữ nguyên 100% chi tiết gốc).`;
+  const s2Action =
+    bps[1]?.suggestedVisualAction ||
+    `[Thay thế theo Cảnh 2 Video Mẫu]: ${c.name} trải nghiệm ${p.name}, làm nổi bật ${p.highlights?.[0] || 'chất liệu cao cấp'}.`;
+  const s3Action =
+    bps[2]?.suggestedVisualAction ||
+    `[Thay thế theo Cảnh 3 Video Mẫu]: Cận cảnh 100% ảnh gốc ${p.name} + 3 thông số thật từ product.json.`;
+  const s4Action =
+    bps[3]?.suggestedVisualAction ||
+    `[Thay thế theo Cảnh 4 Video Mẫu]: Hiển thị ${p.name} + Thẻ giá ưu đãi ${p.salePrice || p.price} & nút đặt hàng.`;
 
   if (mode === 'real-footage') {
     scenesList = [
@@ -447,41 +873,41 @@ function syncScriptToScenes() {
         id: 'scene-1-hook',
         type: 'real-footage',
         durationSec: 4,
-        footageId: defaultClip1,
-        trimStartSec: 0,
-        trimEndSec: 4,
+        footageId: sampleClipId,
+        trimStartSec: bps[0]?.sampleStartSec ?? 0,
+        trimEndSec: (bps[0]?.sampleStartSec ?? 0) + 4,
         subtitle: scriptBlocks[0]?.text || '',
-        visualAction: 'Quay thật điện thoại: cầm sản phẩm trên tay, nói câu hook trực diện.'
+        visualAction: s1Action
       },
       {
         id: 'scene-2-problem-flip',
         type: 'real-footage',
         durationSec: 5,
-        footageId: defaultClip2,
-        trimStartSec: 0,
-        trimEndSec: 5,
+        footageId: sampleClipId,
+        trimStartSec: bps[1]?.sampleStartSec ?? 4,
+        trimEndSec: (bps[1]?.sampleStartSec ?? 4) + 5,
         subtitle: `${scriptBlocks[1]?.text || ''} ${scriptBlocks[2]?.text || ''}`.trim(),
-        visualAction: 'Quay thật cận cảnh bề mặt sơn nhám & thao tác mở nắp.'
+        visualAction: s2Action
       },
       {
         id: 'scene-3-proof',
         type: 'real-product-closeup',
         durationSec: 4,
         footageId: '',
-        trimStartSec: 0,
-        trimEndSec: 4,
+        trimStartSec: bps[2]?.sampleStartSec ?? 9,
+        trimEndSec: (bps[2]?.sampleStartSec ?? 9) + 4,
         subtitle: scriptBlocks[3]?.text || '',
-        visualAction: 'Remotion render 100% ảnh sản phẩm gốc + 3 thông số thật (Zero-AI-Pixel).'
+        visualAction: s3Action
       },
       {
         id: 'scene-4-cta',
         type: 'offer-cta',
         durationSec: 3,
         footageId: '',
-        trimStartSec: 0,
-        trimEndSec: 3,
+        trimStartSec: bps[3]?.sampleStartSec ?? 13,
+        trimEndSec: (bps[3]?.sampleStartSec ?? 13) + 3,
         subtitle: scriptBlocks[5]?.text || '',
-        visualAction: 'Remotion render thẻ giá chính hãng + nút CTA.'
+        visualAction: s4Action
       }
     ];
   } else {
@@ -494,7 +920,7 @@ function syncScriptToScenes() {
         trimStartSec: 0,
         trimEndSec: 4,
         subtitle: scriptBlocks[0]?.text || '',
-        visualAction: 'Character holds the exact product casually on a sunlit desk, subtle slow push-in.'
+        visualAction: s1Action
       },
       {
         id: 'scene-2-experience',
@@ -504,7 +930,7 @@ function syncScriptToScenes() {
         trimStartSec: 0,
         trimEndSec: 5,
         subtitle: scriptBlocks[2]?.text || '',
-        visualAction: 'Close-up of character hand gently lifting the product in natural window light.'
+        visualAction: s2Action
       },
       {
         id: 'scene-3-product-truth',
@@ -514,7 +940,7 @@ function syncScriptToScenes() {
         trimStartSec: 0,
         trimEndSec: 4,
         subtitle: scriptBlocks[3]?.text || '',
-        visualAction: 'Remotion renders 100% original high-res product photo with crisp spec callouts.'
+        visualAction: s3Action
       },
       {
         id: 'scene-4-cta',
@@ -524,7 +950,7 @@ function syncScriptToScenes() {
         trimStartSec: 0,
         trimEndSec: 3,
         subtitle: scriptBlocks[5]?.text || '',
-        visualAction: 'Remotion animated price card, discount badge, and platform CTA.'
+        visualAction: s4Action
       }
     ];
   }
@@ -1045,16 +1471,10 @@ async function uploadAndPreviewAsset(file, kind, targetSceneIdx = null) {
   const statusBox = document.getElementById(`status-${kind}`);
   const objectUrl = URL.createObjectURL(file);
 
-  // Hiển thị xem trước ngay tức thì trên giao diện & khung điện thoại 9:16
+  // Hiển thị xem trước ngay tức thì trên ô Kéo & Thả
   if (previewBox) {
     if (kind === 'footage' || file.type.startsWith('video/')) {
       previewBox.innerHTML = `<video src="${objectUrl}" controls muted playsinline></video>`;
-      const phoneVid = document.getElementById('phone-bg-video');
-      if (phoneVid) {
-        phoneVid.src = objectUrl;
-        phoneVid.style.display = 'block';
-        phoneVid.play().catch(() => {});
-      }
     } else {
       previewBox.innerHTML = `<img src="${objectUrl}" alt="${file.name}" />`;
       if (kind === 'product') {
@@ -1104,6 +1524,13 @@ async function uploadAndPreviewAsset(file, kind, targetSceneIdx = null) {
     if (data.state) {
       appState = data.state;
       populateSelectors();
+    }
+    if (data.sampleAnalysis) {
+      appState.sampleAnalysis = data.sampleAnalysis;
+      const ideaInput = document.getElementById('inp-raw-idea');
+      if (ideaInput) ideaInput.value = data.sampleAnalysis.extractedIdea;
+      renderSampleAnalysisCard();
+      runAllAssistants();
     }
     if (statusBox) statusBox.textContent = `✅ Đã lưu: ${data.relPath}`;
     logConsole(data.output);

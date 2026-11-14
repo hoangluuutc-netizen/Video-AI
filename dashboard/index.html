@@ -184,12 +184,13 @@
       </div>
     </section>
 
-    <!-- SLIDE 02/08: GIAO MỘT Ý TƯỞNG & KHÓA NGƯỜI THẬT + SẢN PHẨM THẬT -->
+    <!-- SLIDE 02/08: PHÂN TÍCH VIDEO MẪU & THAY THẾ BẰNG SẢN PHẨM + NHÂN VẬT CỦA MÌNH -->
     <section id="slide-02" class="slide-card">
       <div class="slide-meta">
-        <span>02 / 08 • TỪ Ý TƯỞNG ĐẾN REEL • KHÓA TÀI SẢN GỐC</span>
+        <span>02 / 08 • PHÂN TÍCH VIDEO MẪU → THAY THẾ BẰNG SẢN PHẨM & NHÂN VẬT CỦA BẠN</span>
         <div class="section-tools">
           <button class="icon-pill-btn help-btn" onclick="toggleHelpDrawer('help-slide-02')">❓ Hướng dẫn mục 02</button>
+          <button class="icon-pill-btn" onclick="openSampleAnalysisFile()">📂 Mở `analysis.json` (Video mẫu)</button>
           <button class="icon-pill-btn" onclick="openSelectedProductFile()">📂 Mở `product.json`</button>
           <button class="icon-pill-btn" onclick="openSelectedCharacterFile()">📂 Mở `character.json`</button>
           <button class="icon-pill-btn" onclick="openProjectFile('assets/brand-kit/brand.json')">📂 Mở `brand.json`</button>
@@ -197,79 +198,88 @@
       </div>
 
       <div id="help-slide-02" class="help-drawer">
-        <strong>💡 Hướng dẫn Mục 02 (Chọn Sản Phẩm, Người Thật & Ý Tưởng):</strong><br/>
-        1. <strong>Mã chiến dịch (Slug):</strong> Đặt tên viết thường không dấu (ví dụ: <code>sample-campaign</code> hoặc <code>vali-cho-be-01</code>).<br/>
-        2. <strong>Chế độ sản xuất:</strong> Chọn <em>"Tạo Video từ Ảnh Người Thật + Ảnh SP Thật (Khóa 100% chi tiết gốc + Lồng tiếng)"</em> để tận dụng ngay ảnh chụp sản phẩm và ảnh nhân vật bạn tải lên.<br/>
-        3. Bấm nút <strong>📂 Mở `product.json`</strong> hoặc <strong>📂 Mở `character.json`</strong> nếu muốn sửa trực tiếp tên sản phẩm, giá bán hoặc đặc điểm nhân vật trên máy.<br/>
-        4. Sau khi nhập ý tưởng thô, bấm nút cam <strong>⚡ Giao Ý Tưởng Cho 7 Trợ Lý</strong>.
+        <strong>💡 Hướng dẫn Mục 02 (Phân tích Video Mẫu & Thay thế bằng Sản phẩm + Nhân vật của bạn):</strong><br/>
+        1. <strong>Nguyên lý hoạt động mới:</strong> Khi bạn tải lên <strong>1 Video Mẫu</strong> (ở Mục 05 hoặc chọn trong danh sách Video mẫu dưới đây), hệ thống sẽ phân tích thời lượng, nhịp chuyển cảnh, trích xuất 4 khung hình mẫu theo mốc thời gian và rút ra <strong>Ý tưởng gốc từ Video mẫu</strong>.<br/>
+        2. <strong>Cơ chế Thay thế 100%:</strong> Hệ thống <strong>không chèn hình sản phẩm/người của video mẫu</strong> vào video thành phẩm, mà dùng <strong>Ảnh Sản phẩm thật của bạn (`product.json`)</strong> và <strong>Ảnh Nhân vật thật của bạn (`character.json`)</strong> để thay thế hoàn toàn vào đúng nhịp dựng đó!<br/>
+        3. Bấm <strong>🔍 1. Phân Tích Video Mẫu & Lấy Ý Tưởng</strong> để trích xuất ý tưởng mới nhất, sau đó bấm <strong>⚡ 2. Giao Ý Tưởng & Thay Thế SP + Nhân Vật Của Mình</strong>.
       </div>
 
       <div>
         <h2 class="slide-headline">
-          MÌNH GIAO CHO HỌ
-          <span class="accent">MỘT Ý TƯỞNG.</span>
+          PHÂN TÍCH VIDEO MẪU
+          <span class="accent">& THAY BẰNG SP + NHÂN VẬT CỦA MÌNH.</span>
         </h2>
-        <p class="slide-sub" style="margin-top:6px;">KHÓA CHẶT HỒ SƠ SẢN PHẨM THẬT & NGƯỜI THẬT TRƯỚC KHI LÊN KỊCH BẢN</p>
+        <p class="slide-sub" style="margin-top:6px;">LẤY Ý TƯỞNG & NHỊP DỰNG TỪ VIDEO MẪU — THAY THẾ 100% BẰNG ẢNH SẢN PHẨM THẬT & NGƯỜI THẬT CỦA BẠN</p>
       </div>
 
       <div class="idea-box">
         <div class="field-group">
-          <label>Mã chiến dịch (Slug)</label>
-          <input type="text" id="inp-campaign-id" value="sample-campaign" />
+          <label>🎬 Video mẫu dùng để phân tích (`assets/footage/`)</label>
+          <select id="inp-sample-video" onchange="onSampleVideoSelectChange()"></select>
         </div>
         <div class="field-group">
-          <label>Chế độ tạo video (Bảo toàn người & sản phẩm thật)</label>
-          <select id="inp-mode" onchange="onModeChange()">
-            <option value="real-footage" selected>🔒 Tạo từ Ảnh/Video Người Thật + SP Thật (Giữ 100% chi tiết gốc + Có lồng tiếng)</option>
-            <option value="hybrid-ai">✨ Hybrid AI (Ảnh thật + Keyframe AI có kiểm duyệt QC + Lồng tiếng)</option>
-          </select>
-        </div>
-        <div class="field-group">
-          <label>Sản phẩm thật (`assets/products/`)</label>
+          <label>📦 Sản phẩm của bạn dùng để thay thế (`assets/products/`)</label>
           <select id="inp-product" onchange="onProductChange()"></select>
         </div>
         <div class="field-group">
-          <label>Người thật lên hình (`assets/characters/`)</label>
+          <label>🧑 Nhân vật của bạn dùng để thay thế (`assets/characters/`)</label>
           <select id="inp-character" onchange="onProductChange()"></select>
         </div>
+        <div class="field-group">
+          <label>Chế độ thay thế & Mã chiến dịch (Slug)</label>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="inp-campaign-id" value="sample-campaign" style="flex:1;" title="Mã chiến dịch" />
+            <select id="inp-mode" onchange="onModeChange()" style="flex:1.4;">
+              <option value="real-footage" selected>🔄 Thay SP & Nhân vật của mình theo nhịp Video Mẫu</option>
+              <option value="hybrid-ai">✨ Hybrid AI (Keyframe QC + Lồng tiếng)</option>
+            </select>
+          </div>
+        </div>
         <div class="field-group" style="grid-column: 1 / -1;">
-          <label>Ý tưởng thô / Nỗi đau khách hàng muốn đánh trúng</label>
-          <textarea id="inp-raw-idea">Đi làm, đi học cả ngày cần bình giữ nhiệt Inox 304 giữ đá lạnh 24h, không đổ mồ hôi vỏ ngoài, cầm sơn nhám sang tay.</textarea>
+          <label>💡 Ý tưởng rút ra từ Video Mẫu (Đã tự động ánh xạ sang Sản phẩm & Nhân vật của bạn — Có thể sửa thêm)</label>
+          <textarea id="inp-raw-idea">Đang phân tích cấu trúc từ Video Mẫu để thay thế bằng Sản phẩm và Nhân vật của bạn...</textarea>
         </div>
       </div>
+
+      <!-- BẢNG KẾT QUẢ PHÂN TÍCH VIDEO MẪU & 4 KHUNG HÌNH THAY THẾ -->
+      <div id="sample-analysis-container" class="idea-box" style="grid-template-columns: 1fr; background:#FFFDF9; border-color:var(--orange-border);"></div>
 
       <!-- Bảng Khóa Bảo Toàn Chi Tiết Sản Phẩm Thật & Người Thật -->
       <div class="source-grid" id="truth-lock-summary"></div>
 
       <div class="btn-row">
-        <button class="btn btn-orange" onclick="runAllAssistants()">⚡ Giao Ý Tưởng Cho 7 Trợ Lý (Tự động chạy 01 → 05)</button>
-        <button class="btn btn-outline" onclick="loadCampaignFromSelect()">📂 Nạp từ chiến dịch có sẵn</button>
-        <span class="serif-note" style="margin-left:auto;">Một ý tưởng. Bảy chuyên gia.</span>
+        <button class="btn" onclick="triggerSampleVideoAnalysis()">🔍 1. Phân Tích Video Mẫu & Lấy Ý Tưởng</button>
+        <button class="btn btn-orange" onclick="runAllAssistants()">⚡ 2. Áp Dụng Ý Tưởng & Thay Thế SP + Nhân Vật Của Mình (01 → 05)</button>
+        <button class="btn btn-outline" onclick="scrollToSlide('slide-05')">📥 Kéo thả đổi Video mẫu / Ảnh SP / Ảnh Nhân vật</button>
+        <button class="btn btn-outline" onclick="loadCampaignFromSelect()">📂 Nạp chiến dịch đã lưu</button>
       </div>
     </section>
 
-    <!-- SLIDE 03/08: TRƯỚC HẾT, 3 TRỢ LÝ LO CÁI HOOK -->
+    <!-- SLIDE 03/08: TRƯỚC HẾT, 3 TRỢ LÝ LO CÁI HOOK & BẢNG ĐỔI Ý TƯỞNG TỪNG HOOK -->
     <section id="slide-03" class="slide-card">
       <div class="slide-meta">
-        <span>03 / 08 • TRỢ LÝ 01 – 02 – 03 • HOOK</span>
+        <span>03 / 08 • TRỢ LÝ 01 – 02 – 03 • HOOK & BẢNG THAY ĐỔI Ý TƯỞNG TỪNG HOOK</span>
         <div class="section-tools">
-          <button class="icon-pill-btn help-btn" onclick="toggleHelpDrawer('help-slide-03')">❓ Hướng dẫn mục 03</button>
+          <button class="icon-pill-btn help-btn" onclick="toggleHelpDrawer('help-slide-03')">❓ Hướng dẫn mục 03 & Bảng đổi ý tưởng Hook</button>
           <button class="icon-pill-btn" onclick="openCurrentCampaignFile('campaign.json')">📂 Mở `campaign.json`</button>
         </div>
       </div>
 
       <div id="help-slide-03" class="help-drawer">
-        <strong>💡 Hướng dẫn Mục 03 (Phễu lọc 15 Hook → 1 Hook thắng):</strong><br/>
-        • Hệ thống tự động tạo <strong>15 câu mở đầu (Hook)</strong> theo 5 cơ chế tâm lý và chấm điểm trên thang 100.<br/>
-        • Những câu dưới 70 điểm sẽ bị làm mờ. Bạn chỉ cần <strong>nhấn chuột vào câu Hook bạn thích nhất</strong> để chọn làm <strong>🏆 1 Hook Thắng</strong> (câu này sẽ tự động chuyển xuống Khối 1 của Kịch bản).
+        <strong>💡 Hướng dẫn Mục 03 (Phễu lọc Hook & Bảng Thay Đổi Ý Tưởng Cho Từng Hook):</strong><br/>
+        • <strong>Mặc định:</strong> 15 câu Hook được sinh ra dựa trên <strong>Ý tưởng gốc của Video Mẫu</strong> kết hợp với tên và tính năng thật của sản phẩm bạn.<br/>
+        • <strong>Muốn làm khác với Video Mẫu ở từng Hook?</strong> Hãy dùng <strong>🎛️ BẢNG THAY ĐỔI Ý TƯỞNG CHO TỪNG HOOK</strong> ngay bên dưới:<br/>
+        &nbsp;&nbsp;1. Ở cột <strong>"Hướng triển khai (So với Video Mẫu)"</strong>, chuyển từ <em>"🎯 Giống Video Mẫu"</em> sang hướng khác (ví dụ: <em>"🔄 Đổi Nỗi Đau Mới"</em>, <em>"🔥 Đảo Ngược Tình Huống"</em>, <em>"🧪 Test Thực Tế 3s Đầu"</em>, <em>"🎁 Đập Giá Sốc Đầu Video"</em> hoặc <em>"✍️ Tự Nhập Ý Tưởng Mới"</em>).<br/>
+        &nbsp;&nbsp;2. Sửa hoặc nhập ý tưởng riêng vào cột <strong>"Ý tưởng / Tình huống riêng cho Hook này"</strong> rồi bấm <strong>⚡ Tạo lại Hook</strong>.<br/>
+        &nbsp;&nbsp;3. Bấm <strong>🏆 Chọn & Áp Dụng</strong> ở dòng Hook bạn ưng ý nhất — hệ thống sẽ tự động cập nhật cả <strong>Kịch bản 6 khối (Mục 04)</strong> và <strong>Bảng Phân Cảnh Thay Thế (Mục 05)</strong> theo đúng ý tưởng mới của Hook đó!
       </div>
 
       <div>
         <h2 class="slide-headline">
-          TRƯỚC HẾT, 3 TRỢ LÝ
-          <span class="accent">LO CÁI HOOK.</span>
+          TRƯỚC HẾT, 3 TRỢ LÝ LO CÁI HOOK
+          <span class="accent">& BẢNG ĐỔI Ý TƯỞNG KHÁC VIDEO MẪU.</span>
         </h2>
-        <p class="slide-sub" style="margin-top:6px;">BA LƯỢT KIỂM CHỨNG (5 CƠ CHẾ × 5 TIÊU CHÍ THANG 100) TRƯỚC KHI VIẾT MỘT CHỮ KỊCH BẢN</p>
+        <p class="slide-sub" style="margin-top:6px;">CÓ THỂ BÁM SÁT Ý TƯỞNG VIDEO MẪU HOẶC ĐỔI Ý TƯỞNG RIÊNG CHO TỪNG HOOK NGAY TRONG BẢNG DƯỚI ĐÂY</p>
       </div>
 
       <div class="funnel-pills">
@@ -283,9 +293,36 @@
       </div>
 
       <div class="btn-row">
-        <button class="btn" onclick="generate15Hooks()">🔄 Sinh lại 15 Hook theo 5 cơ chế</button>
+        <button class="btn" onclick="generate15Hooks()">🔄 Sinh lại 15 Hook từ Video Mẫu & Sản phẩm</button>
         <button class="btn btn-outline" onclick="filterOnlyQualifiedHooks()">Chỉ hiện ứng viên ≥ 70 điểm</button>
+        <button class="btn btn-orange" onclick="applyWinnerHookIdeaToScriptAndScenes()">⚡ Áp dụng Ý tưởng của Hook Thắng xuống Kịch bản & Phân cảnh</button>
         <span id="winner-hook-readtime" style="font-size:12px;font-weight:800;color:var(--orange);"></span>
+      </div>
+
+      <!-- BẢNG THAY ĐỔI Ý TƯỞNG CHO TỪNG HOOK (NẾU MUỐN LÀM KHÁC VỚI VIDEO MẪU) -->
+      <div class="scene-table-wrap" style="border:2px solid var(--orange-border);background:#FFFDF9;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+          <div>
+            <strong style="font-size:14px;color:var(--orange);text-transform:uppercase;">🎛️ BẢNG THAY ĐỔI Ý TƯỞNG CHO TỪNG HOOK (LÀM GIỐNG HOẶC LÀM KHÁC VIDEO MẪU)</strong>
+            <div style="font-size:12px;color:var(--text-muted);">Chọn hướng ý tưởng riêng cho từng Hook nếu bạn muốn mở đầu và triển khai khác đi so với Video Mẫu.</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="icon-pill-btn" onclick="resetAllHooksToSampleIdea()">🎯 Đặt lại tất cả theo Video Mẫu</button>
+            <button class="icon-pill-btn" style="background:var(--orange);color:#FFF;border-color:var(--orange);" onclick="regenerateAllCustomizedHooks()">⚡ Sinh lại các Hook đã đổi ý tưởng</button>
+          </div>
+        </div>
+        <table class="clean-table">
+          <thead>
+            <tr>
+              <th># / Cơ chế & Điểm</th>
+              <th>Hướng triển khai (So với Video Mẫu)</th>
+              <th>Ý tưởng / Tình huống riêng cho Hook này (Nếu làm khác Video Mẫu)</th>
+              <th>Lời thoại Hook & Cảnh 3s đầu (Thay SP + Nhân vật của bạn)</th>
+              <th>Thao tác / Chọn</th>
+            </tr>
+          </thead>
+          <tbody id="hook-idea-table-tbody"></tbody>
+        </table>
       </div>
 
       <div id="hook-list-container" class="hook-list"></div>
@@ -363,9 +400,9 @@
              ondrop="handleAssetDrop(event, 'product')"
              onclick="document.getElementById('file-product').click()">
           <input type="file" id="file-product" accept="image/*" style="display:none" onchange="handleAssetSelect(event, 'product')" />
-          <div style="font-size:12px;font-weight:900;text-transform:uppercase;color:var(--orange);">📦 1. KÉO THẢ ẢNH SẢN PHẨM THẬT</div>
+          <div style="font-size:12px;font-weight:900;text-transform:uppercase;color:var(--orange);">📦 1. ẢNH SẢN PHẨM CỦA BẠN (ĐỂ THAY THẾ)</div>
           <div class="dropzone-preview" id="preview-product">
-            <span style="font-size:12px;color:var(--text-muted);padding:12px;">Kéo thả ảnh SP (`.png`, `.jpg`, `.webp`) vào đây hoặc bấm để chọn file</span>
+            <span style="font-size:12px;color:var(--text-muted);padding:12px;">Kéo thả ảnh SP của bạn (`.png`, `.jpg`, `.webp`) để thay thế SP trong video mẫu</span>
           </div>
           <div class="dropzone-status" id="status-product">Lưu tự động vào `assets/products/&lt;id&gt;/`</div>
         </div>
@@ -377,9 +414,9 @@
              ondrop="handleAssetDrop(event, 'character')"
              onclick="document.getElementById('file-character').click()">
           <input type="file" id="file-character" accept="image/*" style="display:none" onchange="handleAssetSelect(event, 'character')" />
-          <div style="font-size:12px;font-weight:900;text-transform:uppercase;color:var(--orange);">🧑 2. KÉO THẢ ẢNH NHÂN VẬT THẬT</div>
+          <div style="font-size:12px;font-weight:900;text-transform:uppercase;color:var(--orange);">🧑 2. ẢNH NHÂN VẬT CỦA BẠN (ĐỂ THAY THẾ)</div>
           <div class="dropzone-preview" id="preview-character">
-            <span style="font-size:12px;color:var(--text-muted);padding:12px;">Kéo thả ảnh Người thật / KOL (`.png`, `.jpg`) vào đây hoặc bấm để chọn file</span>
+            <span style="font-size:12px;color:var(--text-muted);padding:12px;">Kéo thả ảnh Nhân vật của bạn (`.png`, `.jpg`) để thay thế người trong video mẫu</span>
           </div>
           <div class="dropzone-status" id="status-character">Lưu tự động vào `assets/characters/&lt;id&gt;/`</div>
         </div>
@@ -391,11 +428,11 @@
              ondrop="handleAssetDrop(event, 'footage')"
              onclick="document.getElementById('file-footage').click()">
           <input type="file" id="file-footage" accept="video/mp4,video/quicktime,video/*" style="display:none" onchange="handleAssetSelect(event, 'footage')" />
-          <div style="font-size:12px;font-weight:900;text-transform:uppercase;color:var(--orange);">🎬 3. KÉO THẢ VIDEO QUAY THẬT / MẪU</div>
+          <div style="font-size:12px;font-weight:900;text-transform:uppercase;color:var(--orange);">🎬 3. KÉO THẢ VIDEO MẪU (ĐỂ PHÂN TÍCH Ý TƯỞNG)</div>
           <div class="dropzone-preview" id="preview-footage">
-            <span style="font-size:12px;color:var(--text-muted);padding:12px;">Kéo thả Video (`.mp4`, `.mov`) vào đây — Tự động chạy `ffprobe` & gắn vào cảnh</span>
+            <span style="font-size:12px;color:var(--text-muted);padding:12px;">Kéo thả Video Mẫu (`.mp4`, `.mov`) — Tự động phân tích ý tưởng & nhịp dựng để thay thế</span>
           </div>
-          <div class="dropzone-status" id="status-footage">Lưu vào `assets/footage/` & cập nhật `catalog.json`</div>
+          <div class="dropzone-status" id="status-footage">Tự động chạy `analyze-sample-video.mjs` & trích 4 khung hình mẫu</div>
         </div>
       </div>
 

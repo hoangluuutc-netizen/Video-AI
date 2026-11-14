@@ -2,6 +2,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync, spawn } from 'node:child_process';
+import { analyzeSampleVideo } from './analyze-sample-video.mjs';
 
 const ROOT = process.cwd();
 const PORT = Number(process.env.PORT || 4173);
@@ -86,7 +87,26 @@ function loadWorkspaceState() {
     .filter(Boolean);
   const sheet = readJsonSafe(SHEET_PATH, { reels: [] });
 
-  return { brand, aiConfig, products, characters, catalog, campaigns, sheet };
+  let sampleAnalysis = null;
+  const firstClipId = catalog.clips?.[0]?.id;
+  if (firstClipId) {
+    const anaPath = path.join(ROOT, 'assets', 'footage', 'analysis', firstClipId, 'analysis.json');
+    if (fs.existsSync(anaPath)) {
+      sampleAnalysis = readJsonSafe(anaPath, null);
+    } else {
+      try {
+        sampleAnalysis = analyzeSampleVideo({
+          videoArg: firstClipId,
+          productId: products[0]?.id || 'sample-product',
+          characterId: characters[0]?.id || 'sample-kol'
+        });
+      } catch {
+        sampleAnalysis = null;
+      }
+    }
+  }
+
+  return { brand, aiConfig, products, characters, catalog, campaigns, sheet, sampleAnalysis };
 }
 
 function sendJson(res, status, payload) {
@@ -338,16 +358,50 @@ const server = http.createServer(async (req, res) => {
         const relPath = path.posix.join('assets', 'footage', cleanName);
         const ingestRes = runScript('scripts/ingest-footage.mjs');
         const clipId = path.basename(cleanName, path.extname(cleanName)).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        let sampleAnalysis = null;
+        try {
+          sampleAnalysis = analyzeSampleVideo({
+            videoArg: clipId,
+            productId: 'sample-product',
+            characterId: 'sample-kol'
+          });
+        } catch {
+          // ignore if probe fails
+        }
         return sendJson(res, 200, {
           ok: true,
           relPath,
           clipId,
-          output: `Đã lưu video mẫu tại ${relPath}\n${ingestRes.output}`,
+          sampleAnalysis,
+          output: `Đã lưu & phân tích Video Mẫu tại ${relPath}\n${ingestRes.output}\n${sampleAnalysis ? '→ Ý tưởng rút ra: ' + sampleAnalysis.extractedIdea : ''}`,
           state: loadWorkspaceState()
         });
       }
 
       return sendJson(res, 400, { ok: false, output: `Loại tài sản không hợp lệ: ${kind}` });
+    } catch (e) {
+      return sendJson(res, 500, { ok: false, output: e.message });
+    }
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/analyze-sample-video') {
+    const startMs = Date.now();
+    try {
+      const { clipId, productId, characterId } = await readBody(req);
+      const ana = analyzeSampleVideo({
+        videoArg: clipId || '',
+        productId: productId || 'sample-product',
+        characterId: characterId || 'sample-kol'
+      });
+      const st = loadWorkspaceState();
+      st.sampleAnalysis = ana;
+      return sendJson(res, 200, {
+        ok: true,
+        elapsedSec: ((Date.now() - startMs) / 1000).toFixed(1),
+        sampleAnalysis: ana,
+        output: `Đã phân tích Video Mẫu "${ana.sampleVideo.clipId}" (${ana.sampleVideo.durationSec}s, ${ana.sampleVideo.width}×${ana.sampleVideo.height}).\n→ Đã rút ra ý tưởng & phương án thay thế bằng Sản phẩm "${ana.targetReplacement.productName}" và Nhân vật "${ana.targetReplacement.characterName}"!`,
+        state: st
+      });
     } catch (e) {
       return sendJson(res, 500, { ok: false, output: e.message });
     }
@@ -386,6 +440,28 @@ const server = http.createServer(async (req, res) => {
         result = runScript('scripts/validate-assets.mjs');
       } else if (action === 'ingest-footage') {
         result = runScript('scripts/ingest-footage.mjs');
+      } else if (action === 'analyze-sample') {
+        const startMs = Date.now();
+        try {
+          const campData = readJsonSafe(path.join(ROOT, campRel), {});
+          const ana = analyzeSampleVideo({
+            videoArg: '',
+            productId: campData.productId || 'sample-product',
+            characterId: campData.characterId || 'sample-kol'
+          });
+          result = {
+            ok: true,
+            elapsedSec: ((Date.now() - startMs) / 1000).toFixed(1),
+            sampleAnalysis: ana,
+            output: `Đã phân tích Video Mẫu "${ana.sampleVideo.clipId}" (${ana.sampleVideo.durationSec}s, 4 phân cảnh).\nÝ tưởng rút ra: ${ana.extractedIdea}`
+          };
+        } catch (err) {
+          result = {
+            ok: false,
+            elapsedSec: ((Date.now() - startMs) / 1000).toFixed(1),
+            output: err.message
+          };
+        }
       } else if (action === 'generate-prompts') {
         result = runScript('scripts/generate-prompts.mjs', [campRel]);
       } else if (action === 'generate-voiceover') {

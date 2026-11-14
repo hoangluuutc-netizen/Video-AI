@@ -73,20 +73,24 @@ Ngoài ra, bạn vẫn có thể chép file thủ công vào thư mục như dư
 
 ## 3. Quy trình vận hành 7 Trợ lý trên giao diện (`http://localhost:4173`)
 
-### Bước 1 — Giao ý tưởng & Khóa tài sản gốc (Slide `02 / 08`)
-1. **Mã chiến dịch (Slug):** Đặt tên không dấu, viết thường, nối bằng dấu gạch ngang (ví dụ: `reel-binh-giu-nhiet-01`).
-2. **Chế độ bảo vệ điểm ảnh:**
-   - Chọn **`🔒 Quay thật & Ảnh thật 100% (Zero-AI-Pixel)`** *(Mặc định & Khuyên dùng)*: Cấm tuyệt đối mọi can thiệp AI vào điểm ảnh sản phẩm và người.
-   - Chọn **`✨ Hybrid`** nếu muốn kết hợp ảnh gốc Remotion với cảnh AI có kiểm duyệt Keyframe.
-3. **Sản phẩm thật & Người thật:** Chọn từ danh sách thả xuống. Ngay bên dưới, bảng **Khóa Chi Tiết Sản Phẩm Thật** và **Khóa Danh Tính Người Thật** sẽ hiện rõ các quy tắc bảo toàn.
-4. Nhập **Ý tưởng thô / Nỗi đau khách hàng**, sau đó bấm nút cam **`⚡ Giao Ý Tưởng Cho 7 Trợ Lý`**.
+### Bước 1 — Phân tích Video Mẫu & Thay thế bằng Sản phẩm + Nhân vật của bạn (Slide `02 / 08`)
+1. **Nguyên lý cốt lõi:** Bạn chỉ cần đưa lên **1 Video Mẫu** (video xu hướng/đối thủ có cấu trúc hay). Hệ thống sẽ dùng `analyze-sample-video.mjs` (`ffprobe` + `ffmpeg`) để phân tích thời lượng, chia 4 phân cảnh theo nhịp mẫu, trích xuất **4 khung hình mốc thời gian (`scene-1.jpg` → `scene-4.jpg`)**, rút ra **Ý tưởng gốc** và lập **Sơ đồ Thay thế**.
+2. **Thay thế 100% bằng tài sản của bạn:** Hệ thống tuyệt đối không lấy hình sản phẩm/nhân vật của video mẫu đưa vào video xuất ra, mà tự động thay thế bằng **Ảnh Sản phẩm thật của bạn (`product.json`)** và **Ảnh Nhân vật thật của bạn (`character.json`)** theo đúng bố cục và nhịp dựng của video mẫu.
+3. Bấm **`🔍 1. Phân Tích Video Mẫu & Lấy Ý Tưởng`** để xem sơ đồ 4 cảnh mẫu kèm phương án thay thế, sau đó bấm **`⚡ 2. Áp Dụng Ý Tưởng & Thay Thế SP + Nhân Vật Của Mình (01 → 05)`**.
 
 ---
 
-### Bước 2 — Lọc Hook qua 3 Trợ lý 01, 02, 03 (Slide `03 / 08`)
-- **Trợ lý 01 (Sáng tạo Hook):** Tự động sinh **15 câu hook** chia đều theo **5 cơ chế**: *Cảnh báo, Công nhận, Tò mò, Đối lập, Lời hứa cụ thể* dựa trên đúng tên và tính năng thật của sản phẩm.
-- **Trợ lý 02 (Phản biện Hook):** Chấm điểm từng câu trên **thang 100** (5 tiêu chí × 20 điểm). Câu nào **dưới 70 điểm** tự động bị đánh dấu loại.
-- **Trợ lý 03 (Tuyển chọn Hook):** Kiểm tra độ dài câu hook để đảm bảo đọc gọn trong **3 giây đầu**. Bạn có thể bấm vào bất kỳ thẻ hook nào trong danh sách để chọn làm **🏆 1 Hook Thắng**.
+### Bước 2 — Phễu lọc Hook & Bảng Thay Đổi Ý Tưởng Cho Từng Hook (Slide `03 / 08`)
+- **Trợ lý 01 – 02 – 03:** Tự động sinh **15 câu Hook** theo 5 cơ chế (*Cảnh báo, Công nhận, Tò mò, Đối lập, Lời hứa cụ thể*), chấm điểm trên thang 100 và lọc ra các ứng viên ≥ 70 điểm.
+- **🎛️ Bảng Thay Đổi Ý Tưởng Cho Từng Hook (Làm giống hoặc làm khác Video Mẫu):**
+  - Mặc định các Hook bám sát nhịp mở đầu của Video Mẫu (`🎯 Giống Video Mẫu`).
+  - Nếu bạn muốn **làm khác đi so với Video Mẫu** ở bất kỳ câu Hook nào, hãy chọn trong cột **"Hướng triển khai (So với Video Mẫu)"**:
+    - `🔄 Đổi Nỗi Đau Mới (Làm khác video mẫu)`
+    - `🔥 Đảo Ngược Tình Huống / Bóc Sự Thật (Làm khác mẫu)`
+    - `🧪 Test Thực Tế Ngay 3s Đầu (Làm khác mẫu)`
+    - `🎁 Đập Giá Sốc / Deal Hời Đầu Video (Làm khác mẫu)`
+    - `✍️ Tự Nhập Ý Tưởng Mới Hoàn Toàn`
+  - Bạn có thể sửa trực tiếp ô **"Ý tưởng / Tình huống riêng cho Hook này"**, bấm **`⚡ Tạo lại Hook`** và bấm **`Chọn & Áp Dụng`** — hệ thống sẽ tự động cập nhật cả **Kịch bản 6 khối (Mục 04)** và **Bảng Phân Cảnh Thay Thế (Mục 05)** theo đúng ý tưởng mới của Hook đó!
 
 ---
 
@@ -144,6 +148,7 @@ Ngoài ra, bạn vẫn có thể chép file thủ công vào thư mục như dư
 | Mở giao diện web 7 Trợ lý | `node scripts/dashboard-server.mjs` |
 | Kiểm tra tính hợp lệ toàn dự án | `node scripts/validate-assets.mjs` |
 | Quét clip quay thật bằng `ffprobe` | `node scripts/ingest-footage.mjs` |
+| Phân tích Video Mẫu & lập sơ đồ thay thế | `node scripts/analyze-sample-video.mjs` |
 | Tạo chiến dịch mới từ mẫu quay thật | `node scripts/new-campaign.mjs <ten-chien-dich> --template real-footage-reel` |
 | Sinh giọng đọc & âm thanh tiếng Việt | `node scripts/generate-voiceover.mjs campaigns/<ten-chien-dich>/campaign.json` |
 | Xuất bảng cắt CapCut + Dựng `ffmpeg` có tiếng | `node scripts/export-cutlist.mjs campaigns/<ten-chien-dich>/campaign.json --render-ffmpeg` |

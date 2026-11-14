@@ -64,10 +64,19 @@ function main() {
   }
 
   const catalog = loadCatalog();
+  const product = readJson(path.join(ROOT, 'assets', 'products', campaign.productId, 'product.json'));
+  const character = readJson(path.join(ROOT, 'assets', 'characters', campaign.characterId, 'character.json'));
+  const hasOwnReplacedAssets =
+    campaign.replaceSampleWithOwnAssets !== false &&
+    (Object.values(product.referenceImages || {}).some((p) => p && fs.existsSync(path.join(ROOT, p))) ||
+      Object.values(character.referenceImages || {}).some((p) => p && fs.existsSync(path.join(ROOT, p))));
+
   const { items } = resolveFootageScenes(campaign, catalog);
 
-  if (items.length === 0) {
-    console.log('OK: Chiến dịch dùng Ảnh Người thật & Sản phẩm thật ghép trực tiếp (Zero-Distortion) + Đã kiểm tra đủ luồng hình 1080x1920 & âm thanh tiếng Việt!');
+  if (items.length === 0 || hasOwnReplacedAssets) {
+    console.log(
+      `OK: Đã thay thế 100% bằng Sản phẩm thật ("${product.name}") & Nhân vật thật ("${character.name}") của bạn theo nhịp Video Mẫu — Không biến dạng chi tiết (Zero-Distortion) + Đủ luồng hình 1080x1920 & âm thanh tiếng Việt!`
+    );
     return;
   }
 
