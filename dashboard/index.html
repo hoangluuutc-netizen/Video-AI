@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Đội Làm Video A.I. — 7 Trợ Lý, 1 Cỗ Máy Ra Reel</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Thanh điều hướng trên cùng -->
+    <header class="topbar">
+      <div class="brand-pill">
+        <span class="brand-dot"></span>
+        <span>ĐỘI LÀM VIDEO A.I. • 7 TRỢ LÝ</span>
+      </div>
+      <nav class="nav-tabs">
+        <button class="nav-tab active" onclick="scrollToSlide('slide-01')">01 Tổng quan</button>
+        <button class="nav-tab" onclick="scrollToSlide('slide-02')">02 Ý tưởng & Sản phẩm</button>
+        <button class="nav-tab" onclick="scrollToSlide('slide-03')">03 Phễu Hook (15→1)</button>
+        <button class="nav-tab" onclick="scrollToSlide('slide-04')">04 Kịch bản 6 khối</button>
+        <button class="nav-tab" onclick="scrollToSlide('slide-05')">05 Đạo diễn hình</button>
+        <button class="nav-tab" onclick="scrollToSlide('slide-06')">06 Dựng Reel 9:16</button>
+        <button class="nav-tab" onclick="scrollToSlide('slide-07')">07 Kiểm duyệt & Sổ Reel</button>
+      </nav>
+      <span id="server-status" class="server-badge">Đang kiểm tra kết nối...</span>
+    </header>
+
+    <!-- SLIDE 01/08: ĐỘI LÀM VIDEO A.I. -->
+    <section id="slide-01" class="slide-card">
+      <div class="slide-meta">
+        <span>01 / 08</span>
+        <span>7 TRỢ LÝ • 1 CỖ MÁY</span>
+      </div>
+      <div>
+        <h1 class="slide-headline">
+          MÌNH DỰNG NGUYÊN MỘT
+          <span class="accent">ĐỘI LÀM VIDEO A.I.</span>
+        </h1>
+        <p class="slide-sub" style="margin-top:8px;">7 TRỢ LÝ, 1 CỖ MÁY RA REEL — HỖ TRỢ CẢ QUAY THẬT (ZERO-AI-PIXEL) & HYBRID AI</p>
+      </div>
+
+      <div class="team-grid">
+        <div class="assistant-card" onclick="scrollToSlide('slide-03')">
+          <div class="assistant-top"><span class="assistant-icon">💡</span><span class="assistant-num">01</span></div>
+          <div class="assistant-title">SÁNG TẠO HOOK</div>
+          <div class="assistant-desc">Nghĩ 15 hook theo 5 cơ chế, giữ 6 ứng viên</div>
+        </div>
+        <div class="assistant-card" onclick="scrollToSlide('slide-03')">
+          <div class="assistant-top"><span class="assistant-icon">🎚️</span><span class="assistant-num">02</span></div>
+          <div class="assistant-title">PHẢN BIỆN HOOK</div>
+          <div class="assistant-desc">Chấm 5 tiêu chí thang 100, dưới 70 loại</div>
+        </div>
+        <div class="assistant-card" onclick="scrollToSlide('slide-03')">
+          <div class="assistant-top"><span class="assistant-icon">⭐</span><span class="assistant-num">03</span></div>
+          <div class="assistant-title">TUYỂN CHỌN HOOK</div>
+          <div class="assistant-desc">Thử đọc 3 giây, chọn đúng 1 hook thắng</div>
+        </div>
+        <div class="assistant-card" onclick="scrollToSlide('slide-04')">
+          <div class="assistant-top"><span class="assistant-icon">✍️</span><span class="assistant-num">04</span></div>
+          <div class="assistant-title">BIÊN TẬP KỊCH BẢN</div>
+          <div class="assistant-desc">Viết lời đọc 6 khối, trả lời hook trong 15s đầu</div>
+        </div>
+        <div class="assistant-card" onclick="scrollToSlide('slide-05')">
+          <div class="assistant-top"><span class="assistant-icon">👁️</span><span class="assistant-num">05</span></div>
+          <div class="assistant-title">ĐẠO DIỄN HÌNH</div>
+          <div class="assistant-desc">Chia cảnh 3–6 giây, chống lặp cảnh vừa dùng</div>
+        </div>
+        <div class="assistant-card" onclick="scrollToSlide('slide-06')">
+          <div class="assistant-top"><span class="assistant-icon">🎞️</span><span class="assistant-num">06</span></div>
+          <div class="assistant-title">DỰNG REEL</div>
+          <div class="assistant-desc">Ra MP4 dọc 1080×1920, Cutlist CapCut, Remotion</div>
+        </div>
+        <div class="assistant-card" onclick="scrollToSlide('slide-07')">
+          <div class="assistant-top"><span class="assistant-icon">🛡️</span><span class="assistant-num">07</span></div>
+          <div class="assistant-title">KIỂM DUYỆT</div>
+          <div class="assistant-desc">Soát SSIM khung hình & thông số, PASS mới giao</div>
+        </div>
+        <div class="assistant-card orange-card" onclick="scrollToSlide('slide-06')">
+          <div class="assistant-top"><span class="assistant-icon">▶️</span><span class="assistant-num">ĐẦU RA</span></div>
+          <div class="assistant-title">REEL 9:16 CHUẨN</div>
+          <div class="assistant-desc">MP4 dọc 1080×1920 + 3 bìa + Sổ vận hành</div>
+        </div>
+      </div>
+
+      <div class="pipeline-bar">
+        <div class="pipeline-step">💡 Ý TƯỞNG</div>
+        <span class="pipeline-arrow">→</span>
+        <div class="pipeline-step">❝❞ HOOK (15→1)</div>
+        <span class="pipeline-arrow">→</span>
+        <div class="pipeline-step">📄 KỊCH BẢN (6 KHỐI)</div>
+        <span class="pipeline-arrow">→</span>
+        <div class="pipeline-step">🖼️ ĐẠO DIỄN HÌNH</div>
+        <span class="pipeline-arrow">→</span>
+        <div class="pipeline-step">🎞️ DỰNG REEL</div>
+        <span class="pipeline-arrow">→</span>
+        <div class="pipeline-step">✔️ KIỂM DUYỆT PASS</div>
+      </div>
+    </section>
+
+    <!-- SLIDE 02/08: GIAO MỘT Ý TƯỞNG & CHỌN CHẾ ĐỘ -->
+    <section id="slide-02" class="slide-card">
+      <div class="slide-meta">
+        <span>02 / 08</span>
+        <span>TỪ Ý TƯỞNG ĐẾN REEL</span>
+      </div>
+      <div>
+        <h2 class="slide-headline">
+          MÌNH GIAO CHO HỌ
+          <span class="accent">MỘT Ý TƯỞNG.</span>
+        </h2>
+        <p class="slide-sub" style="margin-top:6px;">CHỌN SẢN PHẨM, CHẾ ĐỘ SẢN XUẤT VÀ Ý TƯỞNG THÔ ĐỂ KÍCH HOẠT 7 TRỢ LÝ</p>
+      </div>
+
+      <div class="idea-box">
+        <div class="field-group">
+          <label>Mã chiến dịch (Slug)</label>
+          <input type="text" id="inp-campaign-id" value="sample-campaign" />
+        </div>
+        <div class="field-group">
+          <label>Chế độ sản xuất (Bảo vệ sản phẩm)</label>
+          <select id="inp-mode" onchange="onModeChange()">
+            <option value="real-footage">Quay thật 100% (Zero-AI-Pixel: Cấm AI chạm điểm ảnh)</option>
+            <option value="hybrid-ai">Hybrid AI (Keyframe QC + Veo/Kling + Remotion)</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Sản phẩm gốc (assets/products/)</label>
+          <select id="inp-product" onchange="onProductChange()"></select>
+        </div>
+        <div class="field-group">
+          <label>Nhân vật / Người lên hình</label>
+          <select id="inp-character"></select>
+        </div>
+        <div class="field-group" style="grid-column: 1 / -1;">
+          <label>Ý tưởng thô / Nỗi đau khách hàng muốn đánh trúng</label>
+          <textarea id="inp-raw-idea">Đi làm, đi học cả ngày cần bình giữ nhiệt Inox 304 giữ đá lạnh 24h, không đổ mồ hôi vỏ ngoài, cầm sơn nhám sang tay.</textarea>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-orange" onclick="runAllAssistants()">⚡ Giao Ý Tưởng Cho 7 Trợ Lý (Tự động chạy 01 → 05)</button>
+        <button class="btn btn-outline" onclick="loadCampaignFromSelect()">📂 Nạp từ chiến dịch có sẵn</button>
+        <span class="serif-note" style="margin-left:auto;">Một ý tưởng. Bảy chuyên gia.</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 03/08: TRƯỚC HẾT, 3 TRỢ LÝ LO CÁI HOOK -->
+    <section id="slide-03" class="slide-card">
+      <div class="slide-meta">
+        <span>03 / 08</span>
+        <span>TRỢ LÝ 01 – 02 – 03 • HOOK</span>
+      </div>
+      <div>
+        <h2 class="slide-headline">
+          TRƯỚC HẾT, 3 TRỢ LÝ
+          <span class="accent">LO CÁI HOOK.</span>
+        </h2>
+        <p class="slide-sub" style="margin-top:6px;">BA LƯỢT KIỂM CHỨNG (5 CƠ CHẾ × 5 TIÊU CHÍ THANG 100) TRƯỚC KHI VIẾT MỘT CHỮ KỊCH BẢN</p>
+      </div>
+
+      <div class="funnel-pills">
+        <div class="funnel-pill"><strong id="cnt-hook-15">15</strong> <span>hook nghĩ ra</span></div>
+        <span class="pipeline-arrow">→</span>
+        <div class="funnel-pill"><strong id="cnt-hook-6">6</strong> <span>ứng viên (≥70đ)</span></div>
+        <span class="pipeline-arrow">→</span>
+        <div class="funnel-pill"><strong id="cnt-hook-3">3</strong> <span>bản đã sửa</span></div>
+        <span class="pipeline-arrow">→</span>
+        <div class="funnel-pill winner"><strong id="cnt-hook-1">1</strong> <span>hook thắng</span></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" onclick="generate15Hooks()">🔄 Sinh lại 15 Hook theo 5 cơ chế</button>
+        <button class="btn btn-outline" onclick="filterOnlyQualifiedHooks()">Chỉ hiện ứng viên ≥ 70 điểm</button>
+        <span id="winner-hook-readtime" style="font-size:12px;font-weight:800;color:var(--orange);"></span>
+      </div>
+
+      <div id="hook-list-container" class="hook-list"></div>
+    </section>
+
+    <!-- SLIDE 04/08: RỒI TRỢ LÝ KỊCH BẢN VIẾT LỜI ĐỌC -->
+    <section id="slide-04" class="slide-card">
+      <div class="slide-meta">
+        <span>04 / 08</span>
+        <span>TRỢ LÝ 04 • KỊCH BẢN</span>
+      </div>
+      <div>
+        <h2 class="slide-headline">
+          RỒI TRỢ LÝ KỊCH BẢN
+          <span class="accent">VIẾT LỜI ĐỌC.</span>
+        </h2>
+        <p class="slide-sub" style="margin-top:6px;">GIỮ NGUYÊN HOOK THẮNG. KHÔNG TỰ ĐỔI HOOK, KHÔNG BỊA SỐ LIỆU NGOÀI PRODUCT.JSON</p>
+      </div>
+
+      <div class="btn-row">
+        <span style="font-size:13px;font-weight:800;">⏱️ Tổng thời lượng đọc ước tính: <strong id="script-duration-badge" style="color:var(--orange);">0 giây</strong></span>
+        <button class="btn btn-outline" onclick="syncScriptToScenes()">↳ Đẩy 6 khối lời đọc xuống Bảng Phân Cảnh (Trợ lý 05)</button>
+      </div>
+
+      <div id="script-blocks-container" class="script-grid"></div>
+      <div class="serif-note">Phần thân phải trả đủ lời hứa của hook trong 15 giây đầu.</div>
+    </section>
+
+    <!-- SLIDE 05/08: TIẾP THEO, ĐẠO DIỄN LÊN HÌNH -->
+    <section id="slide-05" class="slide-card">
+      <div class="slide-meta">
+        <span>05 / 08</span>
+        <span>TRỢ LÝ 05 • HÌNH ẢNH</span>
+      </div>
+      <div>
+        <h2 class="slide-headline">
+          TIẾP THEO, ĐẠO DIỄN
+          <span class="accent">LÊN HÌNH.</span>
+        </h2>
+        <p class="slide-sub" style="margin-top:6px;">MỖI CẢNH 3 – 6 GIÂY. HÌNH PHẢI ĐÚNG CÂU ĐANG NÓI & CHỐNG LẶP CẢNH VỪA DÙNG</p>
+      </div>
+
+      <div class="source-grid">
+        <div class="spec-row"><strong>▶️ Video thật</strong><span style="font-size:12px;color:var(--text-muted);">Kho `assets/footage/`</span></div>
+        <div class="spec-row"><strong>🖼️ Ảnh thật</strong><span style="font-size:12px;color:var(--text-muted);">Ảnh gốc `product.json`</span></div>
+        <div class="spec-row"><strong>✨ AI Keyframe</strong><span style="font-size:12px;color:var(--text-muted);">Chỉ bật ở chế độ Hybrid AI</span></div>
+        <div class="spec-row"><strong>🔁 Chống lặp</strong><span id="footage-count-badge" style="font-size:12px;color:var(--orange);font-weight:800;">0 clip trong sổ</span></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="addSceneRow()">+ Thêm cảnh quay</button>
+        <button class="btn btn-outline" onclick="triggerBackendAction('ingest-footage')">📥 Quét kho cảnh (`ingest-footage.mjs`)</button>
+      </div>
+
+      <div class="scene-table-wrap">
+        <table class="clean-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Mã cảnh</th>
+              <th>Loại cảnh</th>
+              <th>Dài (s)</th>
+              <th>Clip gốc / Trim (In→Out)</th>
+              <th>Lời đọc / Phụ đề tiếng Việt</th>
+              <th>Hành động hình ảnh</th>
+              <th>Xóa</th>
+            </tr>
+          </thead>
+          <tbody id="scenes-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- 3 Phương án bìa -->
+      <div class="source-grid" id="covers-container"></div>
+    </section>
+
+    <!-- SLIDE 06/08: RỒI MỚI DỰNG THÀNH REEL -->
+    <section id="slide-06" class="slide-card">
+      <div class="slide-meta">
+        <span>06 / 08</span>
+        <span>TRỢ LÝ 06 • DỰNG</span>
+      </div>
+      <div>
+        <h2 class="slide-headline">
+          RỒI MỚI DỰNG
+          <span class="accent">THÀNH REEL.</span>
+        </h2>
+        <p class="slide-sub" style="margin-top:6px;">KỊCH BẢN VÀ HÌNH ĐÃ CHỐT, GIỜ MỚI GHÉP THÀNH VIDEO (REMOTION / FFMPEG / CAPCUT)</p>
+      </div>
+
+      <div class="reel-builder-layout">
+        <!-- Khung điện thoại 9:16 -->
+        <div class="phone-frame">
+          <div style="font-size:11px;font-weight:800;color:#A3A3A3;" id="phone-brand-badge">VIETNAM ORIGINAL</div>
+          <div>
+            <div class="phone-ratio">9:16</div>
+            <div class="phone-res">1080 × 1920</div>
+            <div id="phone-scene-indicator" style="font-size:12px;color:var(--orange);margin-top:6px;font-weight:700;">Cảnh 1 / 4</div>
+          </div>
+          <button class="phone-play-btn" onclick="togglePhonePreview()" id="phone-play-btn">▶</button>
+          <div class="phone-sub-pill" id="phone-subtitle-preview">
+            Phụ đề chạy theo giọng đọc...
+          </div>
+        </div>
+
+        <!-- Cột thông số & nút lệnh -->
+        <div class="spec-stack">
+          <div class="spec-row">
+            <span>⏱️</span>
+            <div>
+              <strong id="reel-total-duration">16 giây — Khung dọc 1080×1920 (30fps)</strong>
+              <div style="font-size:12px;color:var(--text-muted);">Đo thời lượng thật từng cảnh, không kéo chậm giọng</div>
+            </div>
+          </div>
+          <div class="spec-row">
+            <span>🎙️</span>
+            <div>
+              <strong id="reel-voice-policy">Giọng thật từ clip quay (Zero-AI-Pixel)</strong>
+              <div style="font-size:12px;color:var(--text-muted);">Không dùng giọng AI trong luồng quay thật để tránh dấu hiệu AI</div>
+            </div>
+          </div>
+          <div class="spec-row">
+            <span>🔤</span>
+            <div>
+              <strong>Phụ đề bám từng câu & khớp thông số `product.json`</strong>
+              <div style="font-size:12px;color:var(--text-muted);">Chữ tiếng Việt chuẩn dấu, giá gốc/giá giảm khóa cứng</div>
+            </div>
+          </div>
+          <div class="spec-row">
+            <span>🖼️</span>
+            <div>
+              <strong>3 phương án bìa (chữ 2 tầng đọc rõ trên lưới Reels)</strong>
+              <div style="font-size:12px;color:var(--text-muted);">Lấy từ khung hình thật + tiêu đề khóa từ hook thắng</div>
+            </div>
+          </div>
+
+          <div class="btn-row" style="margin-top:8px;">
+            <button class="btn btn-orange" onclick="saveCampaignToServer()">💾 1. Lưu `campaign.json`</button>
+            <button class="btn" onclick="triggerBackendAction('export-cutlist')">📋 2. Xuất Cutlist CapCut</button>
+            <button class="btn" onclick="triggerBackendAction('render-ffmpeg')">🎬 3. Dựng MP4 (`ffmpeg`)</button>
+            <button class="btn" onclick="triggerBackendAction('sync-studio')">⚛️ 4. Đồng bộ Remotion (`studio/`)</button>
+            <button class="btn btn-outline" onclick="triggerBackendAction('generate-prompts')">📝 Xuất `prompts.md`</button>
+          </div>
+
+          <div id="action-console" class="console-box">Sẵn sàng. Bấm các nút trên để lưu chiến dịch hoặc gọi trực tiếp scripts/*.mjs...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 07/08: TRỢ LÝ CUỐI CÙNG KIỂM DUYỆT & SỔ VẬN HÀNH -->
+    <section id="slide-07" class="slide-card">
+      <div class="slide-meta">
+        <span>07 / 08</span>
+        <span>TRỢ LÝ 07 • KIỂM DUYỆT & SỔ VẬN HÀNH</span>
+      </div>
+      <div>
+        <h2 class="slide-headline">
+          TRỢ LÝ CUỐI CÙNG
+          <span class="accent">KIỂM DUYỆT.</span>
+        </h2>
+        <p class="slide-sub" style="margin-top:6px;">CHỈ PASS KHI MỌI MỤC ĐỀU ĐẠT — KIỂM CHỨNG CẢ BẰNG SỐ LIỆU SSIM KHUNG HÌNH</p>
+      </div>
+
+      <div class="qc-layout">
+        <div class="qc-checklist">
+          <div style="font-weight:900;font-size:14px;text-transform:uppercase;margin-bottom:4px;">🛡️ KIỂM DUYỆT REEL (5 TIÊU CHÍ BẮT BUỘC)</div>
+          <label class="qc-check-item">
+            <input type="checkbox" class="qc-cb" checked onchange="evaluateQcStatus()" />
+            <span>1. Thời lượng, kích thước 1080×1920, codec H.264/AAC hợp lệ (`validate-assets.mjs`)</span>
+          </label>
+          <label class="qc-check-item">
+            <input type="checkbox" class="qc-cb" checked onchange="evaluateQcStatus()" />
+            <span>2. Khung hình đầu, giữa, cuối khớp cảnh gốc (`SSIM ≥ 0.90`, không biến dạng sản phẩm/mặt)</span>
+          </label>
+          <label class="qc-check-item">
+            <input type="checkbox" class="qc-cb" checked onchange="evaluateQcStatus()" />
+            <span>3. Phụ đề khớp lời đọc, đúng chính tả & dấu tiếng Việt, đúng giá trong `product.json`</span>
+          </label>
+          <label class="qc-check-item">
+            <input type="checkbox" class="qc-cb" checked onchange="evaluateQcStatus()" />
+            <span>4. Hình đúng câu đang nói, không chứa từ cấm quảng cáo (cam kết y tế/tuyệt đối hóa)</span>
+          </label>
+          <label class="qc-check-item">
+            <input type="checkbox" class="qc-cb" checked onchange="evaluateQcStatus()" />
+            <span>5. Bìa được chọn thuộc 3 phương án đạt & có xác nhận đồng ý nếu có trẻ em lên hình</span>
+          </label>
+
+          <div class="btn-row" style="margin-top:10px;">
+            <button class="btn" onclick="triggerBackendAction('validate')">✔️ Chạy `validate-assets.mjs`</button>
+            <button class="btn" onclick="triggerBackendAction('verify-integrity')">🔬 Chạy Kiểm Nguyên Vẹn SSIM (`verify-integrity.mjs`)</button>
+            <button class="btn btn-orange" onclick="recordReelToSheet()">📒 Ghi Reel Đạt Vào Sổ Vận Hành</button>
+          </div>
+        </div>
+
+        <div class="qc-status-cards">
+          <div id="qc-pass-banner" class="status-banner pass-card">
+            <h3>PASS</h3>
+            <div>Bàn giao reel — Đủ tiêu chuẩn đăng TikTok / Reels / Shopee Video</div>
+          </div>
+          <div id="qc-fail-banner" class="status-banner fail-card inactive">
+            <h3>FAIL</h3>
+            <div>Trả lỗi kèm mốc thời gian, dựng lại cảnh lệch</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sổ vận hành Reel -->
+      <div class="scene-table-wrap">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <strong style="font-size:14px;text-transform:uppercase;">📒 SỔ VẬN HÀNH REEL (<span id="sheet-total-count">0</span> REEL ĐÃ GHI)</strong>
+          <button class="btn btn-outline" onclick="exportSheetCsv()">⬇️ Xuất CSV Sổ Vận Hành</button>
+        </div>
+        <table class="clean-table">
+          <thead>
+            <tr>
+              <th>Mã Reel</th>
+              <th>Chế độ</th>
+              <th>Sản phẩm</th>
+              <th>Hook thắng</th>
+              <th>Thời lượng</th>
+              <th>Trạng thái QC</th>
+              <th>Đường dẫn đầu ra</th>
+            </tr>
+          </thead>
+          <tbody id="sheet-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

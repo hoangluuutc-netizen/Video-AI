@@ -15,6 +15,7 @@ Các mô hình Video AI thuần túy thường làm biến dạng logo, chữ tr
 - `assets/products/`: Dữ liệu & ảnh gốc từng sản phẩm (`product.json`).
 - `assets/characters/`: Hồ sơ & ảnh tham chiếu nhân vật đại diện cố định (`character.json`).
 - `campaigns/`: Kịch bản, prompt và cấu hình render cho từng chiến dịch quảng cáo.
+- `dashboard/`: Giao diện điều khiển trực quan **Đội Làm Video A.I. (7 Trợ Lý, 1 Cỗ Máy Ra Reel)** hỗ trợ cả luồng Quay thật (Zero-AI-Pixel) và Hybrid AI.
 - `studio/`: Ứng dụng **Remotion (React + TypeScript)** để xem trước và render video đa tỷ lệ.
 - `scripts/`: Bộ công cụ CLI kiểm tra dữ liệu, tạo chiến dịch mới và sinh prompt khóa chi tiết.
 - `docs/`: Tài liệu tổng hợp công cụ/repo AI video, quy trình chống sai lệch và nhật ký dự án.
@@ -22,6 +23,9 @@ Các mô hình Video AI thuần túy thường làm biến dạng logo, chữ tr
 
 ## 3. Khởi chạy nhanh
 ```powershell
+# 0. Mở Giao diện Trực quan "Đội Làm Video A.I. — 7 Trợ Lý" (http://localhost:4173)
+node scripts/dashboard-server.mjs
+
 # 1. Kiểm tra dữ liệu mẫu
 node scripts/validate-assets.mjs
 
