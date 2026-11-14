@@ -1,0 +1,55 @@
+{
+  "id": "sample-campaign",
+  "title": "Chiến dịch Bình Giữ Nhiệt 24h — TikTok & Shopee",
+  "productId": "sample-product",
+  "characterId": "sample-kol",
+  "platforms": ["tiktok", "shopee", "facebook", "web"],
+  "hookText": "Đừng mua bình giữ nhiệt nếu bạn chưa xem 3 chi tiết này!",
+  "ctaText": "Giảm ngay 38% hôm nay — Bấm giỏ hàng bên dưới!",
+  "scenes": [
+    {
+      "id": "scene-1-hook",
+      "type": "ai-lifestyle",
+      "durationSec": 4,
+      "subtitle": "Đi làm cả ngày mà nước đá vẫn lạnh buốt như mới pha?",
+      "visualAction": "Character holds the exact product casually on an office desk, looking at camera with a confident smile, subtle slow camera push-in.",
+      "setting": "Bright modern sunlit minimalist office desk with laptop and notebook in soft bokeh background",
+      "motionLevel": "low",
+      "keyframeSrc": "",
+      "qcStatus": "pending",
+      "videoSrc": ""
+    },
+    {
+      "id": "scene-2-experience",
+      "type": "ai-experience",
+      "durationSec": 5,
+      "subtitle": "Cầm cực chắc tay với lớp sơn nhám chống bám vân tay siêu mịn.",
+      "visualAction": "Close-up of character's hand gently lifting the matte black bottle, natural studio daylight shimmer, no rapid rotation.",
+      "setting": "Clean warm indoor lifestyle counter, natural window light",
+      "motionLevel": "low",
+      "keyframeSrc": "",
+      "qcStatus": "pending",
+      "videoSrc": ""
+    },
+    {
+      "id": "scene-3-product-truth",
+      "type": "real-product-closeup",
+      "durationSec": 4,
+      "subtitle": "Lõi Inox 304 chuẩn y tế — Giữ nóng & lạnh suốt 24 giờ!",
+      "visualAction": "Remotion renders 100% original high-res product photo with crisp spec callouts (no AI distortion).",
+      "setting": "Clean brand studio card",
+      "motionLevel": "none",
+      "videoSrc": ""
+    },
+    {
+      "id": "scene-4-cta",
+      "type": "offer-cta",
+      "durationSec": 3,
+      "subtitle": "Chỉ 249.000đ hôm nay — Đặt ngay kẻo hết Flash Sale!",
+      "visualAction": "Remotion animated price card, discount badge, and platform CTA.",
+      "setting": "Brand kit end-card",
+      "motionLevel": "none",
+      "videoSrc": ""
+    }
+  ]
+}

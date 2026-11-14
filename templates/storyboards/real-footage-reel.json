@@ -1,0 +1,58 @@
+{
+  "templateId": "real-footage-reel",
+  "name": "Reel Quay Thật 100% (Zero-AI-Pixel, ~25s)",
+  "description": "Luồng quay thật bằng điện thoại + giọng thật. AI chỉ quyết định cắt đâu, ghép cảnh nào, chữ gì; không sinh/vẽ lại điểm ảnh sản phẩm hoặc người.",
+  "mode": "real-footage",
+  "platforms": ["tiktok", "facebook", "shopee"],
+  "scenes": [
+    {
+      "id": "scene-1-hook",
+      "type": "real-footage",
+      "durationSec": 4,
+      "footageId": "",
+      "trimStartSec": 0,
+      "trimEndSec": 4,
+      "subtitle": "[HOOK] Điều ít ai nói khi mua sản phẩm này!",
+      "visualAction": "Quay thật: người dùng cầm sản phẩm nhìn thẳng máy quay, nói câu hook bằng giọng thật.",
+      "setting": "Cảnh quay thật bằng điện thoại, ánh sáng tự nhiên"
+    },
+    {
+      "id": "scene-2-demo",
+      "type": "real-footage",
+      "durationSec": 8,
+      "footageId": "",
+      "trimStartSec": 0,
+      "trimEndSec": 8,
+      "subtitle": "[TRẢI NGHIỆM] Dùng thực tế, thấy rõ từng chi tiết.",
+      "visualAction": "Quay thật: cận cảnh sử dụng sản phẩm, giữ nguyên hình dáng/logo, không phóng to quá 120%.",
+      "setting": "Cảnh quay thật bằng điện thoại"
+    },
+    {
+      "id": "scene-3-detail",
+      "type": "real-footage",
+      "durationSec": 6,
+      "footageId": "",
+      "trimStartSec": 0,
+      "trimEndSec": 6,
+      "subtitle": "[CHI TIẾT] Nhìn kỹ chất liệu và hoàn thiện.",
+      "visualAction": "Quay thật: cận cảnh chất liệu, logo, nắp/khóa.",
+      "setting": "Cảnh quay thật bằng điện thoại"
+    },
+    {
+      "id": "scene-4-product-truth",
+      "type": "real-product-closeup",
+      "durationSec": 4,
+      "subtitle": "[THÔNG SỐ] Thông tin chính xác theo nhà sản xuất.",
+      "visualAction": "Remotion render ảnh sản phẩm gốc + thông số (không dùng AI).",
+      "setting": "Clean brand studio card"
+    },
+    {
+      "id": "scene-5-cta",
+      "type": "offer-cta",
+      "durationSec": 3,
+      "subtitle": "[ƯU ĐÃI] Đặt hàng chính hãng ngay hôm nay!",
+      "visualAction": "Remotion animated price card, discount badge, and CTA.",
+      "setting": "Brand kit end-card"
+    }
+  ]
+}

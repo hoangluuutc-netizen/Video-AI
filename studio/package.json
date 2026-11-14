@@ -1,0 +1,25 @@
+{
+  "name": "ecommerce-video-studio",
+  "version": "1.0.0",
+  "description": "Remotion Video Studio cho quảng cáo sản phẩm TMĐT đa nền tảng (TikTok, Shopee, Facebook, Web)",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio src/index.ts",
+    "build": "remotion bundle src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "render:tiktok": "remotion render src/index.ts TikTok-9x16 out/tiktok-9x16.mp4",
+    "render:facebook": "remotion render src/index.ts Facebook-1x1 out/facebook-1x1.mp4",
+    "render:web": "remotion render src/index.ts Web-16x9 out/web-16x9.mp4"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.250",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.250"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "typescript": "^5.6.3"
+  }
+}

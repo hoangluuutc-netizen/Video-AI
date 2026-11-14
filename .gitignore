@@ -1,0 +1,24 @@
+# Node.js
+node_modules/
+dist/
+build/
+.remotion/
+studio/.remotion/
+studio/out/
+
+# Environment & Secrets
+.env
+.env.local
+
+# Rendered & Heavy Media Outputs
+outputs/
+*.mp4
+*.mov
+*.webm
+*.wav
+*.mp3
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+*.log

@@ -1,0 +1,16 @@
+{
+  "id": "sample-kol",
+  "name": "Minh Anh (Đại sứ thương hiệu)",
+  "role": "Chuyên viên review & trải nghiệm sản phẩm",
+  "immutableTraits": [
+    "Vietnamese woman, 26 years old",
+    "Shoulder-length straight dark brown hair",
+    "Warm natural skin tone, friendly confident smile",
+    "Wearing a clean cream-colored casual blazer over white t-shirt"
+  ],
+  "voiceStyle": "Trẻ trung, rõ ràng, tốc độ vừa phải, giọng miền Bắc hoặc miền Nam tự nhiên",
+  "referenceImages": {
+    "portrait": "assets/characters/sample-kol/portrait.png",
+    "halfBody": "assets/characters/sample-kol/half-body.png"
+  }
+}

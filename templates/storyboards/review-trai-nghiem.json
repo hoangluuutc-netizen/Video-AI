@@ -1,0 +1,64 @@
+{
+  "templateId": "review-trai-nghiem",
+  "name": "Review Trải Nghiệm Thực Tế (20s)",
+  "description": "Cấu trúc 5 cảnh kể chuyện tự nhiên: Vấn đề -> Mở hộp/Trên tay -> Trải nghiệm thực tế -> Ảnh gốc đối chứng -> CTA.",
+  "platforms": ["tiktok", "facebook", "web"],
+  "scenes": [
+    {
+      "id": "scene-1-problem",
+      "type": "ai-lifestyle",
+      "durationSec": 4,
+      "subtitle": "[VẤN ĐỀ] Dùng cả ngày mà vẫn gặp tình trạng khó chịu này?",
+      "visualAction": "Character sits naturally at a clean workspace looking thoughtful, product placed beside them in soft focus.",
+      "setting": "Bright minimalist home office, natural daylight",
+      "motionLevel": "low",
+      "keyframeSrc": "",
+      "qcStatus": "pending",
+      "videoSrc": ""
+    },
+    {
+      "id": "scene-2-unbox",
+      "type": "ai-experience",
+      "durationSec": 4,
+      "subtitle": "[TRÊN TAY] Từ ngày đổi sang em này, mọi thứ gọn gàng hẳn.",
+      "visualAction": "Character picks up the exact product smoothly with both hands, showing true scale and proportions.",
+      "setting": "Warm wooden table, natural window light",
+      "motionLevel": "low",
+      "keyframeSrc": "",
+      "qcStatus": "pending",
+      "videoSrc": ""
+    },
+    {
+      "id": "scene-3-demo",
+      "type": "ai-experience",
+      "durationSec": 5,
+      "subtitle": "[THỰC TẾ] Thiết kế chắc chắn, dùng bền bỉ mỗi ngày.",
+      "visualAction": "Medium shot of character using the product calmly in real lifestyle context, gentle camera pan.",
+      "setting": "Modern sunlit kitchen or desk setup",
+      "motionLevel": "low",
+      "keyframeSrc": "",
+      "qcStatus": "pending",
+      "videoSrc": ""
+    },
+    {
+      "id": "scene-4-product-truth",
+      "type": "real-product-closeup",
+      "durationSec": 4,
+      "subtitle": "[CHI TIẾT GỐC] Xem kỹ từng thông số chuẩn từ nhà sản xuất.",
+      "visualAction": "Remotion renders 100% original product photo with verified highlights.",
+      "setting": "Clean brand studio card",
+      "motionLevel": "none",
+      "videoSrc": ""
+    },
+    {
+      "id": "scene-5-cta",
+      "type": "offer-cta",
+      "durationSec": 3,
+      "subtitle": "[ƯU ĐÃI] Đặt hàng chính hãng ngay hôm nay!",
+      "visualAction": "Remotion animated price card, discount badge, and CTA.",
+      "setting": "Brand kit end-card",
+      "motionLevel": "none",
+      "videoSrc": ""
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "brandName": "Shop Chính Hãng",
+  "tagline": "Chất lượng thật - Giá trị thật",
+  "primaryColor": "#EE4D2D",
+  "secondaryColor": "#111827",
+  "accentColor": "#F59E0B",
+  "backgroundColor": "#FFFFFF",
+  "fontFamily": "Inter, system-ui, sans-serif",
+  "defaultCta": {
+    "tiktok": "Bấm giỏ hàng góc trái nhận ưu đãi hôm nay!",
+    "shopee": "Mua ngay tại Shopee Mall - Freeship Extra!",
+    "facebook": "Inbox ngay hoặc bấm Mua Ngay để được tư vấn!",
+    "web": "Đặt hàng chính hãng tại Website"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "id": "sample-product",
+  "name": "Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml",
+  "sku": "BGN-304-750-BLK",
+  "category": "Gia dụng thông minh",
+  "price": "399.000đ",
+  "salePrice": "249.000đ",
+  "discountBadge": "-38% FLASH SALE",
+  "highlights": [
+    "Inox 304 chuẩn y tế, giữ nhiệt 24h",
+    "Sơn nhám tĩnh điện chống bám vân tay",
+    "Nắp khóa chống tràn 360 độ"
+  ],
+  "immutableFeatures": [
+    "Matte black cylindrical body",
+    "Minimalist silver engraved logo centered on the upper third",
+    "Brushed stainless steel rim and leak-proof flip-top lid",
+    "Exact height-to-width ratio 3.2:1"
+  ],
+  "forbiddenChanges": [
+    "Do not change matte black finish to glossy",
+    "Do not alter or warp the silver logo",
+    "Do not add extra buttons or handles not present in reference"
+  ],
+  "referenceImages": {
+    "front": "assets/products/sample-product/front.png",
+    "detail": "assets/products/sample-product/detail.png",
+    "cutout": "assets/products/sample-product/cutout.png"
+  }
+}

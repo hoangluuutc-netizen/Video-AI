@@ -1,0 +1,52 @@
+{
+  "templateId": "tiktok-flash-sale",
+  "name": "TikTok & Shopee Flash Sale (16s)",
+  "description": "Cấu trúc 4 cảnh tốc độ cao: Hook 3-4s -> Trải nghiệm cận cảnh -> Ảnh sản phẩm gốc + thông số -> Flash Sale CTA.",
+  "platforms": ["tiktok", "shopee", "facebook"],
+  "scenes": [
+    {
+      "id": "scene-1-hook",
+      "type": "ai-lifestyle",
+      "durationSec": 4,
+      "subtitle": "[HOOK] Đừng mua nếu bạn chưa xem 3 điểm này!",
+      "visualAction": "Character holds the exact product in natural daylight, looking directly at camera with an expressive reaction, subtle slow push-in.",
+      "setting": "Modern sunlit lifestyle desk or living space with soft bokeh background",
+      "motionLevel": "low",
+      "keyframeSrc": "",
+      "qcStatus": "pending",
+      "videoSrc": ""
+    },
+    {
+      "id": "scene-2-experience",
+      "type": "ai-experience",
+      "durationSec": 5,
+      "subtitle": "[TRẢI NGHIỆM] Cầm chắc tay, hoàn thiện sắc nét từng chi tiết.",
+      "visualAction": "Close-up of character's hand gently demonstrating the product surface and ergonomics in natural light, no rapid rotation.",
+      "setting": "Clean warm indoor counter, soft window lighting",
+      "motionLevel": "low",
+      "keyframeSrc": "",
+      "qcStatus": "pending",
+      "videoSrc": ""
+    },
+    {
+      "id": "scene-3-product-truth",
+      "type": "real-product-closeup",
+      "durationSec": 4,
+      "subtitle": "[THÔNG SỐ THẬT] Chất liệu chuẩn, bảo hành chính hãng.",
+      "visualAction": "Remotion renders 100% original high-res product photo with crisp spec callouts (no AI distortion).",
+      "setting": "Clean brand studio card",
+      "motionLevel": "none",
+      "videoSrc": ""
+    },
+    {
+      "id": "scene-4-cta",
+      "type": "offer-cta",
+      "durationSec": 3,
+      "subtitle": "[FLASH SALE] Ưu đãi hôm nay — Bấm giỏ hàng đặt ngay!",
+      "visualAction": "Remotion animated price card, discount badge, and platform CTA.",
+      "setting": "Brand kit end-card",
+      "motionLevel": "none",
+      "videoSrc": ""
+    }
+  ]
+}
