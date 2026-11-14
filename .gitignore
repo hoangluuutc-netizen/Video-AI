@@ -9,9 +9,14 @@ studio/out/
 # Environment & Secrets
 .env
 .env.local
+assets/brand-kit/ai-config.json
 
 # Rendered & Heavy Media Outputs
 outputs/
+campaigns/*/media/
+campaigns/*/out/
+campaigns/*/cutlist.md
+campaigns/*/cutlist.csv
 *.mp4
 *.mov
 *.webm

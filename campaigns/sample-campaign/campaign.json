@@ -1,55 +1,64 @@
 {
   "id": "sample-campaign",
-  "title": "Chiến dịch Bình Giữ Nhiệt 24h — TikTok & Shopee",
+  "title": "Chiến dịch Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml (real-footage)",
   "productId": "sample-product",
   "characterId": "sample-kol",
-  "platforms": ["tiktok", "shopee", "facebook", "web"],
-  "hookText": "Đừng mua bình giữ nhiệt nếu bạn chưa xem 3 chi tiết này!",
-  "ctaText": "Giảm ngay 38% hôm nay — Bấm giỏ hàng bên dưới!",
+  "platforms": [
+    "tiktok",
+    "shopee",
+    "facebook",
+    "web"
+  ],
+  "hookText": "Đừng mua Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml nếu bạn chưa kiểm tra 3 chi tiết sống còn này!",
+  "ctaText": "Chỉ 249.000đ hôm nay — Đặt ngay!",
   "scenes": [
     {
       "id": "scene-1-hook",
-      "type": "ai-lifestyle",
+      "type": "real-footage",
       "durationSec": 4,
-      "subtitle": "Đi làm cả ngày mà nước đá vẫn lạnh buốt như mới pha?",
-      "visualAction": "Character holds the exact product casually on an office desk, looking at camera with a confident smile, subtle slow camera push-in.",
-      "setting": "Bright modern sunlit minimalist office desk with laptop and notebook in soft bokeh background",
-      "motionLevel": "low",
-      "keyframeSrc": "",
-      "qcStatus": "pending",
-      "videoSrc": ""
+      "subtitle": "Đừng mua Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml nếu bạn chưa kiểm tra 3 chi tiết sống còn này!",
+      "visualAction": "Quay thật điện thoại: cầm sản phẩm trên tay, nói câu hook trực diện.",
+      "setting": "Standard clean studio/lifestyle setting",
+      "footageId": "clip-quay-that-01",
+      "trimStartSec": 0,
+      "trimEndSec": 4,
+      "audioSrc": "media/audio/scene-1-hook.wav"
     },
     {
-      "id": "scene-2-experience",
-      "type": "ai-experience",
+      "id": "scene-2-problem-flip",
+      "type": "real-footage",
       "durationSec": 5,
-      "subtitle": "Cầm cực chắc tay với lớp sơn nhám chống bám vân tay siêu mịn.",
-      "visualAction": "Close-up of character's hand gently lifting the matte black bottle, natural studio daylight shimmer, no rapid rotation.",
-      "setting": "Clean warm indoor lifestyle counter, natural window light",
-      "motionLevel": "low",
-      "keyframeSrc": "",
-      "qcStatus": "pending",
-      "videoSrc": ""
+      "subtitle": "Mang nước đi làm mà chỉ 2 tiếng đã hết lạnh, vỏ bình lại đọng nước ướt hết giấy tờ trong balo. Khác biệt nằm ở kết cấu: Inox 304 chuẩn y tế, giữ nhiệt 24h kết hợp lớp sơn nhám tĩnh điện chống bám vân tay.",
+      "visualAction": "Quay thật cận cảnh bề mặt sơn nhám & thao tác mở nắp.",
+      "setting": "Standard clean studio/lifestyle setting",
+      "footageId": "clip-quay-that-01",
+      "trimStartSec": 0,
+      "trimEndSec": 5,
+      "audioSrc": "media/audio/scene-2-problem-flip.wav"
     },
     {
-      "id": "scene-3-product-truth",
+      "id": "scene-3-proof",
       "type": "real-product-closeup",
       "durationSec": 4,
-      "subtitle": "Lõi Inox 304 chuẩn y tế — Giữ nóng & lạnh suốt 24 giờ!",
-      "visualAction": "Remotion renders 100% original high-res product photo with crisp spec callouts (no AI distortion).",
-      "setting": "Clean brand studio card",
+      "subtitle": "Nhìn cận cảnh: Inox 304 chuẩn y tế, giữ nhiệt 24h; Sơn nhám tĩnh điện chống bám vân tay; và Nắp khóa chống tràn 360 độ.",
+      "visualAction": "Remotion render 100% ảnh sản phẩm gốc + 3 thông số thật (Zero-AI-Pixel).",
+      "setting": "Standard clean studio/lifestyle setting",
       "motionLevel": "none",
-      "videoSrc": ""
+      "videoSrc": "",
+      "audioSrc": "media/audio/scene-3-proof.wav"
     },
     {
       "id": "scene-4-cta",
       "type": "offer-cta",
       "durationSec": 3,
-      "subtitle": "Chỉ 249.000đ hôm nay — Đặt ngay kẻo hết Flash Sale!",
-      "visualAction": "Remotion animated price card, discount badge, and platform CTA.",
-      "setting": "Brand kit end-card",
+      "subtitle": "Giá gốc 399.000đ giảm chỉ còn 249.000đ (-38% FLASH SALE) — bấm giỏ hàng đặt ngay!",
+      "visualAction": "Remotion render thẻ giá chính hãng + nút CTA.",
+      "setting": "Standard clean studio/lifestyle setting",
       "motionLevel": "none",
-      "videoSrc": ""
+      "videoSrc": "",
+      "audioSrc": "media/audio/scene-4-cta.wav"
     }
-  ]
+  ],
+  "mode": "real-footage",
+  "voiceoverSrc": "media/audio/voiceover-full.mp3"
 }

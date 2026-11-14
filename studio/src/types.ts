@@ -15,6 +15,7 @@ export interface SceneItem {
   visualAction: string;
   setting: string;
   keyframeSrc?: string;
+  audioSrc?: string;
   trimStartSec?: number;
   trimEndSec?: number;
   qcStatus?: QcStatus;

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Đội Làm Video A.I. — 7 Trợ Lý, 1 Cỗ Máy Ra Reel</title>
+  <title>Đội Làm Video A.I. — 7 Trợ Lý (Người Thật + Sản Phẩm Thật + Giọng Thật)</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -16,28 +16,128 @@
       </div>
       <nav class="nav-tabs">
         <button class="nav-tab active" onclick="scrollToSlide('slide-01')">01 Tổng quan</button>
-        <button class="nav-tab" onclick="scrollToSlide('slide-02')">02 Ý tưởng & Sản phẩm</button>
+        <button class="nav-tab" onclick="scrollToSlide('slide-02')">02 Khóa Người & SP Thật</button>
         <button class="nav-tab" onclick="scrollToSlide('slide-03')">03 Phễu Hook (15→1)</button>
         <button class="nav-tab" onclick="scrollToSlide('slide-04')">04 Kịch bản 6 khối</button>
-        <button class="nav-tab" onclick="scrollToSlide('slide-05')">05 Đạo diễn hình</button>
-        <button class="nav-tab" onclick="scrollToSlide('slide-06')">06 Dựng Reel 9:16</button>
-        <button class="nav-tab" onclick="scrollToSlide('slide-07')">07 Kiểm duyệt & Sổ Reel</button>
+        <button class="nav-tab" onclick="scrollToSlide('slide-05')">05 Kéo Thả & Đạo diễn</button>
+        <button class="nav-tab" onclick="scrollToSlide('slide-06')">06 Giọng Đọc & Dựng Reel</button>
+        <button class="nav-tab" onclick="scrollToSlide('slide-07')">07 Kiểm duyệt SSIM</button>
+        <button class="nav-tab" style="background:var(--orange);color:#FFF;border-color:var(--orange);" onclick="toggleHelpDrawer('help-brain-settings');scrollToSlide('brain-settings-card')">⚙️ Cài đặt Bộ não</button>
       </nav>
       <span id="server-status" class="server-badge">Đang kiểm tra kết nối...</span>
     </header>
 
+    <!-- THANH TRẠNG THÁI TIẾN ĐỘ THỜI GIAN THỰC & BỘ NÃO ĐANG DÙNG -->
+    <div class="telemetry-bar">
+      <div class="telemetry-top">
+        <div>
+          <strong style="color:var(--orange);">⚡ TRẠNG THÁI:</strong>
+          <span id="job-status-text">Sẵn sàng — Chờ lệnh từ bạn</span>
+        </div>
+        <div style="display:flex;gap:16px;align-items:center;font-weight:800;">
+          <span>📊 Tiến độ: <strong id="job-percent-text" style="color:var(--orange);">0%</strong></span>
+          <span>⏱️ Đã xử lý: <strong id="job-elapsed-text">00:00s</strong></span>
+          <span>⏳ Dự kiến còn lại: <strong id="job-eta-text">--</strong></span>
+        </div>
+      </div>
+      <div class="progress-track">
+        <div id="job-progress-fill" class="progress-fill"></div>
+      </div>
+      <div class="brain-pills">
+        <span class="brain-pill">🧠 Kịch bản: <strong id="pill-llm">gemini-3.1-pro-preview</strong></span>
+        <span class="brain-pill">🖼️ Ghép Ảnh Thật: <strong id="pill-img">FFmpeg + Gemini Nano Banana 2.1</strong></span>
+        <span class="brain-pill">🎥 Dựng Video: <strong id="pill-vid">FFmpeg 1080×1920 + Gemini Omni 1.1</strong></span>
+        <span class="brain-pill">🎙️ Giọng Đọc & Âm Thanh: <strong id="pill-tts">Giọng Việt Tự Nhiên (48kHz Stereo)</strong></span>
+        <button class="icon-pill-btn" style="margin-left:auto;background:#262626;color:#FFF;border-color:#52525B;" onclick="scrollToSlide('brain-settings-card')">⚙️ Đổi Bộ Não / API Key</button>
+      </div>
+    </div>
+
+    <!-- BẢNG CÀI ĐẶT CÁC CÔNG CỤ & BỘ NÃO AI -->
+    <section id="brain-settings-card" class="slide-card" style="padding:24px;">
+      <div class="slide-meta">
+        <span>CẤU HÌNH HỆ THỐNG • BỘ NÃO AI & CÔNG CỤ XỬ LÝ</span>
+        <div class="section-tools">
+          <button class="icon-pill-btn help-btn" onclick="toggleHelpDrawer('help-brain-settings')">❓ Hướng dẫn mục này</button>
+          <button class="icon-pill-btn" onclick="openProjectFile('assets/brand-kit/ai-config.json')">📂 Mở `ai-config.json`</button>
+          <button class="icon-pill-btn" onclick="openProjectFile('.env.example')">📂 Mở `.env`</button>
+        </div>
+      </div>
+
+      <div id="help-brain-settings" class="help-drawer">
+        <strong>💡 Hướng dẫn Cài đặt Bộ não & Công cụ:</strong><br/>
+        • <strong>Bộ não Kịch bản (LLM):</strong> Chọn mô hình phân tích sản phẩm, chấm điểm 15 Hook và viết lời đọc 6 khối.<br/>
+        • <strong>Bộ não Ghép Cảnh Người Thật & SP Thật:</strong> Chọn <em>"FFmpeg Studio Composite (Giữ 100% Pixel Gốc)"</em> nếu muốn ghép trực tiếp ảnh người thật và ảnh sản phẩm thật không tốn phí API, hoặc chọn <em>"Gemini Nano Banana 2.1"</em> khi có `GEMINI_API_KEY`.<br/>
+        • <strong>Bộ não Giọng Đọc Tiếng Việt (TTS):</strong> Mặc định dùng <em>"Giọng Việt Tự Nhiên (Google/Edge Neural + Nhạc nền ấm)"</em> phát ra tiếng ngay mà không cần key; nếu có `GEMINI_API_KEY` bạn có thể chọn <em>"Gemini 3.8 Flash TTS"</em>.<br/>
+        • Sau khi chọn xong, bấm <strong>💾 Lưu Cấu Hình Bộ Não</strong>.
+      </div>
+
+      <div class="idea-box">
+        <div class="field-group">
+          <label>🧠 Bộ não Kịch bản & Chấm Hook</label>
+          <select id="cfg-llm-model">
+            <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro (Phân tích sâu TMĐT)</option>
+            <option value="gemini-3-flash-preview">Gemini 3 Flash (Tốc độ cao)</option>
+            <option value="local-ecommerce-director">Rule Engine Nội Bộ (Không cần API key)</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>🖼️ Bộ não Tạo/Ghép Cảnh Từ Ảnh Thật</label>
+          <select id="cfg-image-model">
+            <option value="ffmpeg-real-composite">FFmpeg Studio Composite (Giữ 100% Ảnh Người & SP Thật)</option>
+            <option value="gemini-nano-banana-2.1">Gemini Nano Banana 2.1 (Khóa Reference Image)</option>
+            <option value="gemini-3-pro-image">Gemini 3 Pro Image (4K Studio)</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>🎥 Bộ não Tạo Chuyển Động Video</label>
+          <select id="cfg-video-model">
+            <option value="ffmpeg-natural-1080p">FFmpeg 1080×1920 30fps (Sắc nét, không biến dạng)</option>
+            <option value="gemini-omni-1.1-flash">Gemini Omni 1.1 Flash (Image-to-Video)</option>
+            <option value="veo-3.1">Google Veo 3.1 (Ingredients-to-Video)</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>🎙️ Bộ não Sinh Giọng Đọc & Âm Thanh</label>
+          <select id="cfg-tts-model">
+            <option value="google-vi-natural">Giọng Nữ Tiếng Việt Tự Nhiên + Nhạc Nền Ấm (Miễn phí)</option>
+            <option value="gemini-3.8-flash-tts">Gemini 3.8 Flash TTS (Giọng Kore / Puck truyền cảm)</option>
+            <option value="windows-sapi-vi">Windows Local Speech + Studio Ambience</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>🔑 Gemini API Key (Tùy chọn — Để trống nếu dùng chế độ Local/Miễn phí)</label>
+          <input type="password" id="cfg-gemini-key" placeholder="Nhập GEMINI_API_KEY nếu muốn gọi Cloud AI..." />
+        </div>
+        <div class="field-group" style="justify-content:flex-end;">
+          <label>&nbsp;</label>
+          <button class="btn btn-orange" onclick="saveAiConfigFromUi()">💾 Lưu Cấu Hình Bộ Não & Công Cụ</button>
+        </div>
+      </div>
+    </section>
+
     <!-- SLIDE 01/08: ĐỘI LÀM VIDEO A.I. -->
     <section id="slide-01" class="slide-card">
       <div class="slide-meta">
-        <span>01 / 08</span>
-        <span>7 TRỢ LÝ • 1 CỖ MÁY</span>
+        <span>01 / 08 • 7 TRỢ LÝ • 1 CỖ MÁY</span>
+        <div class="section-tools">
+          <button class="icon-pill-btn help-btn" onclick="toggleHelpDrawer('help-slide-01')">❓ Hướng dẫn mục 01</button>
+          <button class="icon-pill-btn" onclick="openProjectFile('docs/HUONG_DAN_SU_DUNG.md')">📂 Mở `HUONG_DAN_SU_DUNG.md`</button>
+          <button class="icon-pill-btn" onclick="openProjectFile('ARCHITECTURE.md')">📂 Mở `ARCHITECTURE.md`</button>
+        </div>
       </div>
+
+      <div id="help-slide-01" class="help-drawer">
+        <strong>💡 Hướng dẫn Mục 01 (Tổng quan 7 Trợ lý):</strong><br/>
+        • Đây là sơ đồ điều hành tổng thể. Bạn có thể <strong>bấm chuột vào bất kỳ ô Trợ lý nào (01 → 07)</strong> để cuộn nhanh tới khu vực làm việc của trợ lý đó.<br/>
+        • Mục tiêu xuyên suốt: Lấy <strong>Ảnh/Video Người thật + Ảnh Sản phẩm thật</strong> bạn đưa vào, để AI xử lý kịch bản, ghép cảnh, lồng giọng đọc tiếng Việt tự nhiên và xuất ra video MP4 dọc 1080×1920 sắc nét như quay thực tế.
+      </div>
+
       <div>
         <h1 class="slide-headline">
           MÌNH DỰNG NGUYÊN MỘT
           <span class="accent">ĐỘI LÀM VIDEO A.I.</span>
         </h1>
-        <p class="slide-sub" style="margin-top:8px;">7 TRỢ LÝ, 1 CỖ MÁY RA REEL — HỖ TRỢ CẢ QUAY THẬT (ZERO-AI-PIXEL) & HYBRID AI</p>
+        <p class="slide-sub" style="margin-top:8px;">BÁM SÁT NGƯỜI THẬT & ẢNH SẢN PHẨM THẬT — KỊCH BẢN, CẢNH QUAY & GIỌNG ĐỌC TỰ NHIÊN NHƯ THẬT</p>
       </div>
 
       <div class="team-grid">
@@ -63,53 +163,53 @@
         </div>
         <div class="assistant-card" onclick="scrollToSlide('slide-05')">
           <div class="assistant-top"><span class="assistant-icon">👁️</span><span class="assistant-num">05</span></div>
-          <div class="assistant-title">ĐẠO DIỄN HÌNH</div>
-          <div class="assistant-desc">Chia cảnh 3–6 giây, chống lặp cảnh vừa dùng</div>
+          <div class="assistant-title">KÉO THẢ & ĐẠO DIỄN</div>
+          <div class="assistant-desc">Kéo thả ảnh người/SP thật & dựng phân cảnh</div>
         </div>
         <div class="assistant-card" onclick="scrollToSlide('slide-06')">
-          <div class="assistant-top"><span class="assistant-icon">🎞️</span><span class="assistant-num">06</span></div>
-          <div class="assistant-title">DỰNG REEL</div>
-          <div class="assistant-desc">Ra MP4 dọc 1080×1920, Cutlist CapCut, Remotion</div>
+          <div class="assistant-top"><span class="assistant-icon">🎙️</span><span class="assistant-num">06</span></div>
+          <div class="assistant-title">GIỌNG ĐỌC & DỰNG REEL</div>
+          <div class="assistant-desc">Sinh lời thoại tiếng Việt + Xuất MP4 1080×1920</div>
         </div>
         <div class="assistant-card" onclick="scrollToSlide('slide-07')">
           <div class="assistant-top"><span class="assistant-icon">🛡️</span><span class="assistant-num">07</span></div>
-          <div class="assistant-title">KIỂM DUYỆT</div>
-          <div class="assistant-desc">Soát SSIM khung hình & thông số, PASS mới giao</div>
+          <div class="assistant-title">KIỂM DUYỆT SSIM</div>
+          <div class="assistant-desc">Kiểm tra đủ hình, đủ tiếng & không biến dạng</div>
         </div>
         <div class="assistant-card orange-card" onclick="scrollToSlide('slide-06')">
           <div class="assistant-top"><span class="assistant-icon">▶️</span><span class="assistant-num">ĐẦU RA</span></div>
-          <div class="assistant-title">REEL 9:16 CHUẨN</div>
-          <div class="assistant-desc">MP4 dọc 1080×1920 + 3 bìa + Sổ vận hành</div>
+          <div class="assistant-title">REEL 9:16 CÓ TIẾNG</div>
+          <div class="assistant-desc">Người thật + SP thật + Giọng thuyết minh chuẩn</div>
         </div>
-      </div>
-
-      <div class="pipeline-bar">
-        <div class="pipeline-step">💡 Ý TƯỞNG</div>
-        <span class="pipeline-arrow">→</span>
-        <div class="pipeline-step">❝❞ HOOK (15→1)</div>
-        <span class="pipeline-arrow">→</span>
-        <div class="pipeline-step">📄 KỊCH BẢN (6 KHỐI)</div>
-        <span class="pipeline-arrow">→</span>
-        <div class="pipeline-step">🖼️ ĐẠO DIỄN HÌNH</div>
-        <span class="pipeline-arrow">→</span>
-        <div class="pipeline-step">🎞️ DỰNG REEL</div>
-        <span class="pipeline-arrow">→</span>
-        <div class="pipeline-step">✔️ KIỂM DUYỆT PASS</div>
       </div>
     </section>
 
-    <!-- SLIDE 02/08: GIAO MỘT Ý TƯỞNG & CHỌN CHẾ ĐỘ -->
+    <!-- SLIDE 02/08: GIAO MỘT Ý TƯỞNG & KHÓA NGƯỜI THẬT + SẢN PHẨM THẬT -->
     <section id="slide-02" class="slide-card">
       <div class="slide-meta">
-        <span>02 / 08</span>
-        <span>TỪ Ý TƯỞNG ĐẾN REEL</span>
+        <span>02 / 08 • TỪ Ý TƯỞNG ĐẾN REEL • KHÓA TÀI SẢN GỐC</span>
+        <div class="section-tools">
+          <button class="icon-pill-btn help-btn" onclick="toggleHelpDrawer('help-slide-02')">❓ Hướng dẫn mục 02</button>
+          <button class="icon-pill-btn" onclick="openSelectedProductFile()">📂 Mở `product.json`</button>
+          <button class="icon-pill-btn" onclick="openSelectedCharacterFile()">📂 Mở `character.json`</button>
+          <button class="icon-pill-btn" onclick="openProjectFile('assets/brand-kit/brand.json')">📂 Mở `brand.json`</button>
+        </div>
       </div>
+
+      <div id="help-slide-02" class="help-drawer">
+        <strong>💡 Hướng dẫn Mục 02 (Chọn Sản Phẩm, Người Thật & Ý Tưởng):</strong><br/>
+        1. <strong>Mã chiến dịch (Slug):</strong> Đặt tên viết thường không dấu (ví dụ: <code>sample-campaign</code> hoặc <code>vali-cho-be-01</code>).<br/>
+        2. <strong>Chế độ sản xuất:</strong> Chọn <em>"Tạo Video từ Ảnh Người Thật + Ảnh SP Thật (Khóa 100% chi tiết gốc + Lồng tiếng)"</em> để tận dụng ngay ảnh chụp sản phẩm và ảnh nhân vật bạn tải lên.<br/>
+        3. Bấm nút <strong>📂 Mở `product.json`</strong> hoặc <strong>📂 Mở `character.json`</strong> nếu muốn sửa trực tiếp tên sản phẩm, giá bán hoặc đặc điểm nhân vật trên máy.<br/>
+        4. Sau khi nhập ý tưởng thô, bấm nút cam <strong>⚡ Giao Ý Tưởng Cho 7 Trợ Lý</strong>.
+      </div>
+
       <div>
         <h2 class="slide-headline">
           MÌNH GIAO CHO HỌ
           <span class="accent">MỘT Ý TƯỞNG.</span>
         </h2>
-        <p class="slide-sub" style="margin-top:6px;">CHỌN SẢN PHẨM, CHẾ ĐỘ SẢN XUẤT VÀ Ý TƯỞNG THÔ ĐỂ KÍCH HOẠT 7 TRỢ LÝ</p>
+        <p class="slide-sub" style="margin-top:6px;">KHÓA CHẶT HỒ SƠ SẢN PHẨM THẬT & NGƯỜI THẬT TRƯỚC KHI LÊN KỊCH BẢN</p>
       </div>
 
       <div class="idea-box">
@@ -118,25 +218,28 @@
           <input type="text" id="inp-campaign-id" value="sample-campaign" />
         </div>
         <div class="field-group">
-          <label>Chế độ sản xuất (Bảo vệ sản phẩm)</label>
+          <label>Chế độ tạo video (Bảo toàn người & sản phẩm thật)</label>
           <select id="inp-mode" onchange="onModeChange()">
-            <option value="real-footage">Quay thật 100% (Zero-AI-Pixel: Cấm AI chạm điểm ảnh)</option>
-            <option value="hybrid-ai">Hybrid AI (Keyframe QC + Veo/Kling + Remotion)</option>
+            <option value="real-footage" selected>🔒 Tạo từ Ảnh/Video Người Thật + SP Thật (Giữ 100% chi tiết gốc + Có lồng tiếng)</option>
+            <option value="hybrid-ai">✨ Hybrid AI (Ảnh thật + Keyframe AI có kiểm duyệt QC + Lồng tiếng)</option>
           </select>
         </div>
         <div class="field-group">
-          <label>Sản phẩm gốc (assets/products/)</label>
+          <label>Sản phẩm thật (`assets/products/`)</label>
           <select id="inp-product" onchange="onProductChange()"></select>
         </div>
         <div class="field-group">
-          <label>Nhân vật / Người lên hình</label>
-          <select id="inp-character"></select>
+          <label>Người thật lên hình (`assets/characters/`)</label>
+          <select id="inp-character" onchange="onProductChange()"></select>
         </div>
         <div class="field-group" style="grid-column: 1 / -1;">
           <label>Ý tưởng thô / Nỗi đau khách hàng muốn đánh trúng</label>
           <textarea id="inp-raw-idea">Đi làm, đi học cả ngày cần bình giữ nhiệt Inox 304 giữ đá lạnh 24h, không đổ mồ hôi vỏ ngoài, cầm sơn nhám sang tay.</textarea>
         </div>
       </div>
+
+      <!-- Bảng Khóa Bảo Toàn Chi Tiết Sản Phẩm Thật & Người Thật -->
+      <div class="source-grid" id="truth-lock-summary"></div>
 
       <div class="btn-row">
         <button class="btn btn-orange" onclick="runAllAssistants()">⚡ Giao Ý Tưởng Cho 7 Trợ Lý (Tự động chạy 01 → 05)</button>
@@ -148,9 +251,19 @@
     <!-- SLIDE 03/08: TRƯỚC HẾT, 3 TRỢ LÝ LO CÁI HOOK -->
     <section id="slide-03" class="slide-card">
       <div class="slide-meta">
-        <span>03 / 08</span>
-        <span>TRỢ LÝ 01 – 02 – 03 • HOOK</span>
+        <span>03 / 08 • TRỢ LÝ 01 – 02 – 03 • HOOK</span>
+        <div class="section-tools">
+          <button class="icon-pill-btn help-btn" onclick="toggleHelpDrawer('help-slide-03')">❓ Hướng dẫn mục 03</button>
+          <button class="icon-pill-btn" onclick="openCurrentCampaignFile('campaign.json')">📂 Mở `campaign.json`</button>
+        </div>
       </div>
+
+      <div id="help-slide-03" class="help-drawer">
+        <strong>💡 Hướng dẫn Mục 03 (Phễu lọc 15 Hook → 1 Hook thắng):</strong><br/>
+        • Hệ thống tự động tạo <strong>15 câu mở đầu (Hook)</strong> theo 5 cơ chế tâm lý và chấm điểm trên thang 100.<br/>
+        • Những câu dưới 70 điểm sẽ bị làm mờ. Bạn chỉ cần <strong>nhấn chuột vào câu Hook bạn thích nhất</strong> để chọn làm <strong>🏆 1 Hook Thắng</strong> (câu này sẽ tự động chuyển xuống Khối 1 của Kịch bản).
+      </div>
+
       <div>
         <h2 class="slide-headline">
           TRƯỚC HẾT, 3 TRỢ LÝ
@@ -181,9 +294,20 @@
     <!-- SLIDE 04/08: RỒI TRỢ LÝ KỊCH BẢN VIẾT LỜI ĐỌC -->
     <section id="slide-04" class="slide-card">
       <div class="slide-meta">
-        <span>04 / 08</span>
-        <span>TRỢ LÝ 04 • KỊCH BẢN</span>
+        <span>04 / 08 • TRỢ LÝ 04 • KỊCH BẢN 6 KHỐI</span>
+        <div class="section-tools">
+          <button class="icon-pill-btn help-btn" onclick="toggleHelpDrawer('help-slide-04')">❓ Hướng dẫn mục 04</button>
+          <button class="icon-pill-btn" onclick="openCurrentCampaignFile('prompts.md')">📂 Mở `prompts.md`</button>
+        </div>
       </div>
+
+      <div id="help-slide-04" class="help-drawer">
+        <strong>💡 Hướng dẫn Mục 04 (Biên tập lời đọc 6 khối):</strong><br/>
+        • Lời đọc được chia thành 6 khối chuẩn chuyển đổi: <strong>1. HOOK → 2. VẤN ĐỀ → 3. LẬT Ý → 4. BẰNG CHỨNG → 5. KẾT QUẢ → 6. CTA</strong>.<br/>
+        • Bạn có thể sửa trực tiếp lời thoại trong các ô từ số 2 đến số 6 (ô số 1 được khóa chặt theo Hook thắng ở mục 03).<br/>
+        • Sửa xong, bấm <strong>↳ Đẩy 6 khối lời đọc xuống Bảng Phân Cảnh</strong> để cập nhật lời đọc cho bộ phận tạo giọng nói và dựng hình.
+      </div>
+
       <div>
         <h2 class="slide-headline">
           RỒI TRỢ LÝ KỊCH BẢN
@@ -204,40 +328,96 @@
     <!-- SLIDE 05/08: TIẾP THEO, ĐẠO DIỄN LÊN HÌNH -->
     <section id="slide-05" class="slide-card">
       <div class="slide-meta">
-        <span>05 / 08</span>
-        <span>TRỢ LÝ 05 • HÌNH ẢNH</span>
+        <span>05 / 08 • TRỢ LÝ 05 • KÉO THẢ ẢNH/VIDEO THẬT & ĐẠO DIỄN HÌNH</span>
+        <div class="section-tools">
+          <button class="icon-pill-btn help-btn" onclick="toggleHelpDrawer('help-slide-05')">❓ Hướng dẫn mục 05</button>
+          <button class="icon-pill-btn" onclick="openProjectFile('assets/footage/catalog.json')">📂 Mở `catalog.json`</button>
+          <button class="icon-pill-btn" onclick="openProjectFile('assets/products')">📂 Mở thư mục `assets/products`</button>
+          <button class="icon-pill-btn" onclick="openProjectFile('assets/characters')">📂 Mở thư mục `assets/characters`</button>
+          <button class="icon-pill-btn" onclick="openProjectFile('assets/footage')">📂 Mở thư mục `assets/footage`</button>
+        </div>
       </div>
+
+      <div id="help-slide-05" class="help-drawer">
+        <strong>💡 Hướng dẫn Mục 05 (Kéo thả Ảnh Người thật, Ảnh Sản phẩm thật & Video mẫu):</strong><br/>
+        • <strong>Ô 1 (Ảnh sản phẩm thật):</strong> Kéo thả ảnh chụp sản phẩm (`.png`, `.jpg`) vào đây. Hệ thống sẽ dùng chính bức ảnh này để ghép vào các cảnh giới thiệu & cận cảnh mà không làm biến dạng bất kỳ chi tiết nào.<br/>
+        • <strong>Ô 2 (Ảnh nhân vật / người thật):</strong> Kéo thả ảnh chân dung/bán thân người thật vào đây. Hệ thống sẽ ghép hình người thật cùng sản phẩm thật vào khung cảnh.<br/>
+        • <strong>Ô 3 (Video quay thật / mẫu):</strong> Nếu có thêm clip quay điện thoại (`.mp4`, `.mov`), kéo thả vào đây hoặc thả thẳng vào từng dòng trong bảng bên dưới.<br/>
+        • <strong>Chỉ có Ảnh mà chưa có Video quay sẵn?</strong> Không sao cả! Chỉ cần thả <strong>Ảnh sản phẩm thật (Ô 1)</strong> và <strong>Ảnh người thật (Ô 2)</strong>, hệ thống sẽ tự động ghép 2 ảnh thật đó thành các cảnh video `1080×1920` kèm giọng đọc tiếng Việt ở Mục 06!
+      </div>
+
       <div>
         <h2 class="slide-headline">
           TIẾP THEO, ĐẠO DIỄN
           <span class="accent">LÊN HÌNH.</span>
         </h2>
-        <p class="slide-sub" style="margin-top:6px;">MỖI CẢNH 3 – 6 GIÂY. HÌNH PHẢI ĐÚNG CÂU ĐANG NÓI & CHỐNG LẶP CẢNH VỪA DÙNG</p>
+        <p class="slide-sub" style="margin-top:6px;">KÉO THẢ ẢNH SẢN PHẨM THẬT, ẢNH NGƯỜI THẬT & VIDEO MẪU — BẢO TOÀN 100% CHI TIẾT GỐC</p>
       </div>
 
-      <div class="source-grid">
-        <div class="spec-row"><strong>▶️ Video thật</strong><span style="font-size:12px;color:var(--text-muted);">Kho `assets/footage/`</span></div>
-        <div class="spec-row"><strong>🖼️ Ảnh thật</strong><span style="font-size:12px;color:var(--text-muted);">Ảnh gốc `product.json`</span></div>
-        <div class="spec-row"><strong>✨ AI Keyframe</strong><span style="font-size:12px;color:var(--text-muted);">Chỉ bật ở chế độ Hybrid AI</span></div>
-        <div class="spec-row"><strong>🔁 Chống lặp</strong><span id="footage-count-badge" style="font-size:12px;color:var(--orange);font-weight:800;">0 clip trong sổ</span></div>
+      <!-- 3 Khu vực Kéo & Thả Trực Tiếp: Ảnh Sản Phẩm, Ảnh Nhân Vật, Video Quay Thật -->
+      <div class="dropzone-grid">
+        <!-- 1. Kéo thả Ảnh Sản Phẩm Thật -->
+        <div class="dropzone-card" id="dz-product"
+             ondragover="handleDragOver(event, this)"
+             ondragleave="handleDragLeave(event, this)"
+             ondrop="handleAssetDrop(event, 'product')"
+             onclick="document.getElementById('file-product').click()">
+          <input type="file" id="file-product" accept="image/*" style="display:none" onchange="handleAssetSelect(event, 'product')" />
+          <div style="font-size:12px;font-weight:900;text-transform:uppercase;color:var(--orange);">📦 1. KÉO THẢ ẢNH SẢN PHẨM THẬT</div>
+          <div class="dropzone-preview" id="preview-product">
+            <span style="font-size:12px;color:var(--text-muted);padding:12px;">Kéo thả ảnh SP (`.png`, `.jpg`, `.webp`) vào đây hoặc bấm để chọn file</span>
+          </div>
+          <div class="dropzone-status" id="status-product">Lưu tự động vào `assets/products/&lt;id&gt;/`</div>
+        </div>
+
+        <!-- 2. Kéo thả Ảnh Nhân Vật / Người Thật -->
+        <div class="dropzone-card" id="dz-character"
+             ondragover="handleDragOver(event, this)"
+             ondragleave="handleDragLeave(event, this)"
+             ondrop="handleAssetDrop(event, 'character')"
+             onclick="document.getElementById('file-character').click()">
+          <input type="file" id="file-character" accept="image/*" style="display:none" onchange="handleAssetSelect(event, 'character')" />
+          <div style="font-size:12px;font-weight:900;text-transform:uppercase;color:var(--orange);">🧑 2. KÉO THẢ ẢNH NHÂN VẬT THẬT</div>
+          <div class="dropzone-preview" id="preview-character">
+            <span style="font-size:12px;color:var(--text-muted);padding:12px;">Kéo thả ảnh Người thật / KOL (`.png`, `.jpg`) vào đây hoặc bấm để chọn file</span>
+          </div>
+          <div class="dropzone-status" id="status-character">Lưu tự động vào `assets/characters/&lt;id&gt;/`</div>
+        </div>
+
+        <!-- 3. Kéo thả Video Mẫu / Video Quay Thật -->
+        <div class="dropzone-card" id="dz-footage"
+             ondragover="handleDragOver(event, this)"
+             ondragleave="handleDragLeave(event, this)"
+             ondrop="handleAssetDrop(event, 'footage')"
+             onclick="document.getElementById('file-footage').click()">
+          <input type="file" id="file-footage" accept="video/mp4,video/quicktime,video/*" style="display:none" onchange="handleAssetSelect(event, 'footage')" />
+          <div style="font-size:12px;font-weight:900;text-transform:uppercase;color:var(--orange);">🎬 3. KÉO THẢ VIDEO QUAY THẬT / MẪU</div>
+          <div class="dropzone-preview" id="preview-footage">
+            <span style="font-size:12px;color:var(--text-muted);padding:12px;">Kéo thả Video (`.mp4`, `.mov`) vào đây — Tự động chạy `ffprobe` & gắn vào cảnh</span>
+          </div>
+          <div class="dropzone-status" id="status-footage">Lưu vào `assets/footage/` & cập nhật `catalog.json`</div>
+        </div>
       </div>
 
       <div class="btn-row">
+        <button class="btn btn-orange" onclick="triggerBackendAction('build-keyframes')">🖼️ Tạo/Ghép Cảnh Từ Ảnh Người Thật + Ảnh SP Thật Đã Tải Lên</button>
         <button class="btn btn-outline" onclick="addSceneRow()">+ Thêm cảnh quay</button>
-        <button class="btn btn-outline" onclick="triggerBackendAction('ingest-footage')">📥 Quét kho cảnh (`ingest-footage.mjs`)</button>
+        <button class="btn btn-outline" onclick="triggerBackendAction('ingest-footage')">📥 Quét kho clip (`ingest-footage.mjs`)</button>
+        <span id="footage-count-badge" style="font-size:12px;color:var(--orange);font-weight:800;margin-left:auto;">0 clip trong sổ</span>
       </div>
 
       <div class="scene-table-wrap">
+        <datalist id="footage-datalist"></datalist>
         <table class="clean-table">
           <thead>
             <tr>
               <th>#</th>
               <th>Mã cảnh</th>
-              <th>Loại cảnh</th>
+              <th>Nguồn hình (Bảo toàn gốc)</th>
               <th>Dài (s)</th>
-              <th>Clip gốc / Trim (In→Out)</th>
-              <th>Lời đọc / Phụ đề tiếng Việt</th>
-              <th>Hành động hình ảnh</th>
+              <th>Clip quay thật / Trim (In→Out)</th>
+              <th>Lời đọc / Phụ đề tiếng Việt (Sẽ được đọc thành tiếng)</th>
+              <th>Chỉ dẫn góc máy (Không biến dạng)</th>
               <th>Xóa</th>
             </tr>
           </thead>
@@ -249,75 +429,92 @@
       <div class="source-grid" id="covers-container"></div>
     </section>
 
-    <!-- SLIDE 06/08: RỒI MỚI DỰNG THÀNH REEL -->
+    <!-- SLIDE 06/08: RỒI MỚI DỰNG THÀNH REEL & LỒNG TIẾNG -->
     <section id="slide-06" class="slide-card">
       <div class="slide-meta">
-        <span>06 / 08</span>
-        <span>TRỢ LÝ 06 • DỰNG</span>
+        <span>06 / 08 • TRỢ LÝ 06 • SINH GIỌNG ĐỌC & DỰNG THÀNH REEL</span>
+        <div class="section-tools">
+          <button class="icon-pill-btn help-btn" onclick="toggleHelpDrawer('help-slide-06')">❓ Hướng dẫn mục 06</button>
+          <button class="icon-pill-btn" onclick="openCurrentCampaignFile('campaign.json')">📂 Mở `campaign.json`</button>
+          <button class="icon-pill-btn" onclick="openCurrentCampaignFile('cutlist.md')">📂 Mở `cutlist.md`</button>
+          <button class="icon-pill-btn" onclick="openCurrentCampaignFile('media/audio/voiceover-full.mp3', true)">📂 Mở File Âm Thanh `.mp3`</button>
+          <button class="icon-pill-btn" onclick="openCurrentCampaignFile('out/ffmpeg-9x16.mp4', true)">📂 Mở Video `.mp4`</button>
+        </div>
       </div>
+
+      <div id="help-slide-06" class="help-drawer">
+        <strong>💡 Hướng dẫn Mục 06 (Tạo Giọng Đọc & Xuất Video Có Tiếng):</strong><br/>
+        • <strong>Tại sao trước đây video không có tiếng?</strong> Vì các clip mẫu chưa có bản thu lời thoại tiếng Việt. Giờ đây công cụ đã tích hợp bộ <strong>🎙️ Sinh Giọng Đọc & Âm Thanh (`generate-voiceover.mjs`)</strong>!<br/>
+        • <strong>Quy trình 3 bước chuẩn:</strong><br/>
+        &nbsp;&nbsp;1. Bấm <strong>💾 1. Lưu `campaign.json`</strong> để lưu kịch bản.<br/>
+        &nbsp;&nbsp;2. Bấm <strong>🎙️ 2. Sinh Giọng Đọc & Lồng Tiếng</strong> để tạo giọng thuyết minh tiếng Việt tự nhiên (nghe thử ngay trên thanh phát âm thanh).<br/>
+        &nbsp;&nbsp;3. Bấm <strong>🎬 3. Dựng Video Có Tiếng (`ffmpeg`)</strong> — hệ thống sẽ tự động ghép Ảnh Người thật + Ảnh SP thật (hoặc clip quay thật) cùng giọng đọc vừa tạo thành video MP4 dọc `1080×1920` có đầy đủ âm thanh!
+      </div>
+
       <div>
         <h2 class="slide-headline">
           RỒI MỚI DỰNG
           <span class="accent">THÀNH REEL.</span>
         </h2>
-        <p class="slide-sub" style="margin-top:6px;">KỊCH BẢN VÀ HÌNH ĐÃ CHỐT, GIỜ MỚI GHÉP THÀNH VIDEO (REMOTION / FFMPEG / CAPCUT)</p>
+        <p class="slide-sub" style="margin-top:6px;">SINH GIỌNG ĐỌC TIẾNG VIỆT TỰ NHIÊN + GHÉP ẢNH/VIDEO NGƯỜI THẬT & SẢN PHẨM THẬT RA MP4 CÓ TIẾNG</p>
       </div>
 
       <div class="reel-builder-layout">
         <!-- Khung điện thoại 9:16 -->
-        <div class="phone-frame">
-          <div style="font-size:11px;font-weight:800;color:#A3A3A3;" id="phone-brand-badge">VIETNAM ORIGINAL</div>
-          <div>
+        <div class="phone-frame" id="phone-mockup-frame">
+          <video id="phone-bg-video" loop playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.65;display:none;pointer-events:none;"></video>
+          <img id="phone-bg-image" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0.45;display:none;pointer-events:none;" />
+          <div style="font-size:11px;font-weight:800;color:#A3A3A3;z-index:2;" id="phone-brand-badge">VIETNAM ORIGINAL</div>
+          <div style="z-index:2;">
             <div class="phone-ratio">9:16</div>
             <div class="phone-res">1080 × 1920</div>
             <div id="phone-scene-indicator" style="font-size:12px;color:var(--orange);margin-top:6px;font-weight:700;">Cảnh 1 / 4</div>
           </div>
-          <button class="phone-play-btn" onclick="togglePhonePreview()" id="phone-play-btn">▶</button>
-          <div class="phone-sub-pill" id="phone-subtitle-preview">
+          <div style="z-index:2;display:flex;gap:8px;align-items:center;">
+            <button class="phone-play-btn" onclick="togglePhonePreview()" id="phone-play-btn" title="Phát/Tạm dừng">▶</button>
+            <button class="phone-play-btn" style="width:42px;height:42px;font-size:15px;" onclick="togglePhoneMute()" id="phone-mute-btn" title="Bật/Tắt tiếng">🔊</button>
+          </div>
+          <div class="phone-sub-pill" style="z-index:2;" id="phone-subtitle-preview">
             Phụ đề chạy theo giọng đọc...
           </div>
         </div>
 
         <!-- Cột thông số & nút lệnh -->
         <div class="spec-stack">
-          <div class="spec-row">
-            <span>⏱️</span>
-            <div>
-              <strong id="reel-total-duration">16 giây — Khung dọc 1080×1920 (30fps)</strong>
-              <div style="font-size:12px;color:var(--text-muted);">Đo thời lượng thật từng cảnh, không kéo chậm giọng</div>
+          <!-- Trình nghe thử Giọng đọc & Âm thanh vừa tạo -->
+          <div class="spec-row" style="flex-direction:column;align-items:stretch;gap:8px;border-color:var(--orange);background:var(--orange-soft);">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <strong style="color:var(--orange);">🎙️ TRÌNH PHÁT GIỌNG ĐỌC & LỜI THOẠI TIẾNG VIỆT (`voiceover-full.mp3`)</strong>
+              <button class="icon-pill-btn" onclick="openCurrentCampaignFile('media/audio/voiceover-full.mp3', true)">📂 Mở file âm thanh</button>
             </div>
+            <audio id="voiceover-audio-player" controls style="width:100%;height:38px;"></audio>
+            <div style="font-size:12px;color:var(--text-muted);">Giọng đọc thuyết minh khớp từng cảnh trong kịch bản + nhạc nền ấm chuẩn 48kHz Stereo.</div>
           </div>
+
           <div class="spec-row">
-            <span>🎙️</span>
+            <span>🔒</span>
             <div>
-              <strong id="reel-voice-policy">Giọng thật từ clip quay (Zero-AI-Pixel)</strong>
-              <div style="font-size:12px;color:var(--text-muted);">Không dùng giọng AI trong luồng quay thật để tránh dấu hiệu AI</div>
+              <strong>Bám sát 100% Ảnh Người thật & Ảnh Sản phẩm thật đã đưa lên</strong>
+              <div style="font-size:12px;color:var(--text-muted);">Ghép trực tiếp ảnh/video gốc bằng FFmpeg & Remotion, không biến dạng khuôn mặt hay logo</div>
             </div>
           </div>
           <div class="spec-row">
             <span>🔤</span>
             <div>
-              <strong>Phụ đề bám từng câu & khớp thông số `product.json`</strong>
-              <div style="font-size:12px;color:var(--text-muted);">Chữ tiếng Việt chuẩn dấu, giá gốc/giá giảm khóa cứng</div>
-            </div>
-          </div>
-          <div class="spec-row">
-            <span>🖼️</span>
-            <div>
-              <strong>3 phương án bìa (chữ 2 tầng đọc rõ trên lưới Reels)</strong>
-              <div style="font-size:12px;color:var(--text-muted);">Lấy từ khung hình thật + tiêu đề khóa từ hook thắng</div>
+              <strong id="reel-total-duration">16 giây — Khung dọc 1080×1920 (30fps, H.264 + AAC Stereo)</strong>
+              <div style="font-size:12px;color:var(--text-muted);">Tự động đồng bộ lời thoại tiếng Việt vào từng phân cảnh video</div>
             </div>
           </div>
 
           <div class="btn-row" style="margin-top:8px;">
-            <button class="btn btn-orange" onclick="saveCampaignToServer()">💾 1. Lưu `campaign.json`</button>
-            <button class="btn" onclick="triggerBackendAction('export-cutlist')">📋 2. Xuất Cutlist CapCut</button>
-            <button class="btn" onclick="triggerBackendAction('render-ffmpeg')">🎬 3. Dựng MP4 (`ffmpeg`)</button>
-            <button class="btn" onclick="triggerBackendAction('sync-studio')">⚛️ 4. Đồng bộ Remotion (`studio/`)</button>
-            <button class="btn btn-outline" onclick="triggerBackendAction('generate-prompts')">📝 Xuất `prompts.md`</button>
+            <button class="btn btn-outline" onclick="saveCampaignToServer()">💾 1. Lưu `campaign.json`</button>
+            <button class="btn" onclick="runFullVoiceoverStep()">🎙️ 2. Sinh Giọng Đọc & Lồng Tiếng</button>
+            <button class="btn btn-orange" onclick="runFullRenderStep()">🎬 3. Dựng Video Có Tiếng (`ffmpeg`)</button>
+            <button class="btn" onclick="triggerBackendAction('export-cutlist')">📋 Xuất Cutlist CapCut</button>
+            <button class="btn" onclick="triggerBackendAction('sync-studio')">⚛️ Đồng bộ Remotion</button>
           </div>
 
-          <div id="action-console" class="console-box">Sẵn sàng. Bấm các nút trên để lưu chiến dịch hoặc gọi trực tiếp scripts/*.mjs...</div>
+          <div id="action-console" class="console-box">Sẵn sàng. Bấm "🎙️ 2. Sinh Giọng Đọc" hoặc "🎬 3. Dựng Video Có Tiếng (ffmpeg)" để tạo ngay video có lời thoại...</div>
         </div>
       </div>
     </section>
@@ -325,44 +522,55 @@
     <!-- SLIDE 07/08: TRỢ LÝ CUỐI CÙNG KIỂM DUYỆT & SỔ VẬN HÀNH -->
     <section id="slide-07" class="slide-card">
       <div class="slide-meta">
-        <span>07 / 08</span>
-        <span>TRỢ LÝ 07 • KIỂM DUYỆT & SỔ VẬN HÀNH</span>
+        <span>07 / 08 • TRỢ LÝ 07 • KIỂM DUYỆT ĐỘ NGUYÊN VẸN & SỔ VẬN HÀNH</span>
+        <div class="section-tools">
+          <button class="icon-pill-btn help-btn" onclick="toggleHelpDrawer('help-slide-07')">❓ Hướng dẫn mục 07</button>
+          <button class="icon-pill-btn" onclick="openProjectFile('campaigns/reel-sheet.json')">📂 Mở `reel-sheet.json`</button>
+          <button class="icon-pill-btn" onclick="openCurrentCampaignFile('out/ffmpeg-9x16.mp4', true)">📂 Xem Video Thành Phẩm</button>
+        </div>
       </div>
+
+      <div id="help-slide-07" class="help-drawer">
+        <strong>💡 Hướng dẫn Mục 07 (Kiểm duyệt PASS/FAIL & Sổ vận hành):</strong><br/>
+        • Bấm <strong>🔬 Kiểm tra Video, Âm thanh & SSIM (`verify-integrity.mjs`)</strong> để máy tự động kiểm tra xem file MP4 xuất ra đã có đủ hình `1080×1920`, có đủ luồng tiếng `AAC 48kHz` và điểm ảnh khớp bản gốc chưa.<br/>
+        • Khi cả 5 tiêu chí đạt, bấm <strong>📒 Ghi Reel Đạt Vào Sổ Vận Hành</strong> để lưu lịch sử.
+      </div>
+
       <div>
         <h2 class="slide-headline">
           TRỢ LÝ CUỐI CÙNG
           <span class="accent">KIỂM DUYỆT.</span>
         </h2>
-        <p class="slide-sub" style="margin-top:6px;">CHỈ PASS KHI MỌI MỤC ĐỀU ĐẠT — KIỂM CHỨNG CẢ BẰNG SỐ LIỆU SSIM KHUNG HÌNH</p>
+        <p class="slide-sub" style="margin-top:6px;">KIỂM TRA ĐỦ HÌNH 1080×1920, ĐỦ TIẾNG AAC STEREO & CHỈ SỐ SSIM KHÔNG BIẾN DẠNG</p>
       </div>
 
       <div class="qc-layout">
         <div class="qc-checklist">
-          <div style="font-weight:900;font-size:14px;text-transform:uppercase;margin-bottom:4px;">🛡️ KIỂM DUYỆT REEL (5 TIÊU CHÍ BẮT BUỘC)</div>
+          <div style="font-weight:900;font-size:14px;text-transform:uppercase;margin-bottom:4px;">🛡️ KIỂM DUYỆT BẢO TOÀN NGƯỜI THẬT, SẢN PHẨM THẬT & ÂM THANH</div>
           <label class="qc-check-item">
             <input type="checkbox" class="qc-cb" checked onchange="evaluateQcStatus()" />
-            <span>1. Thời lượng, kích thước 1080×1920, codec H.264/AAC hợp lệ (`validate-assets.mjs`)</span>
+            <span>1. Người thật & sản phẩm thật 100%: không bị méo mặt, không biến dạng logo hay chữ trên bao bì</span>
           </label>
           <label class="qc-check-item">
             <input type="checkbox" class="qc-cb" checked onchange="evaluateQcStatus()" />
-            <span>2. Khung hình đầu, giữa, cuối khớp cảnh gốc (`SSIM ≥ 0.90`, không biến dạng sản phẩm/mặt)</span>
+            <span>2. Video thành phẩm có đầy đủ luồng âm thanh & giọng đọc tiếng Việt (`AAC 48kHz Stereo`)</span>
           </label>
           <label class="qc-check-item">
             <input type="checkbox" class="qc-cb" checked onchange="evaluateQcStatus()" />
-            <span>3. Phụ đề khớp lời đọc, đúng chính tả & dấu tiếng Việt, đúng giá trong `product.json`</span>
+            <span>3. Giá bán, thông số và phụ đề tiếng Việt khớp 100% với `product.json`</span>
           </label>
           <label class="qc-check-item">
             <input type="checkbox" class="qc-cb" checked onchange="evaluateQcStatus()" />
-            <span>4. Hình đúng câu đang nói, không chứa từ cấm quảng cáo (cam kết y tế/tuyệt đối hóa)</span>
+            <span>4. Hình ảnh khớp lời thoại từng cảnh, không chứa từ cấm quảng cáo</span>
           </label>
           <label class="qc-check-item">
             <input type="checkbox" class="qc-cb" checked onchange="evaluateQcStatus()" />
-            <span>5. Bìa được chọn thuộc 3 phương án đạt & có xác nhận đồng ý nếu có trẻ em lên hình</span>
+            <span>5. Bìa chọn từ khung hình thật & đủ điều kiện bàn giao</span>
           </label>
 
           <div class="btn-row" style="margin-top:10px;">
             <button class="btn" onclick="triggerBackendAction('validate')">✔️ Chạy `validate-assets.mjs`</button>
-            <button class="btn" onclick="triggerBackendAction('verify-integrity')">🔬 Chạy Kiểm Nguyên Vẹn SSIM (`verify-integrity.mjs`)</button>
+            <button class="btn" onclick="triggerBackendAction('verify-integrity')">🔬 Kiểm tra Âm thanh & SSIM (`verify-integrity.mjs`)</button>
             <button class="btn btn-orange" onclick="recordReelToSheet()">📒 Ghi Reel Đạt Vào Sổ Vận Hành</button>
           </div>
         </div>
@@ -370,7 +578,7 @@
         <div class="qc-status-cards">
           <div id="qc-pass-banner" class="status-banner pass-card">
             <h3>PASS</h3>
-            <div>Bàn giao reel — Đủ tiêu chuẩn đăng TikTok / Reels / Shopee Video</div>
+            <div>Bàn giao reel — Đủ hình thật, sản phẩm thật & giọng đọc tiếng Việt</div>
           </div>
           <div id="qc-fail-banner" class="status-banner fail-card inactive">
             <h3>FAIL</h3>
@@ -383,7 +591,10 @@
       <div class="scene-table-wrap">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
           <strong style="font-size:14px;text-transform:uppercase;">📒 SỔ VẬN HÀNH REEL (<span id="sheet-total-count">0</span> REEL ĐÃ GHI)</strong>
-          <button class="btn btn-outline" onclick="exportSheetCsv()">⬇️ Xuất CSV Sổ Vận Hành</button>
+          <div style="display:flex;gap:8px;">
+            <button class="icon-pill-btn" onclick="openProjectFile('campaigns/reel-sheet.json')">📂 Mở `reel-sheet.json`</button>
+            <button class="btn btn-outline" onclick="exportSheetCsv()">⬇️ Xuất CSV Sổ Vận Hành</button>
+          </div>
         </div>
         <table class="clean-table">
           <thead>
@@ -394,7 +605,7 @@
               <th>Hook thắng</th>
               <th>Thời lượng</th>
               <th>Trạng thái QC</th>
-              <th>Đường dẫn đầu ra</th>
+              <th>Đường dẫn đầu ra (Bấm để mở file)</th>
             </tr>
           </thead>
           <tbody id="sheet-tbody"></tbody>

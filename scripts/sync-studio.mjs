@@ -41,6 +41,7 @@ function main() {
 
   const scenes = campaign.scenes.map((scene) => {
     const keyframeAbs = scene.keyframeSrc ? path.join(campaignDir, scene.keyframeSrc) : '';
+    const audioAbs = scene.audioSrc ? path.join(campaignDir, scene.audioSrc) : '';
     let videoAbs = scene.videoSrc ? path.join(campaignDir, scene.videoSrc) : '';
     if (scene.type === 'real-footage') {
       const clip = catalog.get(scene.footageId);
@@ -57,6 +58,7 @@ function main() {
       qcStatus: scene.qcStatus,
       trimStartSec: scene.trimStartSec,
       trimEndSec: scene.trimEndSec,
+      audioSrc: copyAssetToStudioPublic(audioAbs, path.posix.join(publicBase, 'audio'), studioPublic),
       keyframeSrc: copyAssetToStudioPublic(keyframeAbs, path.posix.join(publicBase, 'keyframes'), studioPublic),
       videoSrc: copyAssetToStudioPublic(videoAbs, path.posix.join(publicBase, 'clips'), studioPublic)
     };

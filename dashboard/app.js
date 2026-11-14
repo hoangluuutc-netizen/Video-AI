@@ -17,14 +17,31 @@ const FALLBACK_STATE = {
         'Inox 304 chuẩn y tế, giữ nhiệt 24h',
         'Sơn nhám tĩnh điện chống bám vân tay',
         'Nắp khóa chống tràn 360 độ'
+      ],
+      immutableFeatures: [
+        'Matte black cylindrical body',
+        'Minimalist silver engraved logo centered on the upper third',
+        'Brushed stainless steel rim and leak-proof flip-top lid',
+        'Exact height-to-width ratio 3.2:1'
+      ],
+      forbiddenChanges: [
+        'Do not change matte black finish to glossy',
+        'Do not alter or warp the silver logo',
+        'Do not add extra buttons or handles not present in reference'
       ]
     }
   ],
   characters: [
     {
       id: 'sample-kol',
-      name: 'Minh Anh (Reviewer)',
-      role: 'Host / KOL'
+      name: 'Minh Anh (Đại sứ thương hiệu)',
+      role: 'Chuyên viên review & trải nghiệm sản phẩm',
+      immutableTraits: [
+        'Vietnamese woman, 26 years old',
+        'Shoulder-length straight dark brown hair',
+        'Warm natural skin tone, friendly confident smile',
+        'Wearing a clean cream-colored casual blazer over white t-shirt'
+      ]
     }
   ],
   catalog: { clips: [] },
@@ -54,6 +71,90 @@ let scenesList = [];
 let phoneTimer = null;
 let phoneSceneIdx = 0;
 let phoneWordIdx = 0;
+let progressInterval = null;
+
+function toggleHelpDrawer(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle('open');
+}
+
+function startJobProgress(label, estimatedSec = 6) {
+  if (progressInterval) clearInterval(progressInterval);
+  const statusEl = document.getElementById('job-status-text');
+  const pctEl = document.getElementById('job-percent-text');
+  const elapsedEl = document.getElementById('job-elapsed-text');
+  const etaEl = document.getElementById('job-eta-text');
+  const fillEl = document.getElementById('job-progress-fill');
+
+  const startMs = Date.now();
+  if (statusEl) statusEl.textContent = label;
+  if (pctEl) pctEl.textContent = '5%';
+  if (fillEl) fillEl.style.width = '5%';
+
+  progressInterval = setInterval(() => {
+    const elapsed = (Date.now() - startMs) / 1000;
+    const ratio = Math.min(0.94, elapsed / Math.max(1, estimatedSec));
+    const pct = Math.max(5, Math.round(ratio * 100));
+    const remain = Math.max(1, Math.ceil(estimatedSec - elapsed));
+    if (pctEl) pctEl.textContent = `${pct}%`;
+    if (fillEl) fillEl.style.width = `${pct}%`;
+    if (elapsedEl) elapsedEl.textContent = `${elapsed.toFixed(1)}s`;
+    if (etaEl) etaEl.textContent = `~${remain}s`;
+  }, 200);
+  return startMs;
+}
+
+function finishJobProgress(ok, finalLabel, startMs) {
+  if (progressInterval) {
+    clearInterval(progressInterval);
+    progressInterval = null;
+  }
+  const totalSec = startMs ? ((Date.now() - startMs) / 1000).toFixed(1) : '0.5';
+  const statusEl = document.getElementById('job-status-text');
+  const pctEl = document.getElementById('job-percent-text');
+  const elapsedEl = document.getElementById('job-elapsed-text');
+  const etaEl = document.getElementById('job-eta-text');
+  const fillEl = document.getElementById('job-progress-fill');
+
+  if (statusEl) statusEl.textContent = finalLabel;
+  if (pctEl) pctEl.textContent = ok ? '100%' : 'LỖI';
+  if (fillEl) fillEl.style.width = ok ? '100%' : '0%';
+  if (elapsedEl) elapsedEl.textContent = `${totalSec}s`;
+  if (etaEl) etaEl.textContent = '0s (Hoàn tất)';
+}
+
+async function openProjectFile(relPath, openDirect = false) {
+  if (!serverOnline) {
+    logConsole(`Đường dẫn file: ${relPath}`);
+    return;
+  }
+  const res = await fetch('/api/open-file', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filePath: relPath, openDirect })
+  });
+  const data = await res.json();
+  logConsole(
+    data.previewText
+      ? `📂 ${data.output}\n--- Nội dung trích xuất (${relPath}) ---\n${data.previewText}`
+      : `📂 ${data.output}`
+  );
+}
+
+function openSelectedProductFile() {
+  const pid = getSelectedProduct()?.id || 'sample-product';
+  openProjectFile(`assets/products/${pid}/product.json`);
+}
+
+function openSelectedCharacterFile() {
+  const cid = document.getElementById('inp-character')?.value || 'sample-kol';
+  openProjectFile(`assets/characters/${cid}/character.json`);
+}
+
+function openCurrentCampaignFile(subPath, openDirect = false) {
+  const cid = (document.getElementById('inp-campaign-id')?.value || 'sample-campaign').trim();
+  openProjectFile(`campaigns/${cid}/${subPath}`, openDirect);
+}
 
 function scrollToSlide(id) {
   const el = document.getElementById(id);
@@ -85,12 +186,14 @@ async function initDashboard() {
       const data = await res.json();
       appState = {
         brand: data.brand || FALLBACK_STATE.brand,
+        aiConfig: data.aiConfig || {},
         products: data.products?.length ? data.products : FALLBACK_STATE.products,
         characters: data.characters?.length ? data.characters : FALLBACK_STATE.characters,
         catalog: data.catalog || { clips: [] },
         campaigns: data.campaigns || [],
         sheet: data.sheet?.reels?.length ? data.sheet : FALLBACK_STATE.sheet
       };
+      syncAiConfigToUi();
       serverOnline = true;
       statusEl.textContent = '🟢 Đã kết nối Local Server (Chạy lệnh thật)';
       statusEl.style.background = '#DCFCE7';
@@ -127,6 +230,37 @@ function populateSelectors() {
   if (footageBadge) {
     footageBadge.textContent = `${(appState.catalog?.clips || []).length} clip trong sổ`;
   }
+  const datalist = document.getElementById('footage-datalist');
+  if (datalist) {
+    datalist.innerHTML = (appState.catalog?.clips || [])
+      .map((c) => `<option value="${c.id}">${c.filePath} (${c.durationSec}s)</option>`)
+      .join('');
+  }
+  renderTruthLockSummary();
+}
+
+function renderTruthLockSummary() {
+  const box = document.getElementById('truth-lock-summary');
+  if (!box) return;
+  const p = getSelectedProduct();
+  const cid = document.getElementById('inp-character')?.value;
+  const c = appState.characters.find((x) => x.id === cid) || appState.characters[0];
+  const pLocks = (p.immutableFeatures || []).join(' • ') || 'Giữ nguyên 100% ảnh chụp gốc';
+  const pForbid = (p.forbiddenChanges || []).join(' • ') || 'Cấm thay đổi màu sắc, logo, tỷ lệ';
+  const cLocks = (c?.immutableTraits || []).join(' • ') || 'Giữ nguyên khuôn mặt, trang phục, giọng thật';
+
+  box.innerHTML = `
+    <div class="spec-row" style="flex-direction:column;align-items:flex-start;gap:4px;border-color:var(--orange-border);background:var(--orange-soft);">
+      <span style="font-size:11px;font-weight:900;color:var(--orange);">🔒 KHÓA CHI TIẾT SẢN PHẨM THẬT (${p.name})</span>
+      <div style="font-size:12px;"><strong>Đặc điểm bất biến:</strong> ${pLocks}</div>
+      <div style="font-size:12px;color:var(--red);"><strong>Nghiêm cấm:</strong> ${pForbid}</div>
+    </div>
+    <div class="spec-row" style="flex-direction:column;align-items:flex-start;gap:4px;border-color:var(--orange-border);background:var(--orange-soft);">
+      <span style="font-size:11px;font-weight:900;color:var(--orange);">🧑 KHÓA DANH TÍNH NGƯỜI THẬT (${c?.name || 'Người mẫu/KOL'})</span>
+      <div style="font-size:12px;"><strong>Nhận diện cố định:</strong> ${cLocks}</div>
+      <div style="font-size:12px;color:var(--green);"><strong>Bảo toàn:</strong> Không làm đẹp da AI, không đổi mặt, không dùng giọng đọc AI</div>
+    </div>
+  `;
 }
 
 function onModeChange() {
@@ -142,6 +276,7 @@ function onModeChange() {
 }
 
 function onProductChange() {
+  renderTruthLockSummary();
   runAllAssistants();
 }
 
@@ -410,33 +545,33 @@ function renderScenesTable() {
   tbody.innerHTML = scenesList
     .map(
       (s, i) => `
-      <tr>
+      <tr ondragover="handleDragOver(event, this)" ondragleave="handleDragLeave(event, this)" ondrop="handleSceneRowDrop(event, ${i})" title="Mẹo: Kéo thả trực tiếp file video .mp4 vào dòng này để gán cho cảnh #${i + 1}">
         <td><strong>${i + 1}</strong></td>
-        <td><input type="text" value="${s.id}" onchange="scenesList[${i}].id=this.value" /></td>
-        <td>
+        <td style="min-width:145px;"><input type="text" value="${s.id}" onchange="scenesList[${i}].id=this.value" /></td>
+        <td style="min-width:155px;">
           <select onchange="scenesList[${i}].type=this.value;renderScenesTable();updatePhonePreview();">
             ${typeOptions
               .map((t) => `<option value="${t}" ${s.type === t ? 'selected' : ''}>${t}</option>`)
               .join('')}
           </select>
         </td>
-        <td style="width:76px;">
+        <td style="width:76px;min-width:72px;">
           <input type="number" min="1" max="15" value="${s.durationSec}" onchange="scenesList[${i}].durationSec=Number(this.value);updatePhonePreview();" />
         </td>
-        <td>
+        <td style="min-width:250px;">
           ${
             s.type === 'real-footage'
               ? `<div style="display:flex;gap:4px;align-items:center;">
-                   <input type="text" placeholder="footageId" value="${s.footageId || ''}" onchange="scenesList[${i}].footageId=this.value" style="width:110px;" />
-                   <input type="number" step="0.5" value="${s.trimStartSec ?? 0}" onchange="scenesList[${i}].trimStartSec=Number(this.value)" style="width:58px;" />
+                   <input type="text" list="footage-datalist" placeholder="Kéo thả video hoặc nhập mã" value="${s.footageId || ''}" onchange="scenesList[${i}].footageId=this.value" style="min-width:125px;flex:1;" />
+                   <input type="number" step="0.5" value="${s.trimStartSec ?? 0}" onchange="scenesList[${i}].trimStartSec=Number(this.value)" style="width:54px;" />
                    <span>→</span>
-                   <input type="number" step="0.5" value="${s.trimEndSec ?? s.durationSec}" onchange="scenesList[${i}].trimEndSec=Number(this.value)" style="width:58px;" />
+                   <input type="number" step="0.5" value="${s.trimEndSec ?? s.durationSec}" onchange="scenesList[${i}].trimEndSec=Number(this.value)" style="width:54px;" />
                  </div>`
               : `<span style="font-size:11px;color:var(--text-muted);">${s.type === 'real-product-closeup' || s.type === 'offer-cta' ? 'Remotion 100% ảnh/chữ gốc' : 'Keyframe QC → I2V'}</span>`
           }
         </td>
-        <td><input type="text" value="${s.subtitle}" onchange="scenesList[${i}].subtitle=this.value;updatePhonePreview();" /></td>
-        <td><input type="text" value="${s.visualAction}" onchange="scenesList[${i}].visualAction=this.value" /></td>
+        <td style="min-width:210px;"><input type="text" value="${s.subtitle}" onchange="scenesList[${i}].subtitle=this.value;updatePhonePreview();" /></td>
+        <td style="min-width:210px;"><input type="text" value="${s.visualAction}" onchange="scenesList[${i}].visualAction=this.value" /></td>
         <td><button class="btn btn-outline" style="padding:4px 10px;" onclick="removeSceneRow(${i})">✕</button></td>
       </tr>
     `
@@ -586,19 +721,86 @@ function buildCampaignPayload() {
   return payload;
 }
 
-async function saveCampaignToServer() {
+function syncAiConfigToUi() {
+  const cfg = appState.aiConfig || {};
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el && val) el.value = val;
+  };
+  setVal('cfg-llm-model', cfg.llmModel);
+  setVal('cfg-image-model', cfg.imageModel);
+  setVal('cfg-video-model', cfg.videoModel);
+  setVal('cfg-tts-model', cfg.ttsModel);
+
+  const setText = (id, val) => {
+    const el = document.getElementById(id);
+    if (el && val) el.textContent = val;
+  };
+  setText('pill-llm', cfg.llmModel || 'gemini-3.1-pro-preview');
+  setText('pill-img', cfg.imageModel || 'ffmpeg-real-composite');
+  setText('pill-vid', cfg.videoModel || 'ffmpeg-natural-1080p');
+  setText('pill-tts', cfg.ttsModel || 'google-vi-natural');
+}
+
+async function saveAiConfigFromUi() {
+  const payload = {
+    llmModel: document.getElementById('cfg-llm-model')?.value,
+    imageModel: document.getElementById('cfg-image-model')?.value,
+    videoModel: document.getElementById('cfg-video-model')?.value,
+    ttsModel: document.getElementById('cfg-tts-model')?.value,
+    geminiApiKey: document.getElementById('cfg-gemini-key')?.value || ''
+  };
+  appState.aiConfig = { ...(appState.aiConfig || {}), ...payload };
+  syncAiConfigToUi();
+  if (!serverOnline) {
+    logConsole('Đã cập nhật cấu hình Bộ não trên giao diện.');
+    return;
+  }
+  const t0 = startJobProgress('Đang lưu cấu hình Bộ não AI & Công cụ...', 2);
+  const res = await fetch('/api/save-ai-config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (data.state) appState = data.state;
+  finishJobProgress(Boolean(data.ok), data.output || 'Đã lưu cấu hình', t0);
+  logConsole(data.output);
+}
+
+function togglePhoneMute() {
+  const vid = document.getElementById('phone-bg-video');
+  const btn = document.getElementById('phone-mute-btn');
+  if (!vid) return;
+  vid.muted = !vid.muted;
+  if (btn) btn.textContent = vid.muted ? '🔇' : '🔊';
+}
+
+async function runFullVoiceoverStep() {
+  await saveCampaignToServer(true);
+  await triggerBackendAction('generate-voiceover', 6);
+}
+
+async function runFullRenderStep() {
+  await saveCampaignToServer(true);
+  await triggerBackendAction('render-ffmpeg', 12);
+}
+
+async function saveCampaignToServer(silent = false) {
   const campaign = buildCampaignPayload();
   if (!serverOnline) {
-    const blob = new Blob([JSON.stringify(campaign, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `campaign-${campaign.id}.json`;
-    a.click();
-    logConsole(`Đã tải xuống file campaign-${campaign.id}.json (khởi động dashboard-server.mjs để lưu thẳng vào repo).`);
+    if (!silent) {
+      const blob = new Blob([JSON.stringify(campaign, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `campaign-${campaign.id}.json`;
+      a.click();
+      logConsole(`Đã tải xuống file campaign-${campaign.id}.json`);
+    }
     return;
   }
 
-  logConsole(`Đang lưu campaigns/${campaign.id}/campaign.json...`);
+  const t0 = silent ? null : startJobProgress(`Đang lưu campaigns/${campaign.id}/campaign.json...`, 2);
   const res = await fetch('/api/save-campaign', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -606,10 +808,13 @@ async function saveCampaignToServer() {
   });
   const data = await res.json();
   if (data.state) appState = data.state;
-  logConsole(data.output || 'Đã lưu.');
+  if (!silent) {
+    finishJobProgress(Boolean(data.ok), data.output || 'Đã lưu chiến dịch', t0);
+    logConsole(data.output || 'Đã lưu.');
+  }
 }
 
-async function triggerBackendAction(action) {
+async function triggerBackendAction(action, estSec = 5) {
   const campaignId = (document.getElementById('inp-campaign-id').value || 'sample-campaign').trim();
   if (!serverOnline) {
     logConsole(
@@ -618,7 +823,20 @@ async function triggerBackendAction(action) {
     return;
   }
 
-  logConsole(`Đang thực thi "${action}" cho chiến dịch "${campaignId}"...`);
+  const actionLabels = {
+    'validate': 'Đang kiểm tra cấu trúc dữ liệu (validate-assets.mjs)...',
+    'ingest-footage': 'Đang quét kho video bằng ffprobe (ingest-footage.mjs)...',
+    'build-keyframes': 'Đang ghép cảnh chuẩn từ Ảnh Người thật & Sản phẩm thật...',
+    'generate-voiceover': 'Đang sinh giọng đọc thuyết minh tiếng Việt & trộn âm thanh 48kHz...',
+    'export-cutlist': 'Đang trích xuất bảng cắt CapCut (cutlist.md & cutlist.csv)...',
+    'render-ffmpeg': 'Đang dựng video MP4 1080×1920 + lồng giọng đọc tiếng Việt bằng FFmpeg...',
+    'sync-studio': 'Đang đồng bộ chiến dịch & âm thanh sang Remotion Studio...',
+    'verify-integrity': 'Đang đo chỉ số SSIM khung hình & kiểm tra luồng âm thanh...'
+  };
+
+  const t0 = startJobProgress(actionLabels[action] || `Đang thực thi ${action}...`, estSec);
+  logConsole(actionLabels[action] || `Đang thực thi "${action}"...`);
+
   const res = await fetch('/api/run-action', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -629,7 +847,36 @@ async function triggerBackendAction(action) {
     appState = data.state;
     populateSelectors();
   }
-  logConsole(`${data.ok ? '✅ THÀNH CÔNG' : '❌ LỖI'}:\n${data.output}`);
+
+  if (data.mediaUrl) {
+    if (action === 'generate-voiceover') {
+      const audioEl = document.getElementById('voiceover-audio-player');
+      if (audioEl) {
+        audioEl.src = data.mediaUrl;
+        audioEl.play().catch(() => {});
+      }
+    } else if (action === 'render-ffmpeg') {
+      const phoneVid = document.getElementById('phone-bg-video');
+      const audioEl = document.getElementById('voiceover-audio-player');
+      if (phoneVid) {
+        phoneVid.src = data.mediaUrl;
+        phoneVid.muted = false;
+        phoneVid.style.display = 'block';
+        phoneVid.style.opacity = '0.92';
+        phoneVid.play().catch(() => {});
+      }
+      if (audioEl) {
+        audioEl.src = `/campaigns/${campaignId}/media/audio/voiceover-full.mp3?t=${Date.now()}`;
+      }
+    }
+  }
+
+  finishJobProgress(
+    Boolean(data.ok),
+    data.ok ? `Hoàn tất "${action}" (${data.elapsedSec || ''}s)` : `Lỗi khi chạy "${action}"`,
+    t0
+  );
+  logConsole(`${data.ok ? '✅ THÀNH CÔNG' : '❌ LỖI'} (${data.elapsedSec || 0}s):\n${data.output}`);
 }
 
 function loadCampaignFromSelect() {
@@ -717,7 +964,7 @@ function renderSheetTable() {
         <td>"${r.hook}"</td>
         <td>${r.durationSec}s</td>
         <td><span class="badge-score">${r.qcStatus}</span></td>
-        <td><code>${r.outputPath}</code></td>
+        <td><button class="icon-pill-btn" onclick="openProjectFile('${r.outputPath}', true)">📂 ${r.outputPath}</button></td>
       </tr>
     `
     )
@@ -742,6 +989,153 @@ function runAllAssistants() {
   generate15Hooks();
   syncScriptToScenes();
   evaluateQcStatus();
+}
+
+// 7. Cơ chế Kéo & Thả (Drag & Drop) Ảnh Sản Phẩm, Ảnh Nhân Vật và Video Quay Thật
+function handleDragOver(e, el) {
+  e.preventDefault();
+  e.stopPropagation();
+  if (el) el.classList.add('dragover');
+}
+
+function handleDragLeave(e, el) {
+  e.preventDefault();
+  e.stopPropagation();
+  if (el) el.classList.remove('dragover');
+}
+
+function handleAssetDrop(e, kind) {
+  e.preventDefault();
+  e.stopPropagation();
+  const card = document.getElementById(`dz-${kind}`);
+  if (card) card.classList.remove('dragover');
+  const file = e.dataTransfer?.files?.[0];
+  if (file) uploadAndPreviewAsset(file, kind);
+}
+
+function handleAssetSelect(e, kind) {
+  const file = e.target?.files?.[0];
+  if (file) uploadAndPreviewAsset(file, kind);
+}
+
+function handleSceneRowDrop(e, sceneIdx) {
+  e.preventDefault();
+  e.stopPropagation();
+  if (e.currentTarget) e.currentTarget.classList.remove('dragover');
+  const file = e.dataTransfer?.files?.[0];
+  if (!file) return;
+  if (file.type.startsWith('video/')) {
+    uploadAndPreviewAsset(file, 'footage', sceneIdx);
+  } else if (file.type.startsWith('image/')) {
+    uploadAndPreviewAsset(file, 'product', sceneIdx);
+  }
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadAndPreviewAsset(file, kind, targetSceneIdx = null) {
+  const previewBox = document.getElementById(`preview-${kind}`);
+  const statusBox = document.getElementById(`status-${kind}`);
+  const objectUrl = URL.createObjectURL(file);
+
+  // Hiển thị xem trước ngay tức thì trên giao diện & khung điện thoại 9:16
+  if (previewBox) {
+    if (kind === 'footage' || file.type.startsWith('video/')) {
+      previewBox.innerHTML = `<video src="${objectUrl}" controls muted playsinline></video>`;
+      const phoneVid = document.getElementById('phone-bg-video');
+      if (phoneVid) {
+        phoneVid.src = objectUrl;
+        phoneVid.style.display = 'block';
+        phoneVid.play().catch(() => {});
+      }
+    } else {
+      previewBox.innerHTML = `<img src="${objectUrl}" alt="${file.name}" />`;
+      if (kind === 'product') {
+        const phoneImg = document.getElementById('phone-bg-image');
+        if (phoneImg) {
+          phoneImg.src = objectUrl;
+          phoneImg.style.display = 'block';
+        }
+      }
+    }
+  }
+
+  const clipSlug = file.name.replace(/\.[^.]+$/, '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+  if (!serverOnline) {
+    if (statusBox) statusBox.textContent = `Đã nạp tạm: ${file.name} (mở qua localhost:4173 để lưu vào ổ đĩa)`;
+    if (kind === 'footage') {
+      assignFootageToScenes(clipSlug, targetSceneIdx);
+    }
+    return;
+  }
+
+  try {
+    if (statusBox) statusBox.textContent = `⏳ Đang lưu ${file.name} vào dự án...`;
+    const dataBase64 = await readFileAsDataUrl(file);
+    const targetId =
+      kind === 'product'
+        ? getSelectedProduct()?.id || 'sample-product'
+        : kind === 'character'
+        ? document.getElementById('inp-character')?.value || 'sample-kol'
+        : '';
+
+    const res = await fetch('/api/upload-asset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        kind,
+        targetId,
+        slot: kind === 'product' ? 'front' : 'portrait',
+        fileName: file.name,
+        dataBase64
+      })
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.output || 'Lỗi tải file');
+
+    if (data.state) {
+      appState = data.state;
+      populateSelectors();
+    }
+    if (statusBox) statusBox.textContent = `✅ Đã lưu: ${data.relPath}`;
+    logConsole(data.output);
+
+    if (kind === 'footage') {
+      assignFootageToScenes(data.clipId || clipSlug, targetSceneIdx);
+    }
+  } catch (err) {
+    if (statusBox) statusBox.textContent = `❌ Lỗi: ${err.message}`;
+    logConsole(`Lỗi tải file ${file.name}: ${err.message}`);
+  }
+}
+
+function assignFootageToScenes(clipId, targetSceneIdx = null) {
+  const clipMeta = (appState.catalog?.clips || []).find((c) => c.id === clipId);
+  if (targetSceneIdx !== null && scenesList[targetSceneIdx]) {
+    scenesList[targetSceneIdx].type = 'real-footage';
+    scenesList[targetSceneIdx].footageId = clipId;
+    if (clipMeta?.durationSec) {
+      const dur = Math.min(scenesList[targetSceneIdx].durationSec || 4, clipMeta.durationSec);
+      scenesList[targetSceneIdx].trimStartSec = 0;
+      scenesList[targetSceneIdx].trimEndSec = dur;
+    }
+  } else {
+    scenesList.forEach((s) => {
+      if (s.type === 'real-footage' && (!s.footageId || s.footageId.startsWith('clip-quay-that'))) {
+        s.footageId = clipId;
+      }
+    });
+  }
+  renderScenesTable();
+  updatePhonePreview();
 }
 
 window.addEventListener('DOMContentLoaded', initDashboard);

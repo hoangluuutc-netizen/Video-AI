@@ -41,4 +41,7 @@ npm.cmd install
 npm.cmd run dev
 ```
 
-Xem chi tiết các công cụ, repo GitHub và quy trình tại [docs/CONG_CU_VA_REPO.md](docs/CONG_CU_VA_REPO.md) và [docs/QUY_TRINH_CHONG_SAI_LECH.md](docs/QUY_TRINH_CHONG_SAI_LECH.md).
+Xem chi tiết tại:
+- **Hướng dẫn sử dụng từng bước (A–Z):** [docs/HUONG_DAN_SU_DUNG.md](docs/HUONG_DAN_SU_DUNG.md)
+- **Tổng hợp công cụ & GitHub repos:** [docs/CONG_CU_VA_REPO.md](docs/CONG_CU_VA_REPO.md)
+- **Quy trình chống sai lệch sản phẩm & nhân vật:** [docs/QUY_TRINH_CHONG_SAI_LECH.md](docs/QUY_TRINH_CHONG_SAI_LECH.md)

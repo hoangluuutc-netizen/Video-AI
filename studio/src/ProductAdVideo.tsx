@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   AbsoluteFill,
+  Audio,
   Img,
   OffthreadVideo,
   Sequence,
@@ -48,6 +49,7 @@ const SceneView: React.FC<{
 
   const resolvedVideoSrc = resolveMediaSrc(scene.videoSrc);
   const resolvedKeyframeSrc = resolveMediaSrc(scene.keyframeSrc);
+  const resolvedAudioSrc = resolveMediaSrc(scene.audioSrc);
   const resolvedProductImgSrc = resolveMediaSrc(props.productImageSrc);
   const trimStartFrame = Math.max(0, Math.round((scene.trimStartSec ?? 0) * fps));
   const trimEndFrame =
@@ -63,6 +65,9 @@ const SceneView: React.FC<{
         padding: isVertical ? '72px 48px' : '48px 72px',
       }}
     >
+      {/* Lồng tiếng / Giọng đọc thuyết minh cảnh */}
+      {resolvedAudioSrc ? <Audio src={resolvedAudioSrc} /> : null}
+
       {/* Background Video (AI Clip) hoặc Keyframe Preview */}
       {resolvedVideoSrc ? (
         <AbsoluteFill style={{ transform: `scale(${zoom})` }}>
