@@ -202,11 +202,16 @@ export async function generateCampaignVoiceover(campaignPath) {
     }
 
     if (!synthesized) {
-      const fallbackRaw = path.join(audioDir, `_sapi-${scene.id}.wav`);
-      generateWindowsSapiOrToneWav(text, fallbackRaw, dur);
-      normalizeAndFitAudio(fallbackRaw, finalWav, dur);
-      if (fs.existsSync(fallbackRaw)) fs.rmSync(fallbackRaw, { force: true });
-      console.log(`OK [Local Voice/Audio] Cảnh "${scene.id}" (${dur}s)`);
+      if (fs.existsSync(finalWav) && fs.statSync(finalWav).size > 15000) {
+        console.log(`OK [Giữ Giọng Việt Tự Nhiên đã tạo] Cảnh "${scene.id}" (${dur}s)`);
+        synthesized = true;
+      } else {
+        const fallbackRaw = path.join(audioDir, `_sapi-${scene.id}.wav`);
+        generateWindowsSapiOrToneWav(text, fallbackRaw, dur);
+        normalizeAndFitAudio(fallbackRaw, finalWav, dur);
+        if (fs.existsSync(fallbackRaw)) fs.rmSync(fallbackRaw, { force: true });
+        console.log(`OK [Local Voice/Audio] Cảnh "${scene.id}" (${dur}s)`);
+      }
     }
 
     if (fs.existsSync(rawTmp)) fs.rmSync(rawTmp, { force: true });

@@ -141,8 +141,8 @@ async function processSceneVideo(scene, ctx) {
     return { sceneId: scene.id, updated: false, skipped: true };
   }
 
-  const { videoPrompt } = buildScenePrompt(scene, product, character);
-  const model = process.env.GEMINI_VIDEO_MODEL || 'gemini-omni-1.1-flash';
+  const { videoPrompt, veo3Prompt, omniFlashR2VPrompt } = buildScenePrompt(scene, product, character);
+  const model = process.env.GEMINI_VIDEO_MODEL || 'gemini-omni-1.2-flash';
   const relOut = path.posix.join('media', 'clips', `${scene.id}.mp4`);
   const absOut = path.join(campaignDir, relOut);
 
@@ -151,7 +151,10 @@ async function processSceneVideo(scene, ctx) {
     return { sceneId: scene.id, updated: false };
   }
 
-  const input = [toImagePart(keyframeAbs), { type: 'text', text: videoPrompt }];
+  // Truyền đồng thời Keyframe + Ảnh Nhân vật + Ảnh Sản phẩm (Ingredients-to-Video / R2V)
+  const refParts = collectReferenceParts(product, character);
+  const chosenPrompt = model.includes('omni') ? omniFlashR2VPrompt : (veo3Prompt || videoPrompt);
+  const input = [toImagePart(keyframeAbs), ...refParts.slice(0, 2), { type: 'text', text: chosenPrompt }];
   const response = await callInteractionsApi(apiKey, model, input);
   const b64 = extractBase64Media(response, 'video');
   if (!b64) {

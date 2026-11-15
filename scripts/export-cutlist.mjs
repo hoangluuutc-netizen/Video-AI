@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { ROOT, VERTICAL_FILTER, loadCatalog } from './lib/footage.mjs';
-import { readJson } from './lib/prompt-builder.mjs';
+import { inferMuseStyle, readJson } from './lib/prompt-builder.mjs';
 import { generateCampaignVoiceover } from './generate-voiceover.mjs';
 
 function csvCell(v) {
@@ -32,11 +32,33 @@ function renderSceneSegment(scene, idx, ctx, tmpDir) {
   const hasVoiceover = audioAbs && fs.existsSync(audioAbs);
 
   const hasOwnAssets = Boolean(productImgAbs || charImgAbs);
+  const veoClipAbs = scene.videoSrc && fs.existsSync(path.join(campaignDir, scene.videoSrc))
+    ? path.join(campaignDir, scene.videoSrc)
+    : fs.existsSync(path.join(campaignDir, 'media', 'clips', `${scene.id}.mp4`))
+    ? path.join(campaignDir, 'media', 'clips', `${scene.id}.mp4`)
+    : '';
+
+  // 1. Ưu tiên dùng Clip Điện Ảnh đã sinh từ Veo 3.1 / Gemini Omni 1.2 Flash (nếu có)
+  if (veoClipAbs && scene.type !== 'real-product-closeup' && scene.type !== 'offer-cta') {
+    const args = ['-y', '-v', 'error', '-t', String(dur), '-i', veoClipAbs];
+    if (hasVoiceover) {
+      args.push('-i', audioAbs);
+      args.push('-vf', VERTICAL_FILTER, '-map', '0:v:0', '-map', '1:a:0');
+    } else {
+      args.push('-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo');
+      args.push('-vf', VERTICAL_FILTER, '-map', '0:v:0', '-map', '1:a:0');
+    }
+    args.push(
+      '-c:v', 'libx264', '-crf', '16', '-preset', 'medium', '-pix_fmt', 'yuv420p',
+      '-c:a', 'aac', '-ar', '48000', '-ac', '2', '-shortest', segOut
+    );
+    execFileSync('ffmpeg', args, { stdio: 'inherit' });
+    return segOut;
+  }
+
   const clipMeta = scene.footageId ? catalog.get(scene.footageId) : null;
   const clipAbs = clipMeta && fs.existsSync(path.join(ROOT, clipMeta.filePath))
     ? path.join(ROOT, clipMeta.filePath)
-    : scene.videoSrc && fs.existsSync(path.join(campaignDir, scene.videoSrc))
-    ? path.join(campaignDir, scene.videoSrc)
     : '';
 
   // Chỉ giữ nguyên điểm ảnh video gốc nếu người dùng tắt chế độ Thay thế (hoặc chưa tải ảnh SP/Nhân vật của mình lên)
@@ -61,12 +83,23 @@ function renderSceneSegment(scene, idx, ctx, tmpDir) {
   }
 
   // CHẾ ĐỘ CHÍNH: Thay thế Sản phẩm & Nhân vật của Video Mẫu bằng 100% Ảnh Sản Phẩm Thật & Ảnh Nhân Vật Thật của mình!
-  // Bố cục từng cảnh mô phỏng theo nhịp của Video Mẫu nhưng giữ nguyên 100% tỷ lệ & chi tiết gốc của SP và Nhân vật của mình.
+  // Nếu có Video Mẫu (clipAbs), sử dụng chính phân đoạn tương ứng của Video Mẫu làm nền ánh sáng chuyển động Bokeh mờ sâu (boxblur=38:6)
+  // giúp nhịp ánh sáng và chuyển động sống động như phim thật mà hoàn toàn không lộ sản phẩm của video mẫu!
   const sceneLayoutIdx = idx % 4;
   const bgPalette = ['0x0F172A', '0x111827', '0x1E293B', '0x1E1B4B'];
   const bgHex = scene.type === 'offer-cta' ? '0x1E1B4B' : bgPalette[sceneLayoutIdx];
 
-  const args = ['-y', '-v', 'error', '-f', 'lavfi', '-i', `color=c=${bgHex}:s=1080x1920:r=30:d=${dur}`];
+  const museStyle = inferMuseStyle(scene, ctx.campaignStyleId || 'tvc-studio-luxury');
+  const args = ['-y', '-v', 'error'];
+  let bgFilterPrefix = '[0:v]';
+  if (clipAbs) {
+    const sampleStart = Math.max(0, Number(scene.trimStartSec ?? idx * 4));
+    args.push('-ss', String(sampleStart), '-t', String(dur), '-i', clipAbs);
+    bgFilterPrefix =
+      `[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=38:6,eq=${museStyle.ffmpegEq},setsar=1,fps=30[bg0];[bg0]`;
+  } else {
+    args.push('-f', 'lavfi', '-i', `color=c=${bgHex}:s=1080x1920:r=30:d=${dur}`);
+  }
 
   if (charImgAbs && productImgAbs && charImgAbs !== productImgAbs) {
     args.push('-loop', '1', '-t', String(dur), '-i', charImgAbs);
@@ -76,32 +109,28 @@ function renderSceneSegment(scene, idx, ctx, tmpDir) {
 
     let filterComplex = '';
     if (scene.type === 'real-product-closeup' || sceneLayoutIdx === 2) {
-      // Cảnh 3 (Cận cảnh chi tiết sản phẩm): Phóng lớn Ảnh Sản Phẩm Thật ở trung tâm + Ảnh Nhân Vật nhỏ ở góc trên
       filterComplex =
         `[2:v]scale=960:1180:force_original_aspect_ratio=decrease[prod];` +
         `[1:v]scale=380:460:force_original_aspect_ratio=decrease[char];` +
-        `[0:v][prod]overlay=(W-w)/2:420[tmp];` +
+        `${bgFilterPrefix}[prod]overlay=(W-w)/2:420[tmp];` +
         `[tmp][char]overlay=W-w-48:80,setsar=1,fps=30[v]`;
     } else if (scene.type === 'offer-cta' || sceneLayoutIdx === 3) {
-      // Cảnh 4 (Chốt đơn / Báo giá CTA): Sản phẩm nổi bật phía trên + Nhân vật phía dưới
       filterComplex =
         `[2:v]scale=860:860:force_original_aspect_ratio=decrease[prod];` +
         `[1:v]scale=780:720:force_original_aspect_ratio=decrease[char];` +
-        `[0:v][prod]overlay=(W-w)/2:110[tmp];` +
+        `${bgFilterPrefix}[prod]overlay=(W-w)/2:110[tmp];` +
         `[tmp][char]overlay=(W-w)/2:1020,setsar=1,fps=30[v]`;
     } else if (sceneLayoutIdx === 1) {
-      // Cảnh 2 (Trải nghiệm & Giải quyết vấn đề): Nhân vật bên trái/trên + Sản phẩm bên phải/dưới theo bố cục chia đôi của video mẫu
       filterComplex =
         `[1:v]scale=900:860:force_original_aspect_ratio=decrease[char];` +
         `[2:v]scale=780:740:force_original_aspect_ratio=decrease[prod];` +
-        `[0:v][char]overlay=60:130[tmp];` +
+        `${bgFilterPrefix}[char]overlay=60:130[tmp];` +
         `[tmp][prod]overlay=W-w-60:980,setsar=1,fps=30[v]`;
     } else {
-      // Cảnh 1 (Hook mở đầu): Nhân vật thật + Sản phẩm thật xuất hiện trực diện thu hút trong 3 giây đầu
       filterComplex =
         `[1:v]scale=920:840:force_original_aspect_ratio=decrease[char];` +
         `[2:v]scale=760:700:force_original_aspect_ratio=decrease[prod];` +
-        `[0:v][char]overlay=(W-w)/2:120[tmp];` +
+        `${bgFilterPrefix}[char]overlay=(W-w)/2:120[tmp];` +
         `[tmp][prod]overlay=(W-w)/2:1000,setsar=1,fps=30[v]`;
     }
 
@@ -115,7 +144,7 @@ function renderSceneSegment(scene, idx, ctx, tmpDir) {
     args.push(
       '-filter_complex',
       `[1:v]scale=980:1480:force_original_aspect_ratio=decrease[fg];` +
-      `[0:v][fg]overlay=(W-w)/2:(H-h)/2,setsar=1,fps=30[v]`,
+      `${bgFilterPrefix}[fg]overlay=(W-w)/2:(H-h)/2,setsar=1,fps=30[v]`,
       '-map', '[v]', '-map', '2:a:0'
     );
   } else {
@@ -213,7 +242,8 @@ async function main() {
       catalog,
       productImgAbs,
       charImgAbs,
-      replaceSampleWithOwnAssets
+      replaceSampleWithOwnAssets,
+      campaignStyleId: campaign.museStyle || 'tvc-studio-luxury'
     };
     const segFiles = campaign.scenes.map((sc, i) => renderSceneSegment(sc, i, ctx, tmpDir));
 

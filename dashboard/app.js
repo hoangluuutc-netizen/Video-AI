@@ -206,7 +206,8 @@ async function initDashboard() {
         catalog: data.catalog || { clips: [] },
         campaigns: data.campaigns || [],
         sheet: data.sheet?.reels?.length ? data.sheet : FALLBACK_STATE.sheet,
-        sampleAnalysis: data.sampleAnalysis || null
+        sampleAnalysis: data.sampleAnalysis || null,
+        veo3PromptsPack: data.veo3PromptsPack || null
       };
       syncAiConfigToUi();
       serverOnline = true;
@@ -956,8 +957,189 @@ function syncScriptToScenes() {
   }
 
   renderScenesTable();
+  renderVeo3StudioCards();
   renderThreeCovers();
   updatePhonePreview();
+}
+
+const CAMERA_PRESET_OPTIONS = [
+  { value: 'hook-eye-level', label: '🎥 Cận mắt 50mm Dolly-In (Mở đầu 3s)' },
+  { value: 'ugc-handheld', label: '📱 Cầm tay UGC Tự nhiên 35mm (Trải nghiệm)' },
+  { value: 'macro-product', label: '🔍 Macro Cận cảnh 85mm f/2.8 (Chi tiết SP)' },
+  { value: 'split-comparison', label: '⚖️ Bố cục Đôi Studio (Nhân vật + SP)' },
+  { value: 'cta-hero', label: '✨ Hero Chốt đơn CTA (Nền sáng sang trọng)' }
+];
+
+function getSceneCameraPreset(sc, i) {
+  if (sc.cameraPreset) return sc.cameraPreset;
+  if (sc.type === 'real-product-closeup' || i === 2) return 'macro-product';
+  if (sc.type === 'offer-cta' || i === 3) return 'cta-hero';
+  if (i === 1) return 'ugc-handheld';
+  return 'hook-eye-level';
+}
+
+function buildClientSideVeo3Prompt(sc, i) {
+  const p = getSelectedProduct();
+  const c = getSelectedCharacter();
+  const camKey = getSceneCameraPreset(sc, i);
+  const camObj = CAMERA_PRESET_OPTIONS.find((x) => x.value === camKey) || CAMERA_PRESET_OPTIONS[0];
+  const pLocks = (p.immutableFeatures || []).join('; ');
+  const cLocks = (c.immutableTraits || []).join('; ');
+  const prodImg = Object.values(p.referenceImages || {}).find(Boolean) || 'assets/products/sample-product/front.png';
+  const charImg = Object.values(c.referenceImages || {}).find(Boolean) || 'assets/characters/sample-kol/portrait.png';
+  const refClip = `media/ref-clips/${sc.id}-ref3s.mp4`;
+  const campaignId = (document.getElementById('inp-campaign-id')?.value || 'sample-campaign').trim();
+  const museStyleEl = document.getElementById('inp-muse-style');
+  const museStyleId = sc.museStyle || museStyleEl?.value || 'tvc-studio-luxury';
+  const museStyleLabels = {
+    'tvc-studio-luxury': '💎 TVC Studio Sang Trọng (Bokeh Vàng Ấm)',
+    'warm-lifestyle': '☀️ Lifestyle Đời Thường Tự Nhiên (Nắng Sớm)',
+    'clean-shopee-mall': '🛍️ Shopee Mall Sắc Nét (Sáng Rõ Chi Tiết)',
+    'tiktok-viral-contrast': '🔥 TikTok High-Retention (Tương Phản Ấn Tượng)'
+  };
+  const museStylePrompts = {
+    'tvc-studio-luxury': 'High-end commercial TVC lighting, warm golden rim light, Sony Venice cinema color science, 85mm f/1.4 creamy bokeh',
+    'warm-lifestyle': 'Natural morning window sunlight, soft organic shadows, authentic UGC lifestyle color grade, Fujifilm Eterna warm film tone',
+    'clean-shopee-mall': 'Ultra-clean e-commerce studio softbox lighting, neutral 5600K daylight balance, crisp product edge definition',
+    'tiktok-viral-contrast': 'Punchy high-contrast social commercial look, dramatic studio key light with subtle teal-amber depth separation'
+  };
+  const museStyleLabel = museStyleLabels[museStyleId] || museStyleLabels['tvc-studio-luxury'];
+  const museStylePrompt = museStylePrompts[museStyleId] || museStylePrompts['tvc-studio-luxury'];
+
+  const startKeyframeUrl = `/campaigns/${campaignId}/media/keyframes/${sc.id}-start.png?t=${Date.now()}`;
+  const endKeyframeUrl = `/campaigns/${campaignId}/media/keyframes/${sc.id}-end.png?t=${Date.now()}`;
+  const sceneBackdropRel = `assets/footage/analysis/video-m-u/scene-${(i % 4) + 1}.jpg`;
+
+  const whisk3SlotPrompt = [
+    `[MUSE AI / GOOGLE WHISK 3-SLOT REMIX — 9:16 VERTICAL]`,
+    `• [SLOT 1 - SUBJECT (Chủ thể khóa cứng 100%)]: ${c.name} (${cLocks}) holding/presenting ${p.name} (${pLocks}). Preserve exact face and product geometry/logo.`,
+    `• [SLOT 2 - SCENE (Bối cảnh & Hành động)]: ${sc.setting || 'Modern clean studio/lifestyle backdrop'} (${sceneBackdropRel}). Action: ${sc.visualAction}`,
+    `• [SLOT 3 - STYLE (Ánh sáng & Màu phim)]: ${museStylePrompt}. Camera: ${camObj.label}.`,
+    `• [STRICT NEGATIVE]: no warped logo, no distorted text, no altered product colors, no face morphing.`
+  ].join('\n');
+
+  const veo3Prompt = [
+    `[VEO 3.1 + MUSE AI FRAMES-TO-VIDEO — 9:16 VERTICAL 1080p]`,
+    `• Character Reference (Image 1 - ${charImg}): ${c.name} (${cLocks}). Keep facial identity, hairstyle, and outfit 100% consistent.`,
+    `• Product Ingredient Reference (Image 2 - ${prodImg}): ${p.name} (${pLocks}). Preserve exact shape, logo, and surface finish.`,
+    `• Frame Continuity (Start Frame -> End Frame): Transition smoothly from ${sc.id}-start.png to ${sc.id}-end.png over ${sc.durationSec || 4}s.`,
+    `• Camera & Lens: ${camObj.label}. Style: ${museStylePrompt}.`,
+    `• Scene Action (${sc.durationSec || 4}s): ${sc.visualAction}`,
+    `• Native Audio & Lip-Sync Dialogue (Vietnamese): Character speaks naturally in Vietnamese: "${sc.subtitle || ''}"`,
+    `• Sound Effects (SFX): Realistic tactile product sounds, warm studio acoustic ambiance.`,
+    `• Negative: no warped logo, no distorted text, no altered product colors, no face morphing.`
+  ].join('\n');
+
+  const omniPrompt = `In a single continuous shot (${sc.durationSec || 4}s, 9:16 1080p, ${museStylePrompt}): The person from the first reference image (${c.name}) holds and demonstrates the exact product from the second reference image (${p.name}), following the camera framing of the reference video (${refClip}) and transitioning from start keyframe to end keyframe. Action: ${sc.visualAction}. Audio: Speaks in Vietnamese: "${sc.subtitle || ''}". Preserve 100% original face and product geometry.`;
+
+  return {
+    sceneNumber: i + 1,
+    id: sc.id,
+    durationSec: sc.durationSec || 4,
+    cameraLabel: camObj.label,
+    museStyleId,
+    museStyleLabel,
+    charImg,
+    prodImg,
+    sceneBackdropRel,
+    startKeyframeUrl,
+    endKeyframeUrl,
+    refClip,
+    whisk3SlotPrompt,
+    veo3Prompt,
+    omniPrompt
+  };
+}
+
+function renderVeo3StudioCards() {
+  const container = document.getElementById('veo3-studio-cards');
+  if (!container) return;
+
+  const cards = scenesList.map((sc, i) => buildClientSideVeo3Prompt(sc, i));
+  container.innerHTML = cards
+    .map(
+      (item, i) => `
+      <div class="spec-row" style="flex-direction:column;align-items:stretch;gap:8px;background:#FFFFFF;border:1px solid var(--orange-border);">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;">
+          <span class="badge-mech">CẢNH ${item.sceneNumber} • ${item.id} (${item.durationSec}s)</span>
+          <span style="font-size:11px;font-weight:800;color:var(--orange);">${item.cameraLabel}</span>
+        </div>
+
+        <!-- Whisk 3-Slot Badges -->
+        <div style="font-size:11px;color:var(--text-muted);background:#F8FAFC;padding:6px 8px;border-radius:8px;border:1px solid var(--border);display:flex;flex-direction:column;gap:3px;">
+          <div>🎯 <strong>Slot 1 (Chủ thể):</strong> <code>${item.charImg}</code> + <code>${item.prodImg}</code></div>
+          <div>🏞️ <strong>Slot 2 (Bối cảnh + Clip 3s):</strong> <code>${item.sceneBackdropRel}</code> • <code>${item.refClip}</code></div>
+          <div>🎨 <strong>Slot 3 (Muse Style):</strong> <strong style="color:var(--orange);">${item.museStyleLabel}</strong></div>
+        </div>
+
+        <!-- Khung Hình Đầu (Start Frame) -> Khung Hình Cuối (End Frame) -->
+        <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px;background:#0F172A;padding:8px;border-radius:8px;color:#FFF;">
+          <div style="text-align:center;">
+            <div style="font-size:10px;font-weight:800;color:#38BDF8;margin-bottom:4px;">KHUNG ĐẦU (START)</div>
+            <img src="${item.startKeyframeUrl}" alt="Start ${item.id}" style="width:100%;height:125px;object-fit:contain;border-radius:6px;background:#1E293B;" onerror="this.style.display='none'" />
+          </div>
+          <div style="font-size:16px;font-weight:900;color:var(--orange);">➔</div>
+          <div style="text-align:center;">
+            <div style="font-size:10px;font-weight:800;color:#FBBF24;margin-bottom:4px;">KHUNG CUỐI (END)</div>
+            <img src="${item.endKeyframeUrl}" alt="End ${item.id}" style="width:100%;height:125px;object-fit:contain;border-radius:6px;background:#1E293B;" onerror="this.style.display='none'" />
+          </div>
+        </div>
+
+        <textarea id="veo3-prompt-box-${i}" readonly style="font-size:11px;min-height:105px;background:#18181B;color:#F4F4F5;font-family:Consolas,monospace;border-radius:8px;">${item.veo3Prompt}</textarea>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn btn-outline" style="padding:6px 8px;font-size:11px;flex:1;" onclick="copySceneVeoPrompt(${i}, 'whisk')">📋 Copy Whisk 3-Slot</button>
+          <button class="btn btn-orange" style="padding:6px 8px;font-size:11px;flex:1;" onclick="copySceneVeoPrompt(${i}, 'veo3')">📋 Copy Veo 3.1 (Start→End)</button>
+          <button class="btn btn-outline" style="padding:6px 8px;font-size:11px;flex:1;" onclick="copySceneVeoPrompt(${i}, 'omni')">📋 Copy Omni 1.2</button>
+        </div>
+      </div>
+    `
+    )
+    .join('');
+}
+
+async function onChangeMuseStyle(styleId) {
+  scenesList.forEach((s) => {
+    s.museStyle = styleId;
+  });
+  renderVeo3StudioCards();
+  if (serverOnline) {
+    await saveCampaignToServer(true);
+    await triggerBackendAction('generate-muse-pack', 5);
+    renderVeo3StudioCards();
+  }
+}
+
+async function copySceneVeoPrompt(idx, kind = 'veo3') {
+  const sc = scenesList[idx];
+  if (!sc) return;
+  const built = buildClientSideVeo3Prompt(sc, idx);
+  const textToCopy =
+    kind === 'whisk' ? built.whisk3SlotPrompt : kind === 'omni' ? built.omniPrompt : built.veo3Prompt;
+  const label =
+    kind === 'whisk' ? 'Muse AI / Whisk 3-Slot' : kind === 'omni' ? 'Gemini Omni 1.2 R2V' : 'Google Veo 3.1 (Start→End)';
+  try {
+    await navigator.clipboard.writeText(textToCopy);
+    logConsole(`✅ Đã copy Prompt ${label} của cảnh "${sc.id}" vào Clipboard!`);
+  } catch {
+    logConsole(textToCopy);
+  }
+}
+
+async function copyAllVeo3BatchJson() {
+  const cards = scenesList.map((sc, i) => buildClientSideVeo3Prompt(sc, i));
+  const jsonText = JSON.stringify(cards, null, 2);
+  try {
+    await navigator.clipboard.writeText(jsonText);
+    logConsole(`✅ Đã copy toàn bộ JSON Batch (${cards.length} phân cảnh Veo 3.1) vào Clipboard!`);
+  } catch {
+    logConsole(jsonText);
+  }
+}
+
+async function runVeo3PackGeneration() {
+  await saveCampaignToServer(true);
+  await triggerBackendAction('generate-veo3-pack', 5);
+  renderVeo3StudioCards();
 }
 
 function renderScenesTable() {
@@ -970,37 +1152,45 @@ function renderScenesTable() {
 
   tbody.innerHTML = scenesList
     .map(
-      (s, i) => `
+      (s, i) => {
+        const curCam = getSceneCameraPreset(s, i);
+        return `
       <tr ondragover="handleDragOver(event, this)" ondragleave="handleDragLeave(event, this)" ondrop="handleSceneRowDrop(event, ${i})" title="Mẹo: Kéo thả trực tiếp file video .mp4 vào dòng này để gán cho cảnh #${i + 1}">
         <td><strong>${i + 1}</strong></td>
-        <td style="min-width:145px;"><input type="text" value="${s.id}" onchange="scenesList[${i}].id=this.value" /></td>
-        <td style="min-width:155px;">
-          <select onchange="scenesList[${i}].type=this.value;renderScenesTable();updatePhonePreview();">
+        <td style="min-width:140px;"><input type="text" value="${s.id}" onchange="scenesList[${i}].id=this.value;renderVeo3StudioCards();" /></td>
+        <td style="min-width:145px;">
+          <select onchange="scenesList[${i}].type=this.value;renderScenesTable();renderVeo3StudioCards();updatePhonePreview();">
             ${typeOptions
               .map((t) => `<option value="${t}" ${s.type === t ? 'selected' : ''}>${t}</option>`)
               .join('')}
           </select>
         </td>
-        <td style="width:76px;min-width:72px;">
-          <input type="number" min="1" max="15" value="${s.durationSec}" onchange="scenesList[${i}].durationSec=Number(this.value);updatePhonePreview();" />
+        <td style="width:72px;min-width:68px;">
+          <input type="number" min="1" max="15" value="${s.durationSec}" onchange="scenesList[${i}].durationSec=Number(this.value);renderVeo3StudioCards();updatePhonePreview();" />
         </td>
-        <td style="min-width:250px;">
-          ${
-            s.type === 'real-footage'
-              ? `<div style="display:flex;gap:4px;align-items:center;">
-                   <input type="text" list="footage-datalist" placeholder="Kéo thả video hoặc nhập mã" value="${s.footageId || ''}" onchange="scenesList[${i}].footageId=this.value" style="min-width:125px;flex:1;" />
-                   <input type="number" step="0.5" value="${s.trimStartSec ?? 0}" onchange="scenesList[${i}].trimStartSec=Number(this.value)" style="width:54px;" />
-                   <span>→</span>
-                   <input type="number" step="0.5" value="${s.trimEndSec ?? s.durationSec}" onchange="scenesList[${i}].trimEndSec=Number(this.value)" style="width:54px;" />
-                 </div>`
-              : `<span style="font-size:11px;color:var(--text-muted);">${s.type === 'real-product-closeup' || s.type === 'offer-cta' ? 'Remotion 100% ảnh/chữ gốc' : 'Keyframe QC → I2V'}</span>`
-          }
+        <td style="min-width:255px;">
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <select onchange="scenesList[${i}].cameraPreset=this.value;renderVeo3StudioCards();" style="font-size:11px;padding:6px 8px;">
+              ${CAMERA_PRESET_OPTIONS.map((c) => `<option value="${c.value}" ${curCam === c.value ? 'selected' : ''}>${c.label}</option>`).join('')}
+            </select>
+            ${
+              s.type === 'real-footage'
+                ? `<div style="display:flex;gap:4px;align-items:center;">
+                     <input type="text" list="footage-datalist" placeholder="Mã video mẫu" value="${s.footageId || ''}" onchange="scenesList[${i}].footageId=this.value" style="min-width:105px;flex:1;font-size:11px;padding:5px 8px;" />
+                     <input type="number" step="0.5" value="${s.trimStartSec ?? 0}" onchange="scenesList[${i}].trimStartSec=Number(this.value)" style="width:50px;font-size:11px;padding:5px;" />
+                     <span>→</span>
+                     <input type="number" step="0.5" value="${s.trimEndSec ?? s.durationSec}" onchange="scenesList[${i}].trimEndSec=Number(this.value)" style="width:50px;font-size:11px;padding:5px;" />
+                   </div>`
+                : `<span style="font-size:11px;color:var(--text-muted);">${s.type === 'real-product-closeup' || s.type === 'offer-cta' ? 'Remotion 100% ảnh/chữ gốc' : 'Veo 3.1 Ingredients → Video'}</span>`
+            }
+          </div>
         </td>
-        <td style="min-width:210px;"><input type="text" value="${s.subtitle}" onchange="scenesList[${i}].subtitle=this.value;updatePhonePreview();" /></td>
-        <td style="min-width:210px;"><input type="text" value="${s.visualAction}" onchange="scenesList[${i}].visualAction=this.value" /></td>
+        <td style="min-width:210px;"><input type="text" value="${s.subtitle}" onchange="scenesList[${i}].subtitle=this.value;renderVeo3StudioCards();updatePhonePreview();" /></td>
+        <td style="min-width:210px;"><input type="text" value="${s.visualAction}" onchange="scenesList[${i}].visualAction=this.value;renderVeo3StudioCards();" /></td>
         <td><button class="btn btn-outline" style="padding:4px 10px;" onclick="removeSceneRow(${i})">✕</button></td>
       </tr>
-    `
+    `;
+      }
     )
     .join('');
 
@@ -1106,6 +1296,7 @@ function buildCampaignPayload() {
   const characterId = document.getElementById('inp-character').value || 'sample-kol';
   const winner = hooksPool[winnerHookIndex] || { text: scenesList[0]?.subtitle || '' };
 
+  const museStyle = document.getElementById('inp-muse-style')?.value || 'tvc-studio-luxury';
   const cleanScenes = scenesList.map((s) => {
     const base = {
       id: s.id,
@@ -1113,7 +1304,11 @@ function buildCampaignPayload() {
       durationSec: Number(s.durationSec || 4),
       subtitle: s.subtitle,
       visualAction: s.visualAction,
-      setting: s.setting || 'Standard clean studio/lifestyle setting'
+      setting: s.setting || 'Standard clean studio/lifestyle setting',
+      cameraPreset: s.cameraPreset || '',
+      sfxPreset: s.sfxPreset || '',
+      museStyle: s.museStyle || museStyle,
+      motionRefClip: s.motionRefClip || ''
     };
     if (s.type === 'real-footage') {
       base.footageId = s.footageId || '';
@@ -1136,6 +1331,7 @@ function buildCampaignPayload() {
     title: `Chiến dịch ${product.name} (${mode})`,
     productId: product.id,
     characterId,
+    museStyle,
     platforms: ['tiktok', 'shopee', 'facebook', 'web'],
     hookText: winner.text,
     ctaText: `Chỉ ${product.salePrice || product.price} hôm nay — Đặt ngay!`,
@@ -1212,6 +1408,14 @@ async function runFullRenderStep() {
   await triggerBackendAction('render-ffmpeg', 12);
 }
 
+async function runFullAutoPilot() {
+  await saveCampaignToServer(true);
+  await triggerBackendAction('run-optimal-pipeline', 18);
+  renderVeo3StudioCards();
+  renderReelSheet();
+  scrollToSlide('slide-06');
+}
+
 async function saveCampaignToServer(silent = false) {
   const campaign = buildCampaignPayload();
   if (!serverOnline) {
@@ -1253,20 +1457,25 @@ async function triggerBackendAction(action, estSec = 5) {
     'validate': 'Đang kiểm tra cấu trúc dữ liệu (validate-assets.mjs)...',
     'ingest-footage': 'Đang quét kho video bằng ffprobe (ingest-footage.mjs)...',
     'build-keyframes': 'Đang ghép cảnh chuẩn từ Ảnh Người thật & Sản phẩm thật...',
+    'generate-muse-pack': '🎨 Đang tạo cặp ảnh Khung Đầu / Khung Cuối & gói Muse AI / Whisk 3-Slot...',
+    'generate-veo3-pack': '🎨🎬 Đang xuất bộ Prompt Muse AI × Whisk 3-Slot × Veo 3.1 & cắt clip mẫu 3s...',
+    'run-veo3-cloud': 'Đang gọi Cloud Veo 3.1 / Gemini Omni 1.2 Flash sinh video điện ảnh...',
     'generate-voiceover': 'Đang sinh giọng đọc thuyết minh tiếng Việt & trộn âm thanh 48kHz...',
     'export-cutlist': 'Đang trích xuất bảng cắt CapCut (cutlist.md & cutlist.csv)...',
-    'render-ffmpeg': 'Đang dựng video MP4 1080×1920 + lồng giọng đọc tiếng Việt bằng FFmpeg...',
+    'render-ffmpeg': 'Đang dựng video MP4 1080×1920 (Bokeh Cinema + 100% Người & SP Thật + Giọng Việt)...',
     'sync-studio': 'Đang đồng bộ chiến dịch & âm thanh sang Remotion Studio...',
-    'verify-integrity': 'Đang đo chỉ số SSIM khung hình & kiểm tra luồng âm thanh...'
+    'verify-integrity': 'Đang đo chỉ số SSIM khung hình & kiểm tra luồng âm thanh...',
+    'run-optimal-pipeline': '⚡ AUTO-PILOT: Đang tự động chạy toàn bộ 6 bước (Phân tích Video Mẫu → Muse 3-Slot Keyframes → Prompt Veo 3.1 → Giọng Việt → Dựng MP4 Bokeh Cinema → Kiểm định)...'
   };
 
   const t0 = startJobProgress(actionLabels[action] || `Đang thực thi ${action}...`, estSec);
   logConsole(actionLabels[action] || `Đang thực thi "${action}"...`);
 
+  const museStyle = document.getElementById('inp-muse-style')?.value || 'tvc-studio-luxury';
   const res = await fetch('/api/run-action', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action, campaignId })
+    body: JSON.stringify({ action, campaignId, museStyle })
   });
   const data = await res.json();
   if (data.state) {
@@ -1281,7 +1490,7 @@ async function triggerBackendAction(action, estSec = 5) {
         audioEl.src = data.mediaUrl;
         audioEl.play().catch(() => {});
       }
-    } else if (action === 'render-ffmpeg') {
+    } else if (action === 'render-ffmpeg' || action === 'run-optimal-pipeline') {
       const phoneVid = document.getElementById('phone-bg-video');
       const audioEl = document.getElementById('voiceover-audio-player');
       if (phoneVid) {

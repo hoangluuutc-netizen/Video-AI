@@ -23,6 +23,7 @@
         <button class="nav-tab" onclick="scrollToSlide('slide-06')">06 Giọng Đọc & Dựng Reel</button>
         <button class="nav-tab" onclick="scrollToSlide('slide-07')">07 Kiểm duyệt SSIM</button>
         <button class="nav-tab" style="background:var(--orange);color:#FFF;border-color:var(--orange);" onclick="toggleHelpDrawer('help-brain-settings');scrollToSlide('brain-settings-card')">⚙️ Cài đặt Bộ não</button>
+        <button class="nav-tab" style="background:#16A34A;color:#FFF;border-color:#16A34A;font-weight:900;" onclick="runFullAutoPilot()">⚡ Chạy Tự Động Toàn Bộ (Auto-Pilot)</button>
       </nav>
       <span id="server-status" class="server-badge">Đang kiểm tra kết nối...</span>
     </header>
@@ -89,11 +90,11 @@
           </select>
         </div>
         <div class="field-group">
-          <label>🎥 Bộ não Tạo Chuyển Động Video</label>
+          <label>🎥 Bộ não Tạo Chuyển Động Video (Veo 3.1 / Omni 1.2 / FFmpeg Cinema)</label>
           <select id="cfg-video-model">
-            <option value="ffmpeg-natural-1080p">FFmpeg 1080×1920 30fps (Sắc nét, không biến dạng)</option>
-            <option value="gemini-omni-1.1-flash">Gemini Omni 1.1 Flash (Image-to-Video)</option>
-            <option value="veo-3.1">Google Veo 3.1 (Ingredients-to-Video)</option>
+            <option value="veo-3.1-generate-001">Google Veo 3.1 (Ingredients-to-Video + Native Audio Lip-Sync + 1080p/4K)</option>
+            <option value="gemini-omni-1.2-flash">Gemini Omni 1.2 Flash (Reference-to-Video R2V + Clip Mẫu 3s)</option>
+            <option value="ffmpeg-bokeh-cinema">FFmpeg Bokeh Cinema (Nền chuyển động từ Video Mẫu + 100% Ảnh Thật)</option>
           </select>
         </div>
         <div class="field-group">
@@ -437,9 +438,10 @@
       </div>
 
       <div class="btn-row">
-        <button class="btn btn-orange" onclick="triggerBackendAction('build-keyframes')">🖼️ Tạo/Ghép Cảnh Từ Ảnh Người Thật + Ảnh SP Thật Đã Tải Lên</button>
+        <button class="btn btn-orange" onclick="runVeo3PackGeneration()">✨ 1. Xuất Bộ Prompt Veo 3.1 & Cắt Clip Mẫu 3s (`veo3-prompts.json`)</button>
+        <button class="btn" onclick="triggerBackendAction('build-keyframes')">🖼️ 2. Ghép Keyframe Chuẩn Từ Ảnh Người Thật + SP Thật</button>
+        <button class="btn btn-outline" onclick="triggerBackendAction('run-veo3-cloud', 15)">🚀 3. Chạy Cloud Veo 3.1 / Omni 1.2</button>
         <button class="btn btn-outline" onclick="addSceneRow()">+ Thêm cảnh quay</button>
-        <button class="btn btn-outline" onclick="triggerBackendAction('ingest-footage')">📥 Quét kho clip (`ingest-footage.mjs`)</button>
         <span id="footage-count-badge" style="font-size:12px;color:var(--orange);font-weight:800;margin-left:auto;">0 clip trong sổ</span>
       </div>
 
@@ -452,14 +454,40 @@
               <th>Mã cảnh</th>
               <th>Nguồn hình (Bảo toàn gốc)</th>
               <th>Dài (s)</th>
-              <th>Clip quay thật / Trim (In→Out)</th>
-              <th>Lời đọc / Phụ đề tiếng Việt (Sẽ được đọc thành tiếng)</th>
-              <th>Chỉ dẫn góc máy (Không biến dạng)</th>
+              <th>Góc máy Điện ảnh Veo 3 & Trim mẫu</th>
+              <th>Lời thoại Tiếng Việt (Lip-Sync / Voiceover)</th>
+              <th>Chỉ dẫn Hành động & Thay thế (Không biến dạng)</th>
               <th>Xóa</th>
             </tr>
           </thead>
           <tbody id="scenes-tbody"></tbody>
         </table>
+      </div>
+
+      <!-- BẢNG MUSE AI × WHISK 3-SLOT × VEO 3.1 STUDIO (KHUNG ĐẦU/CUỐI + KHÓA NHÂN VẬT & SẢN PHẨM + COPY 1-CLICK) -->
+      <div class="scene-table-wrap" style="border:2px solid var(--orange);background:#FFFDF9;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+          <div>
+            <strong style="font-size:14px;color:var(--orange);text-transform:uppercase;">🎨🎬 MUSE AI × WHISK 3-SLOT × VEO 3.1 STUDIO (TẠO ẢNH KHUNG ĐẦU/CUỐI & VIDEO HÀNG LOẠT)</strong>
+            <div style="font-size:12px;color:var(--text-muted);">
+              Kết hợp <strong>Whisk 3-Slot (Chủ thể + Bối cảnh + Phong cách)</strong> + <strong>Cặp Ảnh Khung Đầu → Khung Cuối (`-start.png` / `-end.png`)</strong> + <strong>Veo 3.1 Lip-Sync Tiếng Việt</strong>.
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <select id="inp-muse-style" onchange="onChangeMuseStyle(this.value)" style="padding:6px 10px;border-radius:8px;border:1px solid var(--orange);font-size:12px;font-weight:800;background:#FFF;">
+              <option value="tvc-studio-luxury">💎 Style: TVC Studio Sang Trọng (Bokeh Vàng Ấm)</option>
+              <option value="warm-lifestyle">☀️ Style: Lifestyle Đời Thường Tự Nhiên (Nắng Sớm)</option>
+              <option value="clean-shopee-mall">🛍️ Style: Shopee Mall Sắc Nét (Sáng Rõ Chi Tiết)</option>
+              <option value="tiktok-viral-contrast">🔥 Style: TikTok High-Retention (Tương Phản Ấn Tượng)</option>
+            </select>
+            <button class="icon-pill-btn" style="background:var(--orange);color:#FFF;border-color:var(--orange);" onclick="runVeo3PackGeneration()">🎨 Tạo Cặp Ảnh Đầu/Cuối & Prompt 3-Slot</button>
+            <button class="icon-pill-btn" onclick="copyAllVeo3BatchJson()">📋 Copy Toàn Bộ JSON Batch</button>
+            <button class="icon-pill-btn" onclick="openCurrentCampaignFile('muse-ai-pack.json')">📂 Mở `muse-ai-pack.json`</button>
+            <button class="icon-pill-btn" onclick="openCurrentCampaignFile('veo3-prompts.json')">📂 Mở `veo3-prompts.json`</button>
+            <button class="icon-pill-btn" onclick="openCurrentCampaignFile('prompts.md')">📂 Mở `prompts.md`</button>
+          </div>
+        </div>
+        <div id="veo3-studio-cards" class="source-grid" style="grid-template-columns:repeat(auto-fit,minmax(310px,1fr));"></div>
       </div>
 
       <!-- 3 Phương án bìa -->

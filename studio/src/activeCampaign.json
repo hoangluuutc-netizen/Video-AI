@@ -26,7 +26,9 @@
       "setting": "Standard clean studio/lifestyle setting",
       "trimStartSec": 0,
       "trimEndSec": 4,
-      "audioSrc": "campaigns/sample-campaign/audio/scene-1-hook.wav"
+      "audioSrc": "campaigns/sample-campaign/audio/scene-1-hook.wav",
+      "keyframeSrc": "campaigns/sample-campaign/keyframes/scene-1-hook.png",
+      "videoSrc": "campaigns/sample-campaign/clips/Video-m-u.mp4"
     },
     {
       "id": "scene-2-problem-flip",
@@ -37,7 +39,9 @@
       "setting": "Standard clean studio/lifestyle setting",
       "trimStartSec": 0,
       "trimEndSec": 5,
-      "audioSrc": "campaigns/sample-campaign/audio/scene-2-problem-flip.wav"
+      "audioSrc": "campaigns/sample-campaign/audio/scene-2-problem-flip.wav",
+      "keyframeSrc": "campaigns/sample-campaign/keyframes/scene-2-problem-flip.png",
+      "videoSrc": "campaigns/sample-campaign/clips/Video-m-u.mp4"
     },
     {
       "id": "scene-3-proof",
@@ -46,7 +50,8 @@
       "subtitle": "Nhìn cận cảnh: Inox 304 chuẩn y tế, giữ nhiệt 24h; Sơn nhám tĩnh điện chống bám vân tay; và Nắp khóa chống tràn 360 độ.",
       "visualAction": "Remotion render 100% ảnh sản phẩm gốc + 3 thông số thật (Zero-AI-Pixel).",
       "setting": "Standard clean studio/lifestyle setting",
-      "audioSrc": "campaigns/sample-campaign/audio/scene-3-proof.wav"
+      "audioSrc": "campaigns/sample-campaign/audio/scene-3-proof.wav",
+      "keyframeSrc": "campaigns/sample-campaign/keyframes/scene-3-proof.png"
     },
     {
       "id": "scene-4-cta",
@@ -55,7 +60,8 @@
       "subtitle": "Giá gốc 399.000đ giảm chỉ còn 249.000đ (-38% FLASH SALE) — bấm giỏ hàng đặt ngay!",
       "visualAction": "Remotion render thẻ giá chính hãng + nút CTA.",
       "setting": "Standard clean studio/lifestyle setting",
-      "audioSrc": "campaigns/sample-campaign/audio/scene-4-cta.wav"
+      "audioSrc": "campaigns/sample-campaign/audio/scene-4-cta.wav",
+      "keyframeSrc": "campaigns/sample-campaign/keyframes/scene-4-cta.png"
     }
   ]
 }

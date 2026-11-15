@@ -1,0 +1,179 @@
+{
+  "campaignId": "sample-campaign",
+  "generatedAt": "2026-11-14T19:27:19.320Z",
+  "methodology": "Muse AI + Google Whisk 3-Slot (Subject + Scene + Style) + Veo 3.1 Start/End Frame Continuity",
+  "selectedStyle": {
+    "id": "tvc-studio-luxury",
+    "label": "💎 TVC Studio Sang Trọng (Bokeh Vàng Ấm)",
+    "stylePrompt": "High-end commercial TVC lighting, warm golden rim light, ARRI Alexa / Sony Venice cinema color science, 85mm f/1.4 creamy bokeh, ultra-sharp product texture",
+    "ffmpegEq": "brightness=-0.26:saturation=0.92:contrast=1.08"
+  },
+  "availableStyles": [
+    {
+      "id": "tvc-studio-luxury",
+      "label": "💎 TVC Studio Sang Trọng (Bokeh Vàng Ấm)",
+      "stylePrompt": "High-end commercial TVC lighting, warm golden rim light, ARRI Alexa / Sony Venice cinema color science, 85mm f/1.4 creamy bokeh, ultra-sharp product texture",
+      "ffmpegEq": "brightness=-0.26:saturation=0.92:contrast=1.08"
+    },
+    {
+      "id": "warm-lifestyle",
+      "label": "☀️ Lifestyle Đời Thường Tự Nhiên (Nắng Sớm)",
+      "stylePrompt": "Natural morning window sunlight, soft organic shadows, authentic UGC lifestyle color grade, Fujifilm Eterna warm film tone, realistic skin texture",
+      "ffmpegEq": "brightness=-0.22:saturation=1.02:contrast=1.04"
+    },
+    {
+      "id": "clean-shopee-mall",
+      "label": "🛍️ Shopee Mall Sắc Nét (Sáng Rõ Chi Tiết)",
+      "stylePrompt": "Ultra-clean e-commerce studio softbox lighting, neutral 5600K daylight balance, crisp product edge definition, zero color cast on product label",
+      "ffmpegEq": "brightness=-0.18:saturation=0.96:contrast=1.10"
+    },
+    {
+      "id": "tiktok-viral-contrast",
+      "label": "🔥 TikTok High-Retention (Tương Phản Ấn Tượng)",
+      "stylePrompt": "Punchy high-contrast social commercial look, dramatic studio key light with subtle teal-amber depth separation, razor-sharp subject focus",
+      "ffmpegEq": "brightness=-0.28:saturation=1.10:contrast=1.14"
+    }
+  ],
+  "scenes": [
+    {
+      "sceneNumber": 1,
+      "sceneId": "scene-1-hook",
+      "type": "real-footage",
+      "durationSec": 4,
+      "dialogueVi": "Đừng mua Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml nếu bạn chưa kiểm tra 3 chi tiết sống còn này!",
+      "visualAction": "Quay thật điện thoại: cầm sản phẩm trên tay, nói câu hook trực diện.",
+      "museStyle": "tvc-studio-luxury",
+      "museStyleLabel": "💎 TVC Studio Sang Trọng (Bokeh Vàng Ấm)",
+      "whisk3Slots": {
+        "slot1Subject": {
+          "characterImage": "assets/characters/sample-kol/mama.jpg",
+          "productImage": "assets/products/sample-product/binh-thuy-tinh-giu-nhiet.png",
+          "description": "Minh Anh (Đại sứ thương hiệu) + Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml (Khóa cứng 100% chi tiết gốc)"
+        },
+        "slot2Scene": {
+          "sceneReferenceImage": "assets/footage/analysis/video-m-u/scene-1.jpg",
+          "description": "Standard clean studio/lifestyle setting"
+        },
+        "slot3Style": {
+          "styleId": "tvc-studio-luxury",
+          "styleLabel": "💎 TVC Studio Sang Trọng (Bokeh Vàng Ấm)",
+          "stylePrompt": "High-end commercial TVC lighting, warm golden rim light, ARRI Alexa / Sony Venice cinema color science, 85mm f/1.4 creamy bokeh, ultra-sharp product texture"
+        }
+      },
+      "keyframes": {
+        "startFrame": "campaigns/sample-campaign/media/keyframes/scene-1-hook-start.png",
+        "endFrame": "campaigns/sample-campaign/media/keyframes/scene-1-hook-end.png"
+      },
+      "prompts": {
+        "whisk3SlotPrompt": "[MUSE AI / GOOGLE WHISK 3-SLOT REMIX — 9:16 VERTICAL]\n• [SLOT 1 - SUBJECT (Chủ thể khóa cứng 100%)]: Minh Anh (Đại sứ thương hiệu) (Vietnamese woman, 26 years old; Shoulder-length straight dark brown hair; Warm natural skin tone, friendly confident smile; Wearing a clean cream-colored casual blazer over white t-shirt) holding/presenting Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml (Matte black cylindrical body; Minimalist silver engraved logo centered on the upper third; Brushed stainless steel rim and leak-proof flip-top lid; Exact height-to-width ratio 3.2:1). Preserve exact face and product geometry/logo.\n• [SLOT 2 - SCENE (Bối cảnh & Hành động)]: Standard clean studio/lifestyle setting. Action: Quay thật điện thoại: cầm sản phẩm trên tay, nói câu hook trực diện.\n• [SLOT 3 - STYLE (Ánh sáng & Màu phim)]: High-end commercial TVC lighting, warm golden rim light, ARRI Alexa / Sony Venice cinema color science, 85mm f/1.4 creamy bokeh, ultra-sharp product texture. Camera: Eye-level medium close-up shot, 50mm prime lens, f/1.8 shallow depth of field, subtle slow dolly-in to capture attention in the first 3 seconds.\n• [STRICT NEGATIVE]: warped logo, distorted brand text, altered product colors, melted packaging, extra fingers, missing fingers, unnatural grip, face morphing, plastic skin, blurry product edges, random text overlays. Do not change matte black finish to glossy; Do not alter or warp the silver logo; Do not add extra buttons or handles not present in reference.",
+        "veo3FramesToVideoPrompt": "[VEO 3.1 + MUSE AI FRAMES-TO-VIDEO — 9:16 VERTICAL 1080p]\n• Character Reference (Image 1): Minh Anh (Đại sứ thương hiệu) (Vietnamese woman, 26 years old; Shoulder-length straight dark brown hair; Warm natural skin tone, friendly confident smile; Wearing a clean cream-colored casual blazer over white t-shirt). Keep facial identity, hairstyle, and outfit 100% consistent across all scenes.\n• Product Ingredient Reference (Image 2): Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml (Matte black cylindrical body; Minimalist silver engraved logo centered on the upper third; Brushed stainless steel rim and leak-proof flip-top lid; Exact height-to-width ratio 3.2:1). Preserve exact shape, proportions, surface finish, and logo without any distortion.\n• Frame Continuity (Start Frame -> End Frame): Smoothly transition from Start Keyframe (medium hero shot) to End Keyframe (focused product emphasis) over 4s.\n• Camera & Lens: Eye-level medium close-up shot, 50mm prime lens, f/1.8 shallow depth of field, subtle slow dolly-in to capture attention in the first 3 seconds.\n• Style & Color Grade: High-end commercial TVC lighting, warm golden rim light, ARRI Alexa / Sony Venice cinema color science, 85mm f/1.4 creamy bokeh, ultra-sharp product texture.\n• Scene Action (4s): Quay thật điện thoại: cầm sản phẩm trên tay, nói câu hook trực diện.\n• Native Audio & Lip-Sync Dialogue (Vietnamese): Character speaks naturally in Vietnamese with warm, clear delivery: \"Đừng mua Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml nếu bạn chưa kiểm tra 3 chi tiết sống còn này!\"\n• Sound Effects (SFX) & Ambience: Crisp subtle studio whoosh transition, natural room tone, clear warm spoken voice.\n• Strict Negative Constraints: warped logo, distorted brand text, altered product colors, melted packaging, extra fingers, missing fingers, unnatural grip, face morphing, plastic skin, blurry product edges, random text overlays. Do not change matte black finish to glossy; Do not alter or warp the silver logo; Do not add extra buttons or handles not present in reference.",
+        "omniFlashPrompt": "In a single continuous commercial shot (4s, 9:16 portrait, 1080p, High-end commercial TVC lighting, warm golden rim light, ARRI Alexa / Sony Venice cinema color science, 85mm f/1.4 creamy bokeh, ultra-sharp product texture): The person from the first reference image (Minh Anh (Đại sứ thương hiệu), Vietnamese woman, 26 years old; Shoulder-length straight dark brown hair; Warm natural skin tone, friendly confident smile; Wearing a clean cream-colored casual blazer over white t-shirt) holds and demonstrates the exact product from the second reference image (Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml, Matte black cylindrical body; Minimalist silver engraved logo centered on the upper third; Brushed stainless steel rim and leak-proof flip-top lid; Exact height-to-width ratio 3.2:1), following the camera framing and pacing of the 3-second reference video. Transition smoothly from the starting keyframe pose to a close, clear showcase of the product at the ending frame. Action: Quay thật điện thoại: cầm sản phẩm trên tay, nói câu hook trực diện. Camera: Eye-level medium close-up shot, 50mm prime lens, f/1.8 shallow depth of field, subtle slow dolly-in to capture attention in the first 3 seconds. Audio & Dialogue: The character speaks clearly in Vietnamese: \"Đừng mua Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml nếu bạn chưa kiểm tra 3 chi tiết sống còn này!\". Sound design: Crisp subtle studio whoosh transition, natural room tone, clear warm spoken voice. Use the given images as strict character and product references so the face, logo, and product geometry remain 100% unchanged. No warped text, no extra fingers."
+      }
+    },
+    {
+      "sceneNumber": 2,
+      "sceneId": "scene-2-problem-flip",
+      "type": "real-footage",
+      "durationSec": 5,
+      "dialogueVi": "Mang nước đi làm mà chỉ 2 tiếng đã hết lạnh, vỏ bình lại đọng nước ướt hết giấy tờ trong balo. Khác biệt nằm ở kết cấu: Inox 304 chuẩn y tế, giữ nhiệt 24h kết hợp lớp sơn nhám tĩnh điện chống bám vân tay.",
+      "visualAction": "Quay thật cận cảnh bề mặt sơn nhám & thao tác mở nắp.",
+      "museStyle": "tvc-studio-luxury",
+      "museStyleLabel": "💎 TVC Studio Sang Trọng (Bokeh Vàng Ấm)",
+      "whisk3Slots": {
+        "slot1Subject": {
+          "characterImage": "assets/characters/sample-kol/mama.jpg",
+          "productImage": "assets/products/sample-product/binh-thuy-tinh-giu-nhiet.png",
+          "description": "Minh Anh (Đại sứ thương hiệu) + Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml (Khóa cứng 100% chi tiết gốc)"
+        },
+        "slot2Scene": {
+          "sceneReferenceImage": "assets/footage/analysis/video-m-u/scene-2.jpg",
+          "description": "Standard clean studio/lifestyle setting"
+        },
+        "slot3Style": {
+          "styleId": "tvc-studio-luxury",
+          "styleLabel": "💎 TVC Studio Sang Trọng (Bokeh Vàng Ấm)",
+          "stylePrompt": "High-end commercial TVC lighting, warm golden rim light, ARRI Alexa / Sony Venice cinema color science, 85mm f/1.4 creamy bokeh, ultra-sharp product texture"
+        }
+      },
+      "keyframes": {
+        "startFrame": "campaigns/sample-campaign/media/keyframes/scene-2-problem-flip-start.png",
+        "endFrame": "campaigns/sample-campaign/media/keyframes/scene-2-problem-flip-end.png"
+      },
+      "prompts": {
+        "whisk3SlotPrompt": "[MUSE AI / GOOGLE WHISK 3-SLOT REMIX — 9:16 VERTICAL]\n• [SLOT 1 - SUBJECT (Chủ thể khóa cứng 100%)]: Minh Anh (Đại sứ thương hiệu) (Vietnamese woman, 26 years old; Shoulder-length straight dark brown hair; Warm natural skin tone, friendly confident smile; Wearing a clean cream-colored casual blazer over white t-shirt) holding/presenting Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml (Matte black cylindrical body; Minimalist silver engraved logo centered on the upper third; Brushed stainless steel rim and leak-proof flip-top lid; Exact height-to-width ratio 3.2:1). Preserve exact face and product geometry/logo.\n• [SLOT 2 - SCENE (Bối cảnh & Hành động)]: Standard clean studio/lifestyle setting. Action: Quay thật cận cảnh bề mặt sơn nhám & thao tác mở nắp.\n• [SLOT 3 - STYLE (Ánh sáng & Màu phim)]: High-end commercial TVC lighting, warm golden rim light, ARRI Alexa / Sony Venice cinema color science, 85mm f/1.4 creamy bokeh, ultra-sharp product texture. Camera: Natural handheld UGC lifestyle shot, 35mm lens, gentle organic camera movement, warm sunlit indoor ambiance.\n• [STRICT NEGATIVE]: warped logo, distorted brand text, altered product colors, melted packaging, extra fingers, missing fingers, unnatural grip, face morphing, plastic skin, blurry product edges, random text overlays. Do not change matte black finish to glossy; Do not alter or warp the silver logo; Do not add extra buttons or handles not present in reference.",
+        "veo3FramesToVideoPrompt": "[VEO 3.1 + MUSE AI FRAMES-TO-VIDEO — 9:16 VERTICAL 1080p]\n• Character Reference (Image 1): Minh Anh (Đại sứ thương hiệu) (Vietnamese woman, 26 years old; Shoulder-length straight dark brown hair; Warm natural skin tone, friendly confident smile; Wearing a clean cream-colored casual blazer over white t-shirt). Keep facial identity, hairstyle, and outfit 100% consistent across all scenes.\n• Product Ingredient Reference (Image 2): Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml (Matte black cylindrical body; Minimalist silver engraved logo centered on the upper third; Brushed stainless steel rim and leak-proof flip-top lid; Exact height-to-width ratio 3.2:1). Preserve exact shape, proportions, surface finish, and logo without any distortion.\n• Frame Continuity (Start Frame -> End Frame): Smoothly transition from Start Keyframe (medium hero shot) to End Keyframe (focused product emphasis) over 5s.\n• Camera & Lens: Natural handheld UGC lifestyle shot, 35mm lens, gentle organic camera movement, warm sunlit indoor ambiance.\n• Style & Color Grade: High-end commercial TVC lighting, warm golden rim light, ARRI Alexa / Sony Venice cinema color science, 85mm f/1.4 creamy bokeh, ultra-sharp product texture.\n• Scene Action (5s): Quay thật cận cảnh bề mặt sơn nhám & thao tác mở nắp.\n• Native Audio & Lip-Sync Dialogue (Vietnamese): Character speaks naturally in Vietnamese with warm, clear delivery: \"Mang nước đi làm mà chỉ 2 tiếng đã hết lạnh, vỏ bình lại đọng nước ướt hết giấy tờ trong balo. Khác biệt nằm ở kết cấu: Inox 304 chuẩn y tế, giữ nhiệt 24h kết hợp lớp sơn nhám tĩnh điện chống bám vân tay.\"\n• Sound Effects (SFX) & Ambience: Subtle tactile sound of hands holding the matte bottle, gentle click of the flip-top lid, warm acoustic background hum.\n• Strict Negative Constraints: warped logo, distorted brand text, altered product colors, melted packaging, extra fingers, missing fingers, unnatural grip, face morphing, plastic skin, blurry product edges, random text overlays. Do not change matte black finish to glossy; Do not alter or warp the silver logo; Do not add extra buttons or handles not present in reference.",
+        "omniFlashPrompt": "In a single continuous commercial shot (5s, 9:16 portrait, 1080p, High-end commercial TVC lighting, warm golden rim light, ARRI Alexa / Sony Venice cinema color science, 85mm f/1.4 creamy bokeh, ultra-sharp product texture): The person from the first reference image (Minh Anh (Đại sứ thương hiệu), Vietnamese woman, 26 years old; Shoulder-length straight dark brown hair; Warm natural skin tone, friendly confident smile; Wearing a clean cream-colored casual blazer over white t-shirt) holds and demonstrates the exact product from the second reference image (Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml, Matte black cylindrical body; Minimalist silver engraved logo centered on the upper third; Brushed stainless steel rim and leak-proof flip-top lid; Exact height-to-width ratio 3.2:1), following the camera framing and pacing of the 3-second reference video. Transition smoothly from the starting keyframe pose to a close, clear showcase of the product at the ending frame. Action: Quay thật cận cảnh bề mặt sơn nhám & thao tác mở nắp. Camera: Natural handheld UGC lifestyle shot, 35mm lens, gentle organic camera movement, warm sunlit indoor ambiance. Audio & Dialogue: The character speaks clearly in Vietnamese: \"Mang nước đi làm mà chỉ 2 tiếng đã hết lạnh, vỏ bình lại đọng nước ướt hết giấy tờ trong balo. Khác biệt nằm ở kết cấu: Inox 304 chuẩn y tế, giữ nhiệt 24h kết hợp lớp sơn nhám tĩnh điện chống bám vân tay.\". Sound design: Subtle tactile sound of hands holding the matte bottle, gentle click of the flip-top lid, warm acoustic background hum. Use the given images as strict character and product references so the face, logo, and product geometry remain 100% unchanged. No warped text, no extra fingers."
+      }
+    },
+    {
+      "sceneNumber": 3,
+      "sceneId": "scene-3-proof",
+      "type": "real-product-closeup",
+      "durationSec": 4,
+      "dialogueVi": "Nhìn cận cảnh: Inox 304 chuẩn y tế, giữ nhiệt 24h; Sơn nhám tĩnh điện chống bám vân tay; và Nắp khóa chống tràn 360 độ.",
+      "visualAction": "Remotion render 100% ảnh sản phẩm gốc + 3 thông số thật (Zero-AI-Pixel).",
+      "museStyle": "tvc-studio-luxury",
+      "museStyleLabel": "💎 TVC Studio Sang Trọng (Bokeh Vàng Ấm)",
+      "whisk3Slots": {
+        "slot1Subject": {
+          "characterImage": "assets/characters/sample-kol/mama.jpg",
+          "productImage": "assets/products/sample-product/binh-thuy-tinh-giu-nhiet.png",
+          "description": "Minh Anh (Đại sứ thương hiệu) + Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml (Khóa cứng 100% chi tiết gốc)"
+        },
+        "slot2Scene": {
+          "sceneReferenceImage": "assets/footage/analysis/video-m-u/scene-3.jpg",
+          "description": "Standard clean studio/lifestyle setting"
+        },
+        "slot3Style": {
+          "styleId": "tvc-studio-luxury",
+          "styleLabel": "💎 TVC Studio Sang Trọng (Bokeh Vàng Ấm)",
+          "stylePrompt": "High-end commercial TVC lighting, warm golden rim light, ARRI Alexa / Sony Venice cinema color science, 85mm f/1.4 creamy bokeh, ultra-sharp product texture"
+        }
+      },
+      "keyframes": {
+        "startFrame": "campaigns/sample-campaign/media/keyframes/scene-3-proof-start.png",
+        "endFrame": "campaigns/sample-campaign/media/keyframes/scene-3-proof-end.png"
+      },
+      "prompts": {
+        "whisk3SlotPrompt": "[MUSE AI / GOOGLE WHISK 3-SLOT REMIX — 9:16 VERTICAL]\n• [SLOT 1 - SUBJECT (Chủ thể khóa cứng 100%)]: Minh Anh (Đại sứ thương hiệu) (Vietnamese woman, 26 years old; Shoulder-length straight dark brown hair; Warm natural skin tone, friendly confident smile; Wearing a clean cream-colored casual blazer over white t-shirt) holding/presenting Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml (Matte black cylindrical body; Minimalist silver engraved logo centered on the upper third; Brushed stainless steel rim and leak-proof flip-top lid; Exact height-to-width ratio 3.2:1). Preserve exact face and product geometry/logo.\n• [SLOT 2 - SCENE (Bối cảnh & Hành động)]: Standard clean studio/lifestyle setting. Action: Remotion render 100% ảnh sản phẩm gốc + 3 thông số thật (Zero-AI-Pixel).\n• [SLOT 3 - STYLE (Ánh sáng & Màu phim)]: High-end commercial TVC lighting, warm golden rim light, ARRI Alexa / Sony Venice cinema color science, 85mm f/1.4 creamy bokeh, ultra-sharp product texture. Camera: Ultra-sharp macro close-up shot, 85mm f/2.8 lens, smooth slow pan across product surface texture and engraved logo, studio rim lighting.\n• [STRICT NEGATIVE]: warped logo, distorted brand text, altered product colors, melted packaging, extra fingers, missing fingers, unnatural grip, face morphing, plastic skin, blurry product edges, random text overlays. Do not change matte black finish to glossy; Do not alter or warp the silver logo; Do not add extra buttons or handles not present in reference.",
+        "veo3FramesToVideoPrompt": "[VEO 3.1 + MUSE AI FRAMES-TO-VIDEO — 9:16 VERTICAL 1080p]\n• Character Reference (Image 1): Minh Anh (Đại sứ thương hiệu) (Vietnamese woman, 26 years old; Shoulder-length straight dark brown hair; Warm natural skin tone, friendly confident smile; Wearing a clean cream-colored casual blazer over white t-shirt). Keep facial identity, hairstyle, and outfit 100% consistent across all scenes.\n• Product Ingredient Reference (Image 2): Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml (Matte black cylindrical body; Minimalist silver engraved logo centered on the upper third; Brushed stainless steel rim and leak-proof flip-top lid; Exact height-to-width ratio 3.2:1). Preserve exact shape, proportions, surface finish, and logo without any distortion.\n• Frame Continuity (Start Frame -> End Frame): Smoothly transition from Start Keyframe (medium hero shot) to End Keyframe (focused product emphasis) over 4s.\n• Camera & Lens: Ultra-sharp macro close-up shot, 85mm f/2.8 lens, smooth slow pan across product surface texture and engraved logo, studio rim lighting.\n• Style & Color Grade: High-end commercial TVC lighting, warm golden rim light, ARRI Alexa / Sony Venice cinema color science, 85mm f/1.4 creamy bokeh, ultra-sharp product texture.\n• Scene Action (4s): Remotion render 100% ảnh sản phẩm gốc + 3 thông số thật (Zero-AI-Pixel).\n• Native Audio & Lip-Sync Dialogue (Vietnamese): Character speaks naturally in Vietnamese with warm, clear delivery: \"Nhìn cận cảnh: Inox 304 chuẩn y tế, giữ nhiệt 24h; Sơn nhám tĩnh điện chống bám vân tay; và Nắp khóa chống tràn 360 độ.\"\n• Sound Effects (SFX) & Ambience: Delicate metallic shimmer, crisp ice cubes clinking softly inside stainless steel, clean studio ambiance.\n• Strict Negative Constraints: warped logo, distorted brand text, altered product colors, melted packaging, extra fingers, missing fingers, unnatural grip, face morphing, plastic skin, blurry product edges, random text overlays. Do not change matte black finish to glossy; Do not alter or warp the silver logo; Do not add extra buttons or handles not present in reference.",
+        "omniFlashPrompt": "In a single continuous commercial shot (4s, 9:16 portrait, 1080p, High-end commercial TVC lighting, warm golden rim light, ARRI Alexa / Sony Venice cinema color science, 85mm f/1.4 creamy bokeh, ultra-sharp product texture): The person from the first reference image (Minh Anh (Đại sứ thương hiệu), Vietnamese woman, 26 years old; Shoulder-length straight dark brown hair; Warm natural skin tone, friendly confident smile; Wearing a clean cream-colored casual blazer over white t-shirt) holds and demonstrates the exact product from the second reference image (Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml, Matte black cylindrical body; Minimalist silver engraved logo centered on the upper third; Brushed stainless steel rim and leak-proof flip-top lid; Exact height-to-width ratio 3.2:1), following the camera framing and pacing of the 3-second reference video. Transition smoothly from the starting keyframe pose to a close, clear showcase of the product at the ending frame. Action: Remotion render 100% ảnh sản phẩm gốc + 3 thông số thật (Zero-AI-Pixel). Camera: Ultra-sharp macro close-up shot, 85mm f/2.8 lens, smooth slow pan across product surface texture and engraved logo, studio rim lighting. Audio & Dialogue: The character speaks clearly in Vietnamese: \"Nhìn cận cảnh: Inox 304 chuẩn y tế, giữ nhiệt 24h; Sơn nhám tĩnh điện chống bám vân tay; và Nắp khóa chống tràn 360 độ.\". Sound design: Delicate metallic shimmer, crisp ice cubes clinking softly inside stainless steel, clean studio ambiance. Use the given images as strict character and product references so the face, logo, and product geometry remain 100% unchanged. No warped text, no extra fingers."
+      }
+    },
+    {
+      "sceneNumber": 4,
+      "sceneId": "scene-4-cta",
+      "type": "offer-cta",
+      "durationSec": 3,
+      "dialogueVi": "Giá gốc 399.000đ giảm chỉ còn 249.000đ (-38% FLASH SALE) — bấm giỏ hàng đặt ngay!",
+      "visualAction": "Remotion render thẻ giá chính hãng + nút CTA.",
+      "museStyle": "tvc-studio-luxury",
+      "museStyleLabel": "💎 TVC Studio Sang Trọng (Bokeh Vàng Ấm)",
+      "whisk3Slots": {
+        "slot1Subject": {
+          "characterImage": "assets/characters/sample-kol/mama.jpg",
+          "productImage": "assets/products/sample-product/binh-thuy-tinh-giu-nhiet.png",
+          "description": "Minh Anh (Đại sứ thương hiệu) + Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml (Khóa cứng 100% chi tiết gốc)"
+        },
+        "slot2Scene": {
+          "sceneReferenceImage": "assets/footage/analysis/video-m-u/scene-4.jpg",
+          "description": "Standard clean studio/lifestyle setting"
+        },
+        "slot3Style": {
+          "styleId": "tvc-studio-luxury",
+          "styleLabel": "💎 TVC Studio Sang Trọng (Bokeh Vàng Ấm)",
+          "stylePrompt": "High-end commercial TVC lighting, warm golden rim light, ARRI Alexa / Sony Venice cinema color science, 85mm f/1.4 creamy bokeh, ultra-sharp product texture"
+        }
+      },
+      "keyframes": {
+        "startFrame": "campaigns/sample-campaign/media/keyframes/scene-4-cta-start.png",
+        "endFrame": "campaigns/sample-campaign/media/keyframes/scene-4-cta-end.png"
+      },
+      "prompts": {
+        "whisk3SlotPrompt": "[MUSE AI / GOOGLE WHISK 3-SLOT REMIX — 9:16 VERTICAL]\n• [SLOT 1 - SUBJECT (Chủ thể khóa cứng 100%)]: Minh Anh (Đại sứ thương hiệu) (Vietnamese woman, 26 years old; Shoulder-length straight dark brown hair; Warm natural skin tone, friendly confident smile; Wearing a clean cream-colored casual blazer over white t-shirt) holding/presenting Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml (Matte black cylindrical body; Minimalist silver engraved logo centered on the upper third; Brushed stainless steel rim and leak-proof flip-top lid; Exact height-to-width ratio 3.2:1). Preserve exact face and product geometry/logo.\n• [SLOT 2 - SCENE (Bối cảnh & Hành động)]: Standard clean studio/lifestyle setting. Action: Remotion render thẻ giá chính hãng + nút CTA.\n• [SLOT 3 - STYLE (Ánh sáng & Màu phim)]: High-end commercial TVC lighting, warm golden rim light, ARRI Alexa / Sony Venice cinema color science, 85mm f/1.4 creamy bokeh, ultra-sharp product texture. Camera: Hero product showcase shot, dynamic slow push-in, warm golden studio backlight with clean negative space for price badge.\n• [STRICT NEGATIVE]: warped logo, distorted brand text, altered product colors, melted packaging, extra fingers, missing fingers, unnatural grip, face morphing, plastic skin, blurry product edges, random text overlays. Do not change matte black finish to glossy; Do not alter or warp the silver logo; Do not add extra buttons or handles not present in reference.",
+        "veo3FramesToVideoPrompt": "[VEO 3.1 + MUSE AI FRAMES-TO-VIDEO — 9:16 VERTICAL 1080p]\n• Character Reference (Image 1): Minh Anh (Đại sứ thương hiệu) (Vietnamese woman, 26 years old; Shoulder-length straight dark brown hair; Warm natural skin tone, friendly confident smile; Wearing a clean cream-colored casual blazer over white t-shirt). Keep facial identity, hairstyle, and outfit 100% consistent across all scenes.\n• Product Ingredient Reference (Image 2): Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml (Matte black cylindrical body; Minimalist silver engraved logo centered on the upper third; Brushed stainless steel rim and leak-proof flip-top lid; Exact height-to-width ratio 3.2:1). Preserve exact shape, proportions, surface finish, and logo without any distortion.\n• Frame Continuity (Start Frame -> End Frame): Smoothly transition from Start Keyframe (medium hero shot) to End Keyframe (focused product emphasis) over 3s.\n• Camera & Lens: Hero product showcase shot, dynamic slow push-in, warm golden studio backlight with clean negative space for price badge.\n• Style & Color Grade: High-end commercial TVC lighting, warm golden rim light, ARRI Alexa / Sony Venice cinema color science, 85mm f/1.4 creamy bokeh, ultra-sharp product texture.\n• Scene Action (3s): Remotion render thẻ giá chính hãng + nút CTA.\n• Native Audio & Lip-Sync Dialogue (Vietnamese): Character speaks naturally in Vietnamese with warm, clear delivery: \"Giá gốc 399.000đ giảm chỉ còn 249.000đ (-38% FLASH SALE) — bấm giỏ hàng đặt ngay!\"\n• Sound Effects (SFX) & Ambience: Upbeat modern commercial chime, confident spoken call-to-action, warm background music swell.\n• Strict Negative Constraints: warped logo, distorted brand text, altered product colors, melted packaging, extra fingers, missing fingers, unnatural grip, face morphing, plastic skin, blurry product edges, random text overlays. Do not change matte black finish to glossy; Do not alter or warp the silver logo; Do not add extra buttons or handles not present in reference.",
+        "omniFlashPrompt": "In a single continuous commercial shot (3s, 9:16 portrait, 1080p, High-end commercial TVC lighting, warm golden rim light, ARRI Alexa / Sony Venice cinema color science, 85mm f/1.4 creamy bokeh, ultra-sharp product texture): The person from the first reference image (Minh Anh (Đại sứ thương hiệu), Vietnamese woman, 26 years old; Shoulder-length straight dark brown hair; Warm natural skin tone, friendly confident smile; Wearing a clean cream-colored casual blazer over white t-shirt) holds and demonstrates the exact product from the second reference image (Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml, Matte black cylindrical body; Minimalist silver engraved logo centered on the upper third; Brushed stainless steel rim and leak-proof flip-top lid; Exact height-to-width ratio 3.2:1), following the camera framing and pacing of the 3-second reference video. Transition smoothly from the starting keyframe pose to a close, clear showcase of the product at the ending frame. Action: Remotion render thẻ giá chính hãng + nút CTA. Camera: Hero product showcase shot, dynamic slow push-in, warm golden studio backlight with clean negative space for price badge. Audio & Dialogue: The character speaks clearly in Vietnamese: \"Giá gốc 399.000đ giảm chỉ còn 249.000đ (-38% FLASH SALE) — bấm giỏ hàng đặt ngay!\". Sound design: Upbeat modern commercial chime, confident spoken call-to-action, warm background music swell. Use the given images as strict character and product references so the face, logo, and product geometry remain 100% unchanged. No warped text, no extra fingers."
+      }
+    }
+  ]
+}

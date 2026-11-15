@@ -1,6 +1,17 @@
 {
   "reels": [
     {
+      "code": "REEL-04",
+      "campaignId": "sample-campaign",
+      "type": "Veo3.1 + Bokeh Cinema (16s)",
+      "hook": "Đừng mua Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml nếu bạn chưa kiểm tra 3 chi tiết sống còn này!",
+      "durationSec": 16,
+      "mode": "real-footage",
+      "status": "PASS (100% Gốc + Có Tiếng)",
+      "videoLink": "campaigns/sample-campaign/out/ffmpeg-9x16.mp4",
+      "updatedAt": "2026-11-14 19:27"
+    },
+    {
       "id": "xe đạp thể thao",
       "mode": "hybrid-ai",
       "productName": "Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml",

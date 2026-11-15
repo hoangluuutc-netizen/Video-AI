@@ -115,6 +115,16 @@ Ngoài ra, bạn vẫn có thể chép file thủ công vào thư mục như dư
 
 ---
 
+### Bước 4.5 — Sử dụng **Muse AI × Whisk 3-Slot × Veo 3.1 Studio** (Slide `05 / 08`)
+Ngay bên dưới bảng phân cảnh của Trợ lý 05 là trung tâm **`🎨🎬 MUSE AI × WHISK 3-SLOT × VEO 3.1 STUDIO`**:
+- **Cơ chế Whisk 3-Slot (`Chủ thể [Người + SP]` + `Bối cảnh [Scene]` + `Phong cách [Style]`):**
+  - Chọn **`Style`** (`💎 TVC Studio Sang Trọng`, `☀️ Lifestyle Đời Thường Tự Nhiên`, `🛍️ Shopee Mall Sắc Nét`, `🔥 TikTok High-Retention`) ở góc phải trên để đổi màu phim điện ảnh cho cả ảnh Keyframe lẫn video MP4.
+- **Khóa Quỹ Đạo Chuyển Động bằng Cặp Ảnh `KHUNG ĐẦU (START) ➔ KHUNG CUỐI (END)` (`generate-muse-pack.mjs`):**
+  - Tự động tạo 8 ảnh Keyframe (`media/keyframes/<scene>-start.png` và `<scene>-end.png`) hiển thị trực quan ngay trên từng thẻ cảnh quay.
+- **Copy 1 chạm cho Muse AI / Google Whisk / Flow / Veo 3.1:** Mỗi cảnh có sẵn 3 nút **`📋 Copy Whisk 3-Slot`**, **`📋 Copy Veo 3.1 (Start→End)`**, và **`📋 Copy Omni 1.2`**, cùng nút **`📋 Copy Toàn Bộ JSON Batch`** và **`📂 Mở muse-ai-pack.json`**.
+
+---
+
 ### Bước 5 — Xem trước 9:16, Sinh Giọng Đọc & Xuất Video với Trợ lý 06 (Slide `06 / 08`)
 - Bên trái là **khung điện thoại dọc `9:16` (`1080 × 1920`)**:
   - Bấm nút **`▶`** để xem thử nhịp chạy phụ đề đổi màu theo từng từ, đồng thời tự động phát cả hình lẫn **tiếng thuyết minh tiếng Việt**.
@@ -146,6 +156,7 @@ Ngoài ra, bạn vẫn có thể chép file thủ công vào thư mục như dư
 | Tác vụ | Lệnh thực thi |
 | :--- | :--- |
 | Mở giao diện web 7 Trợ lý | `node scripts/dashboard-server.mjs` |
+| **Chạy tự động toàn bộ dây chuyền tối ưu (6 bước Auto-Pilot)** | `node scripts/run-optimal-pipeline.mjs campaigns/sample-campaign/campaign.json` |
 | Kiểm tra tính hợp lệ toàn dự án | `node scripts/validate-assets.mjs` |
 | Quét clip quay thật bằng `ffprobe` | `node scripts/ingest-footage.mjs` |
 | Phân tích Video Mẫu & lập sơ đồ thay thế | `node scripts/analyze-sample-video.mjs` |

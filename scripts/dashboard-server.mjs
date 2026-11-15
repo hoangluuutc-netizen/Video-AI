@@ -12,13 +12,13 @@ const CAMPAIGNS_DIR = path.join(ROOT, 'campaigns');
 const SHEET_PATH = path.join(ROOT, 'campaigns', 'reel-sheet.json');
 const AI_CONFIG_PATH = path.join(ROOT, 'assets', 'brand-kit', 'ai-config.json');
 
-const DEFAULT_AI_CONFIG = {
+  const DEFAULT_AI_CONFIG = {
   llmModel: 'gemini-3.1-pro-preview',
   imageModel: 'gemini-nano-banana-2.1',
-  videoModel: 'gemini-omni-1.1-flash',
+  videoModel: 'veo-3.1-generate-001',
   ttsModel: 'google-vi-natural',
   ttsVoice: 'Kore',
-  renderEngine: 'ffmpeg-anchored-real',
+  renderEngine: 'veo3-hybrid-real-lock',
   hasGeminiKey: false
 };
 
@@ -106,7 +106,13 @@ function loadWorkspaceState() {
     }
   }
 
-  return { brand, aiConfig, products, characters, catalog, campaigns, sheet, sampleAnalysis };
+  const veo3PackPath = path.join(ROOT, 'campaigns', 'sample-campaign', 'veo3-prompts.json');
+  const veo3PromptsPack = fs.existsSync(veo3PackPath) ? readJsonSafe(veo3PackPath, null) : null;
+
+  const musePackPath = path.join(ROOT, 'campaigns', 'sample-campaign', 'muse-ai-pack.json');
+  const museAiPack = fs.existsSync(musePackPath) ? readJsonSafe(musePackPath, null) : null;
+
+  return { brand, aiConfig, products, characters, catalog, campaigns, sheet, sampleAnalysis, veo3PromptsPack, museAiPack };
 }
 
 function sendJson(res, status, payload) {
@@ -462,8 +468,27 @@ const server = http.createServer(async (req, res) => {
             output: err.message
           };
         }
-      } else if (action === 'generate-prompts') {
+      } else if (action === 'generate-prompts' || action === 'generate-veo3-pack' || action === 'generate-muse-pack') {
+        const styleArg = body.museStyle || '';
+        if (styleArg) {
+          runScript('scripts/generate-muse-pack.mjs', [campRel, styleArg]);
+        }
         result = runScript('scripts/generate-prompts.mjs', [campRel]);
+        const packPath = path.join(ROOT, 'campaigns', cid, 'veo3-prompts.json');
+        if (fs.existsSync(packPath)) {
+          result.veo3PromptsPack = readJsonSafe(packPath, null);
+        }
+      } else if (action === 'run-veo3-cloud') {
+        const aiCfg = loadAiConfig();
+        runScript('scripts/generate-prompts.mjs', [campRel]);
+        buildLocalKeyframesFromRealImages(campRel);
+        if (aiCfg.hasGeminiKey) {
+          process.env.GEMINI_VIDEO_MODEL = aiCfg.videoModel || 'veo-3.1-generate-001';
+          result = runScript('scripts/generate-media.mjs', [campRel, '--mode', 'video']);
+        } else {
+          result = runScript('scripts/generate-media.mjs', [campRel, '--mode', 'video', '--dry-run']);
+          result.output = `[CHẾ ĐỘ CHUẨN BỊ NGUYÊN LIỆU VEO 3.1]\nĐã khóa Keyframes (Ảnh Người thật + SP thật), cắt Clip mẫu 3s và xuất veo3-prompts.json!\n(Nếu muốn gọi trực tiếp API Cloud Veo 3.1 / Omni 1.2, hãy điền GEMINI_API_KEY tại mục Cài đặt Bộ não; hoặc bấm Copy Prompt Veo 3 bên dưới để dán vào Google Veo 3 / Flow).\n${result.output}`;
+        }
       } else if (action === 'generate-voiceover') {
         result = runScript('scripts/generate-voiceover.mjs', [campRel]);
         mediaUrl = `/campaigns/${cid}/media/audio/voiceover-full.mp3?t=${Date.now()}`;
@@ -483,6 +508,10 @@ const server = http.createServer(async (req, res) => {
         result = runScript('scripts/sync-studio.mjs', [campRel]);
       } else if (action === 'verify-integrity') {
         result = runScript('scripts/verify-integrity.mjs', [campRel]);
+      } else if (action === 'run-optimal-pipeline') {
+        buildLocalKeyframesFromRealImages(campRel);
+        result = runScript('scripts/run-optimal-pipeline.mjs', [campRel]);
+        mediaUrl = `/campaigns/${cid}/out/ffmpeg-9x16.mp4?t=${Date.now()}`;
       } else {
         return sendJson(res, 400, { ok: false, output: `Hành động không hỗ trợ: ${action}` });
       }
