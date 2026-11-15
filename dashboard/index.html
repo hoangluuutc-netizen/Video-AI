@@ -219,6 +219,34 @@
           <select id="inp-sample-video" onchange="onSampleVideoSelectChange()"></select>
         </div>
         <div class="field-group">
+          <label>🔗 Hoặc dán Link TikTok / Shorts / Reels</label>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="inp-sample-url" placeholder="https://www.tiktok.com/... hoặc YouTube Shorts" style="flex:1;" />
+            <button class="btn btn-outline" onclick="importSampleVideoFromUrl()" style="white-space:nowrap;">⬇️ Tải từ Link</button>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>🏷️ Ngành hàng & Phong cách viết lại kịch bản</label>
+          <div style="display:flex;gap:8px;">
+            <select id="inp-industry" style="flex:1;">
+              <option value="home">🏠 Gia dụng & đời sống</option>
+              <option value="tech">📱 Công nghệ & phụ kiện</option>
+              <option value="beauty">💄 Làm đẹp & chăm sóc da</option>
+              <option value="fashion">👗 Thời trang & phụ kiện</option>
+              <option value="food">🍹 Ăn uống & F&B</option>
+              <option value="education">📚 Giáo dục & khoá học</option>
+              <option value="other">📦 Ngành hàng khác</option>
+            </select>
+            <select id="inp-tone-style" style="flex:1;">
+              <option value="ugc-iphone">📱 UGC chân thực (iPhone)</option>
+              <option value="cinematic">🎬 Điện ảnh (Tone ấm, bokeh)</option>
+              <option value="luxury">💎 Sang trọng tối giản (Studio)</option>
+              <option value="fast-viral">⚡ Nhanh dồn dập (0.5–1.2s)</option>
+              <option value="funny">😄 Hài hước phóng đại</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-group">
           <label>📦 Sản phẩm của bạn dùng để thay thế (`assets/products/`)</label>
           <select id="inp-product" onchange="onProductChange()"></select>
         </div>
@@ -250,6 +278,9 @@
 
       <div class="btn-row">
         <button class="btn" onclick="triggerSampleVideoAnalysis()">🔍 1. Phân Tích Video Mẫu & Lấy Ý Tưởng</button>
+        <button class="btn btn-outline" onclick="triggerGeminiXray()">🧠 Giải Phẫu Sâu Gemini (X-Ray AI)</button>
+        <button class="btn btn-outline" onclick="applyRemakeToHooksAndScript()">✨ Áp Công Thức Sang Hook & 6 Khối</button>
+        <button class="btn btn-outline" onclick="generateCharacterSheetUi()">🎭 Tạo Bộ Ảnh Nhân Vật 4 Góc</button>
         <button class="btn btn-orange" onclick="runAllAssistants()">⚡ 2. Áp Dụng Ý Tưởng & Thay Thế SP + Nhân Vật Của Mình (01 → 05)</button>
         <button class="btn btn-outline" onclick="scrollToSlide('slide-05')">📥 Kéo thả đổi Video mẫu / Ảnh SP / Ảnh Nhân vật</button>
         <button class="btn btn-outline" onclick="loadCampaignFromSelect()">📂 Nạp chiến dịch đã lưu</button>
@@ -485,6 +516,7 @@
             <button class="icon-pill-btn" onclick="openCurrentCampaignFile('muse-ai-pack.json')">📂 Mở `muse-ai-pack.json`</button>
             <button class="icon-pill-btn" onclick="openCurrentCampaignFile('veo3-prompts.json')">📂 Mở `veo3-prompts.json`</button>
             <button class="icon-pill-btn" onclick="openCurrentCampaignFile('prompts.md')">📂 Mở `prompts.md`</button>
+            <button class="icon-pill-btn" onclick="downloadCampaignFile('prompts.md', 'sieu-lenh-prompts.md')">📥 Tải `.md`</button>
           </div>
         </div>
         <div id="veo3-studio-cards" class="source-grid" style="grid-template-columns:repeat(auto-fit,minmax(310px,1fr));"></div>
@@ -503,6 +535,8 @@
           <button class="icon-pill-btn" onclick="openCurrentCampaignFile('campaign.json')">📂 Mở `campaign.json`</button>
           <button class="icon-pill-btn" onclick="openCurrentCampaignFile('cutlist.md')">📂 Mở `cutlist.md`</button>
           <button class="icon-pill-btn" onclick="openCurrentCampaignFile('media/audio/voiceover-full.mp3', true)">📂 Mở File Âm Thanh `.mp3`</button>
+          <button class="icon-pill-btn" onclick="downloadCampaignFile('media/audio/subtitles.srt', 'subtitles.srt')">📥 Tải phụ đề `.srt`</button>
+          <button class="icon-pill-btn" onclick="downloadCampaignFile('media/audio/subtitles.ass', 'subtitles.ass')">📥 Tải `.ass` (TikTok)</button>
           <button class="icon-pill-btn" onclick="openCurrentCampaignFile('out/ffmpeg-9x16.mp4', true)">📂 Mở Video `.mp4`</button>
         </div>
       </div>
@@ -575,6 +609,7 @@
             <button class="btn btn-outline" onclick="saveCampaignToServer()">💾 1. Lưu `campaign.json`</button>
             <button class="btn" onclick="runFullVoiceoverStep()">🎙️ 2. Sinh Giọng Đọc & Lồng Tiếng</button>
             <button class="btn btn-orange" onclick="runFullRenderStep()">🎬 3. Dựng Video Có Tiếng (`ffmpeg`)</button>
+            <button class="btn" onclick="triggerBackendAction('render-all-ratios')">📐 Xuất 3 Tỷ Lệ (9:16 + 1:1 + 16:9)</button>
             <button class="btn" onclick="triggerBackendAction('export-cutlist')">📋 Xuất Cutlist CapCut</button>
             <button class="btn" onclick="triggerBackendAction('sync-studio')">⚛️ Đồng bộ Remotion</button>
           </div>

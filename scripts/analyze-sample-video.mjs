@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { ROOT, loadCatalog } from './lib/footage.mjs';
+import { detectVideoCuts, buildShots, analyzeAudioSync, pacingMetrics } from './lib/video-analyzer.mjs';
 import { fileURLToPath } from 'node:url';
 
 function probeVideo(absPath) {
@@ -100,6 +101,12 @@ export function analyzeSampleVideo({ videoArg = '', productId = 'sample-product'
   const meta = probeVideo(found.abs);
   const totalDur = Math.max(8, Math.round(meta.durationSec || 16));
 
+  // Đo cắt cảnh thật + sóng âm/BPM thật bằng ffmpeg
+  const realCuts = detectVideoCuts(found.abs, { durationSec: meta.durationSec || totalDur });
+  const realShots = buildShots(realCuts, meta.durationSec || totalDur);
+  const realPacing = pacingMetrics(realShots, meta.durationSec || totalDur, realCuts);
+  const realAudio = meta.hasAudio ? analyzeAudioSync(found.abs, meta.durationSec || totalDur) : null;
+
   const product = readJsonSafe(path.join(ROOT, 'assets', 'products', productId, 'product.json'), {
     id: productId,
     name: 'Sản phẩm của bạn',
@@ -115,11 +122,24 @@ export function analyzeSampleVideo({ videoArg = '', productId = 'sample-product'
     role: 'Người trải nghiệm thực tế'
   });
 
-  // Chia nhịp 4 phân cảnh theo đúng tỷ lệ thời lượng của Video Mẫu
-  const s1Dur = Math.max(3, Math.round(totalDur * 0.24));
-  const s2Dur = Math.max(4, Math.round(totalDur * 0.32));
-  const s3Dur = Math.max(3, Math.round(totalDur * 0.25));
-  const s4Dur = Math.max(2, totalDur - (s1Dur + s2Dur + s3Dur));
+  // Chia nhịp 4 phân cảnh theo ranh giới cắt cảnh thật (nếu phát hiện >= 3 điểm cắt) hoặc fallback theo tỷ lệ
+  let s1Dur = Math.max(3, Math.round(totalDur * 0.24));
+  let s2Dur = Math.max(4, Math.round(totalDur * 0.32));
+  let s3Dur = Math.max(3, Math.round(totalDur * 0.25));
+  let s4Dur = Math.max(2, totalDur - (s1Dur + s2Dur + s3Dur));
+  if (realCuts.length >= 3) {
+    const pickCut = (targetSec) =>
+      realCuts.reduce((best, c) => (Math.abs(c - targetSec) < Math.abs(best - targetSec) ? c : best), realCuts[0]);
+    const c1 = Math.max(2, Math.round(pickCut(totalDur * 0.24)));
+    const c2 = Math.max(c1 + 2, Math.round(pickCut(totalDur * 0.56)));
+    const c3 = Math.max(c2 + 2, Math.min(totalDur - 2, Math.round(pickCut(totalDur * 0.81))));
+    if (c3 > c2 && c2 > c1 && totalDur - c3 >= 2) {
+      s1Dur = c1;
+      s2Dur = c2 - c1;
+      s3Dur = c3 - c2;
+      s4Dur = totalDur - c3;
+    }
+  }
 
   const segments = [
     { idx: 1, id: 'scene-1-hook', role: 'Mở đầu (Hook 3s đầu)', start: 0, dur: s1Dur },
@@ -244,7 +264,13 @@ export function analyzeSampleVideo({ videoArg = '', productId = 'sample-product'
       characterName: character.name
     },
     extractedIdea,
-    sampleStructureSummary: `Video mẫu dài ${totalDur}s (${meta.width}×${meta.height}, ${meta.fps}fps) gồm 4 nhịp chuyển đổi: Mở đầu giữ chân (${s1Dur}s) → Trải nghiệm giải quyết vấn đề (${s2Dur}s) → Cận cảnh chứng minh chất lượng (${s3Dur}s) → Chốt ưu đãi CTA (${s4Dur}s).`,
+    sampleStructureSummary: `Video mẫu dài ${totalDur}s (${meta.width}×${meta.height}, ${meta.fps}fps) — đo thật: ${realPacing.shotCount} cảnh cắt (${realPacing.avgShotSec}s/cảnh, ${realPacing.pace}${realAudio?.bpm ? `, ~${realAudio.bpm.value} BPM` : ''}). Khung 4 nhịp thay thế: Mở đầu (${s1Dur}s) → Trải nghiệm (${s2Dur}s) → Cận cảnh (${s3Dur}s) → CTA (${s4Dur}s).`,
+    xray: {
+      cuts: realCuts,
+      shots: realShots,
+      pacing: realPacing,
+      audio: realAudio ? { bpm: realAudio.bpm, meanDb: realAudio.meanDb, silenceRatio: realAudio.silenceRatio, hopSec: realAudio.hopSec, waveform: realAudio.waveform } : null
+    },
     sceneBlueprints,
     hookIdeaPresets
   };

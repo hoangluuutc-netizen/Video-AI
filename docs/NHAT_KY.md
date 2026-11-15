@@ -42,3 +42,32 @@
   - Tự động tách nền trắng ảnh sản phẩm (`colorkey=0xFFFFFF:0.06:0.03`) để sản phẩm nổi 3D trực tiếp lên nền Bokeh, loại bỏ hoàn toàn mảng trắng hình chữ nhật.
   - Bổ sung phông nền Bokeh chuyển động cho toàn bộ 4 cảnh (kể cả cảnh 3 & 4), kết hợp chuyển động Ken Burns (`zoompan`) 30fps cho nhân vật (crop chân dung/nửa thân cân đối) và hiệu ứng nổi 3D (`sin`) cho sản phẩm.
   - Vẽ trực tiếp Thanh Hook / Badge thông số / Thẻ giá Flash Sale và Phụ đề Tiếng Việt có dấu sắc nét lên file `ffmpeg-9x16.mp4` bằng `drawtext` UTF-8.
+
+## 2026-11-16 — Tích hợp Giai đoạn 2 Giải Phẫu Video (FFmpeg Cut & Audio X-Ray)
+- Bổ sung `scripts/lib/video-analyzer.mjs` (đo cắt cảnh thật bằng `ffmpeg select='gt(scene,...)'`, giải mã sóng âm PCM, ước lượng BPM và chấm điểm hook 3s đầu).
+- Nâng cấp `scripts/analyze-sample-video.mjs` sử dụng ranh giới cắt cảnh thật để chia 4 nhịp thay thế (giữ fallback theo tỷ lệ khi video không có cắt cảnh) và lưu thêm `xray` (`cuts`, `shots`, `pacing`, `audio`) vào `analysis.json`.
+- Chuyển bộ thư viện giải phẫu & nhân bản (`scripts/lib/gemini-client.mjs`, `scripts/lib/video-forensics.mjs`, `scripts/lib/video-remake.mjs`) và lập `docs/KE_HOACH_NANG_CAP_GIAI_PHAU.md` (5 gói nâng cấp) để sẵn sàng triển khai tiếp trên workspace chính.
+
+## 2026-11-16 — Tích hợp REA-Video, ComfyUI IC-Light & Bộ Prompt Mẫu Chuẩn
+- Tích hợp bộ kỹ năng **`rea-video`** (Reverse-engineer any video, shot by shot) vào `.agents/skills/rea-video/` để phân tích sâu video viral đối thủ và tự động lập sơ đồ Element-Swap đổi sản phẩm.
+- Bổ sung mẫu **`templates/comfyui/comfyui_ic_light_product_workflow.json`** bảo vệ 100% hình dạng bao bì, tem nhãn, logo qua IC-Light Relighting và Mask Composite.
+- Biên soạn và tích hợp **`docs/BO_PROMPT_MAU_CHUAN.md`** (Thư viện prompt chuẩn cho Storyboard, ComfyUI, Veo/Kling/Wan và Antigravity Agent) cùng **`docs/HUONG_DAN_HE_THONG_VA_TOI_UU.md`** (Cẩm nang tối ưu token và quy tắc vận hành).
+- Đóng gói ứng dụng giao diện **`dashboard/ai-video-ad-studio`** kèm file `start.bat` để chạy nhanh trên máy tính cá nhân.
+- Chạy `validate-assets.mjs` xác nhận 100% kiểm tra hợp lệ.
+- Nâng cấp toàn diện theo bảng đối chiếu tối ưu (`dashboard/`, `scripts/`):
+  1. Hiển thị biểu đồ X-Ray thật (sóng âm `waveform`, vạch cắt cảnh `cuts`, `BPM`, `Số cảnh thật`, `Hook 3s đầu`) ngay tại Mục `02 / 08` trên Dashboard.
+  2. Bổ sung 7 ngành hàng (`INDUSTRY_PRESETS`) + 5 phong cách (`TONE_STYLE_PRESETS`) vào `scripts/lib/prompt-builder.mjs` và giao diện Mục `02 / 08`.
+  3. Bổ sung ô dán link URL (TikTok / Shorts / Reels) + API `/api/import-url` gọi `yt-dlp` (kèm hướng dẫn fallback nếu máy chưa cài `yt-dlp`).
+  4. Bổ sung bộ đếm số từ realtime theo ngưỡng `2.8 từ/giây` trên từng khối kịch bản (Mục `04 / 08`), tự động xuất phụ đề `media/audio/subtitles.srt` trong `scripts/generate-voiceover.mjs`, và thêm nút tải trực tiếp `.md` / `.srt` trên Dashboard.
+  5. Gia cố `scripts/export-cutlist.mjs` (ưu tiên `referenceImages.transparent`/`cutout`, không chạy `colorkey` đè lên ảnh `.png` đã có kênh alpha) và `scripts/verify-integrity.mjs` (kiểm tra thêm `blackdetect` và độ lệch hình/tiếng <= 1.5s).
+  6. Hoàn thiện Gói 2 & Gói 4 theo `docs/KE_HOACH_NANG_CAP_GIAI_PHAU.md`: tích hợp `POST /api/xray-ai` (`uploadVideo` + `aiBreakdown` qua Gemini Files/Interactions API), `POST /api/fetch-sample-url`, `POST /api/ai-remake` (`aiRemake` / `templateRemake`), đồng bộ `CATEGORY_PRESETS` (7 ngành) & `STYLE_PRESETS` (5 phong cách) vào `prompt-builder.mjs` và Dashboard.
+- Rà soát & tinh gọn toàn bộ dự án:
+  - Loại bỏ thư mục trùng lặp `dashboard/ai-video-ad-studio/` (và 2 bản sao tài liệu trùng bên trong) để tập trung 100% vào hệ thống Dashboard chính (`dashboard/` + `scripts/`).
+  - Dọn dẹp 4 file media cũ không còn dùng trong `campaigns/sample-campaign/media/`.
+  - Bổ sung `start-dashboard.bat` ở thư mục gốc để mở nhanh `http://localhost:4173` chỉ với 1 lần nhấp đúp và đồng bộ lại `docs/HUONG_DAN_HE_THONG_VA_TOI_UU.md`.
+- Triển khai trọn bộ 5 nâng cấp Production:
+  1. **Xuất đồng bộ 3 tỷ lệ (`9:16`, `1:1`, `16:9`)**: Nâng cấp `scripts/export-cutlist.mjs` hỗ trợ `--ratio=all` và thêm nút **📐 Xuất 3 Tỷ Lệ** trên Dashboard.
+  2. **Bộ Ảnh Nhân Vật 4 Góc (`Character Sheet`)**: Bổ sung `scripts/generate-character-sheet.mjs`, API `POST /api/character-sheet` và nút **🎭 Tạo Bộ Ảnh Nhân Vật 4 Góc** (ưu tiên Gemini Image, fallback FFmpeg 4-panel).
+  3. **Phụ đề Highlight kiểu TikTok (`.ass`)**: Bổ sung `scripts/lib/ass-subtitles.mjs`, xuất song song `subtitles.ass` trong `scripts/generate-voiceover.mjs` và nút tải `.ass` trên Dashboard.
+  4. **Nhập hàng loạt nhiều SKU từ CSV**: Bổ sung `assets/products/batch-template.csv` và `scripts/batch-from-csv.mjs` (hỗ trợ `--run` chạy Auto-Pilot hàng loạt).
+  5. **Nhạc nền Auto-Ducking (`assets/music/`)**: Tự động trộn nhạc nền với `sidechaincompress` trong `scripts/export-cutlist.mjs` khi có file âm thanh trong `assets/music/`.

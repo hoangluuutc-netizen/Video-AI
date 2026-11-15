@@ -1,4 +1,7 @@
 import fs from 'node:fs';
+import { CATEGORY_PRESETS, STYLE_PRESETS } from './video-remake.mjs';
+
+export { CATEGORY_PRESETS, STYLE_PRESETS };
 
 export const DEFAULT_NEGATIVE =
   'warped logo, distorted brand text, altered product colors, melted packaging, extra fingers, missing fingers, unnatural grip, face morphing, plastic skin, blurry product edges, random text overlays';
@@ -83,14 +86,18 @@ export function buildScenePrompt(scene, product, character, idx = 0, campaignSty
   const cameraSpec = inferCameraPreset(scene, idx);
   const sfxSpec = inferSfxPreset(scene, idx);
   const museStyle = inferMuseStyle(scene, campaignStyleId);
+  const industryLabel = CATEGORY_PRESETS[scene.category || product.category] || '';
+  const toneStyle = STYLE_PRESETS[scene.style || product.style] || null;
+  const industryCue = industryLabel ? ` Category context: ${industryLabel}.` : '';
+  const toneCue = toneStyle ? ` Visual style: ${toneStyle.prompt}.` : '';
   const dialogueVi = (scene.subtitle || '').trim();
 
   // 1. Prompt chuẩn Muse AI / Google Whisk 3-Slot (Subject + Scene + Style)
   const whisk3SlotPrompt = [
     `[MUSE AI / GOOGLE WHISK 3-SLOT REMIX — 9:16 VERTICAL]`,
     `• [SLOT 1 - SUBJECT (Chủ thể khóa cứng 100%)]: ${character.name} (${charLock}) holding/presenting ${product.name} (${productLock}). Preserve exact face and product geometry/logo.`,
-    `• [SLOT 2 - SCENE (Bối cảnh & Hành động)]: ${scene.setting || 'Modern clean studio/lifestyle backdrop'}. Action: ${scene.visualAction}`,
-    `• [SLOT 3 - STYLE (Ánh sáng & Màu phim)]: ${museStyle.stylePrompt}. Camera: ${cameraSpec}.`,
+    `• [SLOT 2 - SCENE (Bối cảnh & Hành động)]: ${scene.setting || 'Modern clean studio/lifestyle backdrop'}.${industryCue} Action: ${scene.visualAction}`,
+    `• [SLOT 3 - STYLE (Ánh sáng & Màu phim)]: ${museStyle.stylePrompt}.${toneCue} Camera: ${cameraSpec}.`,
     `• [STRICT NEGATIVE]: ${DEFAULT_NEGATIVE}. ${forbidden}.`
   ].join('\n');
 

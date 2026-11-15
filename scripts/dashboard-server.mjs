@@ -3,6 +3,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync, spawn } from 'node:child_process';
 import { analyzeSampleVideo } from './analyze-sample-video.mjs';
+import { generateCharacterSheet } from './generate-character-sheet.mjs';
+import { uploadVideo, DEFAULT_MODEL } from './lib/gemini-client.mjs';
+import { aiBreakdown } from './lib/video-forensics.mjs';
+import { aiRemake, templateRemake } from './lib/video-remake.mjs';
 
 const ROOT = process.cwd();
 const PORT = Number(process.env.PORT || 4173);
@@ -413,6 +417,148 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  if (req.method === 'POST' && (url.pathname === '/api/import-url' || url.pathname === '/api/fetch-sample-url')) {
+    try {
+      const { videoUrl, productId, characterId } = await readBody(req);
+      if (!videoUrl || !/^https?:\/\/.+/i.test(videoUrl.trim())) {
+        return sendJson(res, 400, { ok: false, output: 'URL video không hợp lệ (cần bắt đầu bằng http:// hoặc https://).' });
+      }
+      const slug = `url-${Date.now()}`;
+      const outFile = path.join(ROOT, 'assets', 'footage', `${slug}.mp4`);
+      try {
+        execFileSync('yt-dlp', ['-f', 'mp4/best[ext=mp4]/best', '--no-playlist', '-o', outFile, videoUrl.trim()], {
+          encoding: 'utf8',
+          timeout: 60000
+        });
+      } catch (err) {
+        const msg = String(err.message || '');
+        if (msg.includes('ENOENT') || msg.includes('not recognized')) {
+          return sendJson(res, 400, {
+            ok: false,
+            output: 'Máy chưa cài yt-dlp. Hãy chạy `winget install yt-dlp` trong PowerShell hoặc tải video MP4 về rồi kéo thả vào Mục 05.'
+          });
+        }
+        return sendJson(res, 500, { ok: false, output: `Không tải được video từ URL: ${msg}` });
+      }
+      execFileSync('node', [path.join(ROOT, 'scripts', 'ingest-footage.mjs'), '--force'], { encoding: 'utf8' });
+      const ana = analyzeSampleVideo({
+        videoArg: slug,
+        productId: productId || 'sample-product',
+        characterId: characterId || 'sample-kol'
+      });
+      const st = loadWorkspaceState();
+      st.sampleAnalysis = ana;
+      return sendJson(res, 200, {
+        ok: true,
+        clipId: slug,
+        sampleAnalysis: ana,
+        output: `Đã tải video từ link và phân tích xong (${ana.sampleVideo.durationSec}s).`,
+        state: st
+      });
+    } catch (e) {
+      return sendJson(res, 500, { ok: false, output: e.message });
+    }
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/xray-ai') {
+    const startMs = Date.now();
+    try {
+      const { clipId, productId, characterId } = await readBody(req);
+      const aiCfg = fs.existsSync(AI_CONFIG_PATH) ? JSON.parse(fs.readFileSync(AI_CONFIG_PATH, 'utf8')) : {};
+      const apiKey = aiCfg.geminiApiKey || process.env.GEMINI_API_KEY || '';
+      if (!apiKey) {
+        return sendJson(res, 400, {
+          ok: false,
+          output: 'Chưa cấu hình GEMINI_API_KEY (hãy nhập trong "Cài đặt Bộ não & Công cụ" hoặc file .env).'
+        });
+      }
+
+      const ana = analyzeSampleVideo({
+        videoArg: clipId || '',
+        productId: productId || 'sample-product',
+        characterId: characterId || 'sample-kol'
+      });
+      const videoAbs = path.join(ROOT, ana.sampleVideo.filePath);
+      if (!fs.existsSync(videoAbs)) {
+        return sendJson(res, 404, { ok: false, output: `Không tìm thấy file video mẫu: ${ana.sampleVideo.filePath}` });
+      }
+
+      const model = aiCfg.llmModel || DEFAULT_MODEL;
+      const uploaded = await uploadVideo(apiKey, videoAbs);
+      const breakdown = await aiBreakdown(apiKey, uploaded, ana.xray, { model });
+
+      ana.breakdown = breakdown;
+      const anaOut = path.join(ROOT, 'assets', 'footage', 'analysis', ana.sampleVideo.clipId, 'analysis.json');
+      fs.writeFileSync(anaOut, JSON.stringify(ana, null, 2) + '\n', 'utf8');
+
+      const st = loadWorkspaceState();
+      st.sampleAnalysis = ana;
+      return sendJson(res, 200, {
+        ok: true,
+        elapsedSec: ((Date.now() - startMs) / 1000).toFixed(1),
+        breakdown,
+        sampleAnalysis: ana,
+        output: `Đã giải phẫu sâu Gemini (${model}) cho "${ana.sampleVideo.clipId}": nhận diện khung ${breakdown.framework || 'AIDA'}, ${breakdown.shots?.length || 0} cảnh chi tiết.`,
+        state: st
+      });
+    } catch (e) {
+      return sendJson(res, 500, { ok: false, output: `Lỗi Giải phẫu Gemini: ${e.message}` });
+    }
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/ai-remake') {
+    const startMs = Date.now();
+    try {
+      const { clipId, productId, category, style } = await readBody(req);
+      const aiCfg = fs.existsSync(AI_CONFIG_PATH) ? JSON.parse(fs.readFileSync(AI_CONFIG_PATH, 'utf8')) : {};
+      const apiKey = aiCfg.geminiApiKey || process.env.GEMINI_API_KEY || '';
+      const anaPath = path.join(ROOT, 'assets', 'footage', 'analysis', clipId || 'video-m-u', 'analysis.json');
+      if (!fs.existsSync(anaPath)) {
+        return sendJson(res, 404, { ok: false, output: 'Chưa có dữ liệu phân tích video mẫu. Hãy bấm "1. Phân Tích Video Mẫu" trước.' });
+      }
+      const ana = JSON.parse(fs.readFileSync(anaPath, 'utf8'));
+      const prodPath = path.join(ROOT, 'assets', 'products', productId || 'sample-product', 'product.json');
+      const prod = fs.existsSync(prodPath) ? JSON.parse(fs.readFileSync(prodPath, 'utf8')) : { name: 'Sản phẩm' };
+      const productInput = {
+        name: prod.name,
+        category: category || prod.category || 'home',
+        style: style || prod.style || 'ugc-iphone',
+        usp: Array.isArray(prod.highlights) ? prod.highlights.join(', ') : '',
+        offer: prod.salePrice ? `Ưu đãi còn ${prod.salePrice}` : '',
+        pain: ''
+      };
+
+      const remake = apiKey
+        ? await aiRemake(apiKey, ana.xray || { shots: [] }, ana.breakdown || null, productInput, { model: aiCfg.llmModel || DEFAULT_MODEL })
+        : templateRemake(ana.xray || { shots: [] }, ana.breakdown || null, productInput);
+
+      return sendJson(res, 200, {
+        ok: true,
+        elapsedSec: ((Date.now() - startMs) / 1000).toFixed(1),
+        usedAi: Boolean(apiKey),
+        remake,
+        output: `Đã nhân bản công thức (${apiKey ? 'Gemini AI' : 'Template chuẩn'}) cho "${prod.name}" (${remake.shots?.length || 0} cảnh).`
+      });
+    } catch (e) {
+      return sendJson(res, 500, { ok: false, output: `Lỗi nhân bản kịch bản: ${e.message}` });
+    }
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/character-sheet') {
+    try {
+      const { characterId } = await readBody(req);
+      const resSheet = await generateCharacterSheet(characterId || 'sample-kol');
+      return sendJson(res, 200, {
+        ok: true,
+        ...resSheet,
+        output: `Đã tạo Bộ Ảnh Nhân Vật 4 Góc (${resSheet.method}): ${resSheet.relPath}`,
+        state: loadWorkspaceState()
+      });
+    } catch (e) {
+      return sendJson(res, 500, { ok: false, output: `Lỗi tạo Bộ Ảnh Nhân Vật: ${e.message}` });
+    }
+  }
+
   if (req.method === 'POST' && url.pathname === '/api/save-campaign') {
     try {
       const body = await readBody(req);
@@ -503,6 +649,9 @@ const server = http.createServer(async (req, res) => {
         result = runScript('scripts/export-cutlist.mjs', [campRel]);
       } else if (action === 'render-ffmpeg') {
         result = runScript('scripts/export-cutlist.mjs', [campRel, '--render-ffmpeg']);
+        mediaUrl = `/campaigns/${cid}/out/ffmpeg-9x16.mp4?t=${Date.now()}`;
+      } else if (action === 'render-all-ratios') {
+        result = runScript('scripts/export-cutlist.mjs', [campRel, '--render-ffmpeg', '--ratio=all']);
         mediaUrl = `/campaigns/${cid}/out/ffmpeg-9x16.mp4?t=${Date.now()}`;
       } else if (action === 'sync-studio') {
         result = runScript('scripts/sync-studio.mjs', [campRel]);

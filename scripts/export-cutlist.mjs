@@ -54,8 +54,25 @@ function toFfmpegFontPath() {
   return '';
 }
 
+function hasAlphaChannel(imgPath) {
+  try {
+    const out = execFileSync(
+      'ffprobe',
+      ['-v', 'quiet', '-select_streams', 'v:0', '-show_entries', 'stream=pix_fmt', '-of', 'csv=p=0', imgPath],
+      { encoding: 'utf8' }
+    ).trim();
+    return /^(rgba|bgra|argb|abgr|yuva|pal8|ya)/i.test(out);
+  } catch {
+    return false;
+  }
+}
+
 function prepareCleanProductImage(productImgAbs, tmpDir) {
   if (!productImgAbs || !fs.existsSync(productImgAbs)) return '';
+  // Nếu ảnh PNG đã có nền trong suốt sẵn thì giữ nguyên để không làm lủng chi tiết sản phẩm màu trắng/xám
+  if (path.extname(productImgAbs).toLowerCase() === '.png' && hasAlphaChannel(productImgAbs)) {
+    return productImgAbs;
+  }
   const cleanOut = path.join(tmpDir, 'product-nobg.png');
   try {
     // Tách nền trắng tinh (0xFFFFFF) quanh sản phẩm để sản phẩm nổi 3D trực tiếp lên nền Bokeh Cinema
@@ -249,9 +266,51 @@ function renderSceneSegment(scene, idx, ctx, tmpDir) {
   return segOut;
 }
 
+function findBackgroundMusic(campaign) {
+  if (campaign.bgmSrc) {
+    const abs = path.isAbsolute(campaign.bgmSrc) ? campaign.bgmSrc : path.join(ROOT, campaign.bgmSrc);
+    if (fs.existsSync(abs)) return abs;
+  }
+  const musicDir = path.join(ROOT, 'assets', 'music');
+  if (!fs.existsSync(musicDir)) return '';
+  const files = fs.readdirSync(musicDir).filter((f) => /\.(mp3|wav|m4a|aac)$/i.test(f));
+  return files.length > 0 ? path.join(musicDir, files[0]) : '';
+}
+
+function applyBgmAutoDucking(videoPath, bgmPath, tmpDir) {
+  if (!bgmPath || !fs.existsSync(bgmPath)) return;
+  const duckedTmp = path.join(tmpDir, 'master-ducked.mp4');
+  execFileSync('ffmpeg', [
+    '-y', '-v', 'error',
+    '-i', videoPath,
+    '-stream_loop', '-1', '-i', bgmPath,
+    '-filter_complex',
+    '[1:a]volume=0.22[bgm];[bgm][0:a]sidechaincompress=threshold=0.03:ratio=6:attack=25:release=300[ducked];[0:a][ducked]amix=inputs=2:duration=first:dropout_transition=0[aout]',
+    '-map', '0:v:0', '-map', '[aout]',
+    '-c:v', 'copy', '-c:a', 'aac', '-ar', '48000', '-ac', '2', '-shortest',
+    duckedTmp
+  ], { stdio: 'inherit' });
+  fs.renameSync(duckedTmp, videoPath);
+}
+
+function renderRatioVariant(master9x16, outPath, w, h) {
+  execFileSync('ffmpeg', [
+    '-y', '-v', 'error',
+    '-i', master9x16,
+    '-filter_complex',
+    `[0:v]scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h},boxblur=28:5,eq=brightness=-0.15[bg];` +
+    `[0:v]scale=${w}:${h}:force_original_aspect_ratio=decrease[fg];` +
+    `[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1[v]`,
+    '-map', '[v]', '-map', '0:a:0',
+    '-c:v', 'libx264', '-crf', '16', '-preset', 'medium', '-pix_fmt', 'yuv420p',
+    '-c:a', 'copy', '-shortest', outPath
+  ], { stdio: 'inherit' });
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const render = args.includes('--render-ffmpeg');
+  const ratioArg = (args.find((a) => a.startsWith('--ratio=')) || '--ratio=9x16').split('=')[1];
   const argPath = args.find((a) => !a.startsWith('--')) || 'campaigns/sample-campaign/campaign.json';
 
   const campaignPath = path.isAbsolute(argPath) ? argPath : path.join(ROOT, argPath);
@@ -266,7 +325,8 @@ async function main() {
   const product = readJson(path.join(ROOT, 'assets', 'products', campaign.productId, 'product.json'));
   const character = readJson(path.join(ROOT, 'assets', 'characters', campaign.characterId, 'character.json'));
 
-  const productImgAbs = findFirstExisting(Object.values(product.referenceImages || {}));
+  const refImgs = product.referenceImages || {};
+  const productImgAbs = findFirstExisting([refImgs.transparent, refImgs.cutout, ...Object.values(refImgs)]);
   const charImgAbs = findFirstExisting(Object.values(character.referenceImages || {}));
   const replaceSampleWithOwnAssets = campaign.replaceSampleWithOwnAssets !== false;
 
@@ -347,6 +407,24 @@ async function main() {
       ['-y', '-v', 'error', '-f', 'concat', '-safe', '0', '-i', listPath, '-c', 'copy', outFile],
       { stdio: 'inherit' }
     );
+
+    const bgmAbs = findBackgroundMusic(campaign);
+    if (bgmAbs) {
+      applyBgmAutoDucking(outFile, bgmAbs, tmpDir);
+      console.log(`Đã trộn nhạc nền Auto-Ducking: ${path.relative(ROOT, bgmAbs)}`);
+    }
+
+    if (ratioArg === '1x1' || ratioArg === 'all') {
+      const out1x1 = path.join(outDir, 'ffmpeg-1x1.mp4');
+      renderRatioVariant(outFile, out1x1, 1080, 1080);
+      console.log(`Đã xuất bản Facebook/Shopee vuông 1:1: ${path.relative(ROOT, out1x1)}`);
+    }
+    if (ratioArg === '16x9' || ratioArg === 'all') {
+      const out16x9 = path.join(outDir, 'ffmpeg-16x9.mp4');
+      renderRatioVariant(outFile, out16x9, 1920, 1080);
+      console.log(`Đã xuất bản Website/YouTube ngang 16:9: ${path.relative(ROOT, out16x9)}`);
+    }
+
     console.log(`Đã dựng thành công video Studio Pro (Tách nền SP + Ken Burns + Phụ đề Việt + Có Tiếng): ${path.relative(ROOT, outFile)}`);
   }
 }

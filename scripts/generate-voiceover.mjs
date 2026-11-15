@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { readJson } from './lib/prompt-builder.mjs';
+import { generateAssSubtitles } from './lib/ass-subtitles.mjs';
 
 const ROOT = process.cwd();
 const INTERACTIONS_URL = 'https://generativelanguage.googleapis.com/v1beta/interactions';
@@ -158,6 +159,15 @@ function normalizeAndFitAudio(rawMediaPath, finalWavPath, targetDurationSec) {
   ]);
 }
 
+function formatSrtTime(sec) {
+  const msTotal = Math.max(0, Math.round(sec * 1000));
+  const h = Math.floor(msTotal / 3600000);
+  const m = Math.floor((msTotal % 3600000) / 60000);
+  const s = Math.floor((msTotal % 60000) / 1000);
+  const ms = msTotal % 1000;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(ms).padStart(3, '0')}`;
+}
+
 export async function generateCampaignVoiceover(campaignPath) {
   loadEnvFile();
   const aiCfg = loadAiConfig();
@@ -169,10 +179,20 @@ export async function generateCampaignVoiceover(campaignPath) {
   const ttsEngine = aiCfg.ttsModel || process.env.TTS_MODEL || 'google-vi-natural';
   const geminiKey = aiCfg.geminiApiKey || process.env.GEMINI_API_KEY || '';
   const sceneWavs = [];
+  const srtLines = [];
+  let srtOffset = 0;
 
-  for (const scene of campaign.scenes) {
+  for (let i = 0; i < campaign.scenes.length; i++) {
+    const scene = campaign.scenes[i];
     const text = cleanSpeechText(scene.subtitle || campaign.hookText || 'Sản phẩm chính hãng chất lượng cao');
     const dur = Math.max(1, Number(scene.durationSec || 4));
+    const wordCount = text.split(/\s+/).filter(Boolean).length;
+    const maxWords = Math.round(dur * 2.8);
+    if (wordCount > maxWords) {
+      console.warn(`[Cảnh báo nhịp thoại] Cảnh "${scene.id}" (${dur}s) có ${wordCount} từ (khuyên dùng <= ${maxWords} từ để không bị đọc vội).`);
+    }
+    srtLines.push(`${i + 1}\n${formatSrtTime(srtOffset)} --> ${formatSrtTime(srtOffset + dur)}\n${text}\n`);
+    srtOffset += dur;
     const rawTmp = path.join(audioDir, `_raw-${scene.id}.mp3`);
     const finalWav = path.join(audioDir, `${scene.id}.wav`);
     let synthesized = false;
@@ -233,10 +253,18 @@ export async function generateCampaignVoiceover(campaignPath) {
     '-c:a', 'libmp3lame', '-b:a', '192k', fullMp3
   ]);
 
+  const srtPath = path.join(audioDir, 'subtitles.srt');
+  fs.writeFileSync(srtPath, srtLines.join('\n'), 'utf8');
+
+  const assPath = path.join(audioDir, 'subtitles.ass');
+  generateAssSubtitles(campaign.scenes, assPath, { width: 1080, height: 1920 });
+
   campaign.voiceoverSrc = 'media/audio/voiceover-full.mp3';
+  campaign.subtitlesSrtSrc = 'media/audio/subtitles.srt';
+  campaign.subtitlesAssSrc = 'media/audio/subtitles.ass';
   fs.writeFileSync(campaignPath, JSON.stringify(campaign, null, 2) + '\n', 'utf8');
-  console.log(`Đã tạo xong giọng đọc & âm thanh tại: ${path.relative(ROOT, fullMp3)}`);
-  return { fullMp3, sceneWavs };
+  console.log(`Đã tạo xong giọng đọc tại: ${path.relative(ROOT, fullMp3)} & phụ đề: .srt / .ass`);
+  return { fullMp3, srtPath, assPath, sceneWavs };
 }
 
 if (import.meta.url === `file:///${process.argv[1].replace(/\\/g, '/')}` || process.argv[1]?.endsWith('generate-voiceover.mjs')) {

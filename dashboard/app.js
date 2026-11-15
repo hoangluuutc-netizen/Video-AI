@@ -333,6 +333,78 @@ function renderSampleAnalysisCard() {
   }
 
   const blueprints = ana.sceneBlueprints || [];
+  const xray = ana.xray || null;
+  let xrayHtml = '';
+  if (xray && (xray.pacing || xray.audio)) {
+    const bpmVal = xray.audio?.bpm?.value ? `${xray.audio.bpm.value} BPM` : 'N/A';
+    const shotCount = xray.pacing?.shotCount ?? blueprints.length;
+    const avgShot = xray.pacing?.avgShotSec ? `${xray.pacing.avgShotSec}s/cảnh` : 'N/A';
+    const hookStrength = xray.pacing?.hookStrength || 'Chưa đo';
+    const wf = Array.isArray(xray.audio?.waveform) ? xray.audio.waveform : [];
+    const durTotal = Math.max(1, Number(ana.sampleVideo?.durationSec || 1));
+    const cuts = Array.isArray(xray.cuts) ? xray.cuts : [];
+
+    let svgWave = '';
+    if (wf.length > 0) {
+      const w = 680;
+      const h = 58;
+      const step = w / wf.length;
+      const bars = wf
+        .map((v, i) => {
+          const bh = Math.max(2, Math.round(Number(v || 0) * (h - 8)));
+          const x = (i * step).toFixed(1);
+          const y = Math.round((h - bh) / 2);
+          return `<rect x="${x}" y="${y}" width="${Math.max(1.2, step * 0.7).toFixed(1)}" height="${bh}" rx="1" fill="#F59E0B" opacity="0.85" />`;
+        })
+        .join('');
+      const cutLines = cuts
+        .map((c) => {
+          const cx = ((Number(c) / durTotal) * w).toFixed(1);
+          return `<line x1="${cx}" y1="0" x2="${cx}" y2="${h}" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="3,2" />`;
+        })
+        .join('');
+      const hook3x = ((Math.min(3, durTotal) / durTotal) * w).toFixed(1);
+      svgWave = `
+        <div style="margin-top:8px;background:#0F172A;border-radius:10px;padding:8px 10px;">
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:#CBD5E1;margin-bottom:4px;">
+            <span>📊 Sóng âm thật (${wf.length} mẫu) • <span style="color:#F87171;">Vạch đỏ: ${cuts.length} điểm cắt cảnh</span></span>
+            <span>⏱️ Mốc 3s đầu: ${Math.min(3, durTotal)}s</span>
+          </div>
+          <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:58px;display:block;">
+            <rect x="0" y="0" width="${hook3x}" height="${h}" fill="#22C55E" opacity="0.12" />
+            ${bars}
+            ${cutLines}
+          </svg>
+        </div>
+      `;
+    }
+
+    xrayHtml = `
+      <div style="background:#FFFFFF;border:1px solid var(--orange-border);border-radius:12px;padding:10px 12px;">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:12px;">
+          <span class="badge-mech">🥁 Nhịp nhạc: <strong>${bpmVal}</strong></span>
+          <span class="badge-mech">✂️ Cắt cảnh thật: <strong>${shotCount} cảnh</strong></span>
+          <span class="badge-mech">⏱️ Nhịp TB: <strong>${avgShot}</strong></span>
+          <span class="badge-mech">⚡ Hook 3s đầu: <strong>${hookStrength}</strong></span>
+        </div>
+        ${svgWave}
+      </div>
+    `;
+  }
+
+  let breakdownHtml = '';
+  if (ana.breakdown) {
+    const bd = ana.breakdown;
+    const formulaList = (bd.winningFormula || []).slice(0, 4).map((f) => `<li>${f}</li>`).join('');
+    breakdownHtml = `
+      <div style="background:#EFF6FF;border:1px solid #93C5FD;border-radius:12px;padding:10px 14px;font-size:12px;">
+        <div style="font-weight:800;color:#1D4ED8;margin-bottom:4px;">🧠 Giải phẫu sâu Gemini: Khung ${bd.framework || 'AIDA'} • Hook: ${bd.hook?.type || ''}</div>
+        <div style="color:#1E3A8A;margin-bottom:4px;">${bd.summary || ''}</div>
+        ${formulaList ? `<ul style="margin:4px 0 0 18px;color:#1E40AF;">${formulaList}</ul>` : ''}
+      </div>
+    `;
+  }
+
   box.innerHTML = `
     <div style="display:flex;flex-direction:column;gap:12px;">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
@@ -345,6 +417,9 @@ function renderSampleAnalysisCard() {
         </div>
         <button class="icon-pill-btn" onclick="openSampleAnalysisFile()">📂 Mở file \`analysis.json\`</button>
       </div>
+
+      ${xrayHtml}
+      ${breakdownHtml}
 
       <div style="font-size:12px;color:var(--text-dark);background:#FFF5ED;padding:10px 14px;border-radius:10px;border:1px solid var(--orange-border);">
         <strong>📌 Cấu trúc rút ra từ Video mẫu:</strong> ${ana.sampleStructureSummary || ana.extractedIdea}
@@ -826,20 +901,186 @@ function renderScriptBlocks() {
   document.getElementById('script-duration-badge').textContent = `${totalSec} giây (trả lời hook ở giây thứ 8–12 ≤ 15s)`;
 
   container.innerHTML = scriptBlocks
-    .map(
-      (b, idx) => `
+    .map((b, idx) => {
+      const words = String(b.text || '').trim().split(/\s+/).filter(Boolean).length;
+      const maxWords = Math.max(1, Math.round(Number(b.sec || 4) * 2.8));
+      const isOver = words > maxWords;
+      return `
       <div class="script-block ${idx === 0 ? 'first-block' : ''}">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
           <span class="script-num">${b.num}</span>
-          <span style="font-size:11px;font-weight:800;color:var(--text-muted);">${b.sec}s</span>
+          <span id="word-badge-${idx}" style="font-size:11px;font-weight:800;color:${isOver ? '#DC2626' : '#16A34A'};">
+            ${words}/${maxWords} từ ${isOver ? '⚠️ Quá dài' : '✓ Chuẩn'} • ${b.sec}s
+          </span>
         </div>
         <div class="script-label">${b.title}</div>
         <div style="font-size:11px;color:var(--text-muted);">${b.note}</div>
-        <textarea onchange="onScriptBlockEdit(${idx}, this.value)" style="margin-top:4px;font-size:12px;min-height:74px;">${b.text}</textarea>
+        <textarea oninput="onScriptWordCount(${idx}, this.value)" onchange="onScriptBlockEdit(${idx}, this.value)" style="margin-top:4px;font-size:12px;min-height:74px;">${b.text}</textarea>
       </div>
-    `
-    )
+    `;
+    })
     .join('');
+}
+
+function onScriptWordCount(idx, val) {
+  const b = scriptBlocks[idx];
+  const badge = document.getElementById(`word-badge-${idx}`);
+  if (!b || !badge) return;
+  const words = String(val || '').trim().split(/\s+/).filter(Boolean).length;
+  const maxWords = Math.max(1, Math.round(Number(b.sec || 4) * 2.8));
+  const isOver = words > maxWords;
+  badge.style.color = isOver ? '#DC2626' : '#16A34A';
+  badge.textContent = `${words}/${maxWords} từ ${isOver ? '⚠️ Quá dài' : '✓ Chuẩn'} • ${b.sec}s`;
+}
+
+async function importSampleVideoFromUrl() {
+  const urlInput = document.getElementById('inp-sample-url');
+  const videoUrl = (urlInput?.value || '').trim();
+  if (!videoUrl) {
+    alert('Hãy dán link video TikTok / YouTube Shorts / Facebook Reels trước.');
+    return;
+  }
+  if (!serverOnline) {
+    logConsole('Hãy mở http://localhost:4173 để tải video từ URL.');
+    return;
+  }
+  const productId = getSelectedProduct()?.id || 'sample-product';
+  const characterId = getSelectedCharacter()?.id || 'sample-kol';
+  const t0 = startJobProgress('Đang tải video từ link và phân tích nhịp cắt cảnh...', 8);
+  try {
+    const res = await fetch('/api/import-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ videoUrl, productId, characterId })
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      finishJobProgress(t0, data.output || 'Không tải được video từ link.');
+      alert(data.output || 'Không tải được video từ link.');
+      return;
+    }
+    if (data.state) {
+      appState = data.state;
+      populateSampleVideoSelect();
+      const sel = document.getElementById('inp-sample-video');
+      if (sel && data.clipId) sel.value = data.clipId;
+      renderSampleAnalysisCard();
+    }
+    finishJobProgress(t0, data.output || 'Đã tải và phân tích video từ link!');
+  } catch (e) {
+    finishJobProgress(t0, `Lỗi tải link: ${e.message}`);
+  }
+}
+
+function downloadCampaignFile(relPath, downloadName) {
+  const campId = document.getElementById('inp-campaign-id')?.value || 'sample-campaign';
+  const url = `/campaigns/${campId}/${relPath}`;
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = downloadName || relPath.split('/').pop();
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+async function triggerGeminiXray() {
+  if (!serverOnline) {
+    logConsole('Hãy mở http://localhost:4173 để chạy Giải phẫu sâu Gemini.');
+    return;
+  }
+  const clipId = document.getElementById('inp-sample-video')?.value || '';
+  const productId = getSelectedProduct()?.id || 'sample-product';
+  const characterId = getSelectedCharacter()?.id || 'sample-kol';
+  const t0 = startJobProgress('Đang tải video lên Gemini Files API & giải phẫu từng cảnh...', 15);
+  try {
+    const res = await fetch('/api/xray-ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clipId, productId, characterId })
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      finishJobProgress(t0, data.output || 'Giải phẫu Gemini thất bại.');
+      alert(data.output || 'Giải phẫu Gemini thất bại.');
+      return;
+    }
+    if (data.state) appState = data.state;
+    else if (data.sampleAnalysis) appState.sampleAnalysis = data.sampleAnalysis;
+    renderSampleAnalysisCard();
+    finishJobProgress(t0, data.output || 'Đã giải phẫu sâu Gemini xong!');
+  } catch (e) {
+    finishJobProgress(t0, `Lỗi Giải phẫu Gemini: ${e.message}`);
+  }
+}
+
+async function generateCharacterSheetUi() {
+  if (!serverOnline) {
+    logConsole('Hãy mở http://localhost:4173 để tạo Bộ Ảnh Nhân Vật 4 Góc.');
+    return;
+  }
+  const characterId = getSelectedCharacter()?.id || 'sample-kol';
+  const t0 = startJobProgress('Đang tạo Bộ Ảnh Nhân Vật 4 Góc (Character Sheet)...', 5);
+  try {
+    const res = await fetch('/api/character-sheet', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ characterId })
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      finishJobProgress(t0, data.output || 'Lỗi tạo Character Sheet.');
+      alert(data.output || 'Lỗi tạo Character Sheet.');
+      return;
+    }
+    if (data.state) appState = data.state;
+    if (typeof renderTruthLockSummary === 'function') renderTruthLockSummary();
+    finishJobProgress(t0, data.output || 'Đã tạo Bộ Ảnh Nhân Vật 4 Góc!');
+  } catch (e) {
+    finishJobProgress(t0, `Lỗi tạo Character Sheet: ${e.message}`);
+  }
+}
+
+async function applyRemakeToHooksAndScript() {
+  if (!serverOnline) {
+    logConsole('Hãy mở http://localhost:4173 để nhân bản công thức.');
+    return;
+  }
+  const clipId = document.getElementById('inp-sample-video')?.value || '';
+  const productId = getSelectedProduct()?.id || 'sample-product';
+  const category = document.getElementById('inp-industry')?.value || 'home';
+  const style = document.getElementById('inp-tone-style')?.value || 'ugc-iphone';
+  const t0 = startJobProgress('Đang áp công thức giải phẫu sang Hook & Kịch bản 6 khối...', 6);
+  try {
+    const res = await fetch('/api/ai-remake', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clipId, productId, category, style })
+    });
+    const data = await res.json();
+    if (!data.ok || !data.remake) {
+      finishJobProgress(t0, data.output || 'Không áp được công thức.');
+      alert(data.output || 'Không áp được công thức.');
+      return;
+    }
+    const remake = data.remake;
+    const shots = remake.shots || [];
+    if (remake.hookLine && hooksPool[winnerHookIndex]) {
+      hooksPool[winnerHookIndex].text = remake.hookLine;
+    }
+    for (let i = 0; i < scriptBlocks.length; i++) {
+      const mapped = shots[i];
+      if (mapped && mapped.voiceover) {
+        scriptBlocks[i].text = mapped.voiceover;
+        if (mapped.durationSec) scriptBlocks[i].sec = Math.max(1, Math.round(mapped.durationSec));
+      }
+    }
+    if (typeof renderHooks === 'function') renderHooks();
+    renderScriptBlocks();
+    finishJobProgress(t0, data.output || 'Đã áp công thức sang Mục 03 & 04!');
+    scrollToSlide('slide-03');
+  } catch (e) {
+    finishJobProgress(t0, `Lỗi áp công thức: ${e.message}`);
+  }
 }
 
 function onScriptBlockEdit(idx, val) {
