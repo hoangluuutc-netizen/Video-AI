@@ -3,6 +3,7 @@
   "title": "Chiến dịch Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml (real-footage)",
   "productId": "sample-product",
   "characterId": "sample-kol",
+  "museStyle": "tvc-studio-luxury",
   "platforms": [
     "tiktok",
     "shopee",
@@ -19,14 +20,14 @@
       "subtitle": "Đừng mua Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml nếu bạn chưa kiểm tra 3 chi tiết sống còn này!",
       "visualAction": "Quay thật điện thoại: cầm sản phẩm trên tay, nói câu hook trực diện.",
       "setting": "Standard clean studio/lifestyle setting",
+      "cameraPreset": "",
+      "sfxPreset": "",
+      "museStyle": "tvc-studio-luxury",
+      "motionRefClip": "",
       "footageId": "video-m-u",
       "trimStartSec": 0,
       "trimEndSec": 4,
-      "audioSrc": "media/audio/scene-1-hook.wav",
-      "keyframeSrc": "media/keyframes/scene-1-hook.png",
-      "startKeyframeSrc": "media/keyframes/scene-1-hook-start.png",
-      "endKeyframeSrc": "media/keyframes/scene-1-hook-end.png",
-      "museStyle": "tvc-studio-luxury"
+      "audioSrc": "media/audio/scene-1-hook.wav"
     },
     {
       "id": "scene-2-problem-flip",
@@ -35,14 +36,14 @@
       "subtitle": "Mang nước đi làm mà chỉ 2 tiếng đã hết lạnh, vỏ bình lại đọng nước ướt hết giấy tờ trong balo. Khác biệt nằm ở kết cấu: Inox 304 chuẩn y tế, giữ nhiệt 24h kết hợp lớp sơn nhám tĩnh điện chống bám vân tay.",
       "visualAction": "Quay thật cận cảnh bề mặt sơn nhám & thao tác mở nắp.",
       "setting": "Standard clean studio/lifestyle setting",
+      "cameraPreset": "",
+      "sfxPreset": "",
+      "museStyle": "tvc-studio-luxury",
+      "motionRefClip": "",
       "footageId": "video-m-u",
       "trimStartSec": 0,
       "trimEndSec": 5,
-      "audioSrc": "media/audio/scene-2-problem-flip.wav",
-      "keyframeSrc": "media/keyframes/scene-2-problem-flip.png",
-      "startKeyframeSrc": "media/keyframes/scene-2-problem-flip-start.png",
-      "endKeyframeSrc": "media/keyframes/scene-2-problem-flip-end.png",
-      "museStyle": "tvc-studio-luxury"
+      "audioSrc": "media/audio/scene-2-problem-flip.wav"
     },
     {
       "id": "scene-3-proof",
@@ -51,13 +52,13 @@
       "subtitle": "Nhìn cận cảnh: Inox 304 chuẩn y tế, giữ nhiệt 24h; Sơn nhám tĩnh điện chống bám vân tay; và Nắp khóa chống tràn 360 độ.",
       "visualAction": "Remotion render 100% ảnh sản phẩm gốc + 3 thông số thật (Zero-AI-Pixel).",
       "setting": "Standard clean studio/lifestyle setting",
+      "cameraPreset": "",
+      "sfxPreset": "",
+      "museStyle": "tvc-studio-luxury",
+      "motionRefClip": "",
       "motionLevel": "none",
       "videoSrc": "",
-      "audioSrc": "media/audio/scene-3-proof.wav",
-      "keyframeSrc": "media/keyframes/scene-3-proof.png",
-      "startKeyframeSrc": "media/keyframes/scene-3-proof-start.png",
-      "endKeyframeSrc": "media/keyframes/scene-3-proof-end.png",
-      "museStyle": "tvc-studio-luxury"
+      "audioSrc": "media/audio/scene-3-proof.wav"
     },
     {
       "id": "scene-4-cta",
@@ -66,18 +67,17 @@
       "subtitle": "Giá gốc 399.000đ giảm chỉ còn 249.000đ (-38% FLASH SALE) — bấm giỏ hàng đặt ngay!",
       "visualAction": "Remotion render thẻ giá chính hãng + nút CTA.",
       "setting": "Standard clean studio/lifestyle setting",
+      "cameraPreset": "",
+      "sfxPreset": "",
+      "museStyle": "tvc-studio-luxury",
+      "motionRefClip": "",
       "motionLevel": "none",
       "videoSrc": "",
-      "audioSrc": "media/audio/scene-4-cta.wav",
-      "keyframeSrc": "media/keyframes/scene-4-cta.png",
-      "startKeyframeSrc": "media/keyframes/scene-4-cta-start.png",
-      "endKeyframeSrc": "media/keyframes/scene-4-cta-end.png",
-      "museStyle": "tvc-studio-luxury"
+      "audioSrc": "media/audio/scene-4-cta.wav"
     }
   ],
   "mode": "real-footage",
   "voiceoverSrc": "media/audio/voiceover-full.mp3",
-  "museStyle": "tvc-studio-luxury",
   "subtitlesSrtSrc": "media/audio/subtitles.srt",
   "subtitlesAssSrc": "media/audio/subtitles.ass"
 }

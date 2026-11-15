@@ -84,6 +84,74 @@ async function fetchGeminiTts(text, apiKey, voiceName = 'Kore') {
   throw new Error('Không tìm thấy dữ liệu âm thanh từ Gemini TTS');
 }
 
+async function fetchVbeeTts(text, { apiKey, appId = '', voiceCode = 'hn_female_ngochuyen_full_48k-fhg' }) {
+  const res = await fetch('https://vbee.vn/api/v1/tts', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      app_id: appId || undefined,
+      voice_code: voiceCode,
+      audio_type: 'mp3',
+      bitrate: 128,
+      speed_rate: '1.0',
+      input_text: text
+    })
+  });
+  if (!res.ok) throw new Error(`Vbee TTS HTTP ${res.status}`);
+  const data = await res.json();
+  const audioUrl = data?.result?.audio_link || data?.audio_link;
+  if (audioUrl) {
+    const dl = await fetch(audioUrl);
+    if (!dl.ok) throw new Error(`Vbee download HTTP ${dl.status}`);
+    return Buffer.from(await dl.arrayBuffer());
+  }
+  const reqId = data?.result?.request_id || data?.request_id;
+  if (!reqId) throw new Error('Vbee TTS không trả về audio_link hoặc request_id');
+  for (let i = 0; i < 20; i++) {
+    await new Promise((r) => setTimeout(r, 1000));
+    const stRes = await fetch(`https://vbee.vn/api/v1/tts/${reqId}`, {
+      headers: { Authorization: `Bearer ${apiKey}` }
+    });
+    if (!stRes.ok) continue;
+    const st = await stRes.json();
+    const link = st?.result?.audio_link;
+    if (link) {
+      const dl = await fetch(link);
+      if (dl.ok) return Buffer.from(await dl.arrayBuffer());
+    }
+  }
+  throw new Error('Vbee TTS timeout khi chờ audio');
+}
+
+async function fetchFptTts(text, { apiKey, voice = 'banmai' }) {
+  const res = await fetch('https://api.fpt.ai/hmi/tts/v5', {
+    method: 'POST',
+    headers: {
+      api_key: apiKey,
+      voice,
+      speed: '0',
+      format: 'mp3'
+    },
+    body: text
+  });
+  if (!res.ok) throw new Error(`FPT.AI TTS HTTP ${res.status}`);
+  const data = await res.json();
+  const asyncUrl = data?.async;
+  if (!asyncUrl) throw new Error(`FPT.AI TTS không trả về URL async: ${JSON.stringify(data).slice(0, 200)}`);
+  for (let i = 0; i < 20; i++) {
+    await new Promise((r) => setTimeout(r, 800));
+    const dl = await fetch(asyncUrl);
+    if (dl.ok) {
+      const buf = Buffer.from(await dl.arrayBuffer());
+      if (buf.length > 500) return buf;
+    }
+  }
+  throw new Error('FPT.AI TTS timeout khi tải file mp3');
+}
+
 async function fetchGoogleTranslateViTts(text) {
   const chunks = [];
   const words = text.split(/\s+/);
@@ -178,6 +246,9 @@ export async function generateCampaignVoiceover(campaignPath) {
 
   const ttsEngine = aiCfg.ttsModel || process.env.TTS_MODEL || 'google-vi-natural';
   const geminiKey = aiCfg.geminiApiKey || process.env.GEMINI_API_KEY || '';
+  const vbeeKey = aiCfg.vbeeApiKey || process.env.VBEE_API_KEY || '';
+  const vbeeAppId = aiCfg.vbeeAppId || process.env.VBEE_APP_ID || '';
+  const fptKey = aiCfg.fptApiKey || process.env.FPT_API_KEY || '';
   const sceneWavs = [];
   const srtLines = [];
   let srtOffset = 0;
@@ -197,7 +268,27 @@ export async function generateCampaignVoiceover(campaignPath) {
     const finalWav = path.join(audioDir, `${scene.id}.wav`);
     let synthesized = false;
 
-    if (ttsEngine.startsWith('gemini') && geminiKey) {
+    if (ttsEngine === 'vbee-vi' && vbeeKey) {
+      try {
+        const buf = await fetchVbeeTts(text, { apiKey: vbeeKey, appId: vbeeAppId, voiceCode: aiCfg.vbeeVoice || undefined });
+        fs.writeFileSync(rawTmp, buf);
+        normalizeAndFitAudio(rawTmp, finalWav, dur);
+        synthesized = true;
+        console.log(`OK [Vbee TTS] Cảnh "${scene.id}" (${dur}s)`);
+      } catch (e) {
+        console.warn(`[Vbee TTS fallback] Cảnh "${scene.id}": ${e.message}`);
+      }
+    } else if (ttsEngine === 'fpt-vi' && fptKey) {
+      try {
+        const buf = await fetchFptTts(text, { apiKey: fptKey, voice: aiCfg.fptVoice || 'banmai' });
+        fs.writeFileSync(rawTmp, buf);
+        normalizeAndFitAudio(rawTmp, finalWav, dur);
+        synthesized = true;
+        console.log(`OK [FPT.AI TTS] Cảnh "${scene.id}" (${dur}s)`);
+      } catch (e) {
+        console.warn(`[FPT.AI TTS fallback] Cảnh "${scene.id}": ${e.message}`);
+      }
+    } else if (ttsEngine.startsWith('gemini') && geminiKey) {
       try {
         const buf = await fetchGeminiTts(text, geminiKey, aiCfg.ttsVoice || 'Kore');
         fs.writeFileSync(rawTmp, buf);

@@ -71,3 +71,12 @@
   3. **Phụ đề Highlight kiểu TikTok (`.ass`)**: Bổ sung `scripts/lib/ass-subtitles.mjs`, xuất song song `subtitles.ass` trong `scripts/generate-voiceover.mjs` và nút tải `.ass` trên Dashboard.
   4. **Nhập hàng loạt nhiều SKU từ CSV**: Bổ sung `assets/products/batch-template.csv` và `scripts/batch-from-csv.mjs` (hỗ trợ `--run` chạy Auto-Pilot hàng loạt).
   5. **Nhạc nền Auto-Ducking (`assets/music/`)**: Tự động trộn nhạc nền với `sidechaincompress` trong `scripts/export-cutlist.mjs` khi có file âm thanh trong `assets/music/`.
+- Chuẩn bị sẵn sàng cho kiểm thử thực tế: bổ sung `scripts/smoke-test.mjs` (kiểm tra tự động dữ liệu, 11 file mẫu, kiểm định video và API Dashboard Server) và `docs/HUONG_DAN_TEST_THU.md`; chạy `smoke-test.mjs` đạt 100%.
+- Tích hợp gói tối ưu **< $1 / video 30s** (Ollama Local `qwen3.5:9b` + Fal.ai + TTS Việt):
+  - Bổ sung `scripts/lib/ollama-client.mjs` và `ollamaRemake()` trong `scripts/lib/video-remake.mjs` để dùng model local `qwen3.5:9b` (0đ token) sinh kịch bản JSON chuẩn schema, kết nối thẳng vào `/api/ai-remake` trong `scripts/dashboard-server.mjs`.
+  - Bổ sung `scripts/lib/fal-client.mjs` (`fal-flux-kontext`, `fal-wan-i2v`, `fal-kling-turbo`) và chế độ `--selective` (`selectiveAiOnly`) trong `scripts/generate-media.mjs` để chỉ sinh AI 2 cảnh đầu (~10s), giữ 20s sau bằng ảnh thật.
+  - Bổ sung `Vbee AIVoice API` (`vbee-vi`) và `FPT.AI Speech v5` (`fpt-vi`) vào `scripts/generate-voiceover.mjs` (tự động fallback về `google-vi-natural` nếu thiếu key).
+  - Cập nhật `dashboard/index.html`, `dashboard/app.js` và `.env.example` với nút **⚡ Preset Tối Ưu <$1/Video** trong khu vực Cài đặt Bộ não & Công cụ.
+- Chuẩn hóa danh sách model theo lộ trình **Gói 6** (`docs/KE_HOACH_NANG_CAP_GIAI_PHAU.md`):
+  - Sắp xếp toàn bộ 4 danh sách model (`#cfg-llm-model`, `#cfg-image-model`, `#cfg-video-model`, `#cfg-tts-model`) trong `dashboard/index.html` theo hướng tối ưu dần từ thấp đến cao, lựa chọn mặc định đầu tiên là model không tốn token (`$0`), và ghi rõ giá ước tính sau từng lựa chọn.
+  - Đồng bộ mặc định `$0` trong `scripts/dashboard-server.mjs` và `assets/brand-kit/ai-config.json`.

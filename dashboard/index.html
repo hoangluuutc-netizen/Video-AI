@@ -76,42 +76,66 @@
         <div class="field-group">
           <label>🧠 Bộ não Kịch bản & Chấm Hook</label>
           <select id="cfg-llm-model">
-            <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro (Phân tích sâu TMĐT)</option>
-            <option value="gemini-3-flash-preview">Gemini 3 Flash (Tốc độ cao)</option>
-            <option value="local-ecommerce-director">Rule Engine Nội Bộ (Không cần API key)</option>
+            <option value="local-ecommerce-director">Rule Engine Nội Bộ — Không tốn token ($0 / video)</option>
+            <option value="ollama:qwen3.5:9b">Ollama Local (qwen3.5:9b) — Không tốn token API ($0 / video, chạy trên máy)</option>
+            <option value="gemini-3-flash-preview">Gemini 3 Flash — Nhanh, tiết kiệm (~$0.001 / video)</option>
+            <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro — Phân tích sâu TMĐT (~$0.01 / video)</option>
           </select>
         </div>
         <div class="field-group">
           <label>🖼️ Bộ não Tạo/Ghép Cảnh Từ Ảnh Thật</label>
           <select id="cfg-image-model">
-            <option value="ffmpeg-real-composite">FFmpeg Studio Composite (Giữ 100% Ảnh Người & SP Thật)</option>
-            <option value="gemini-nano-banana-2.1">Gemini Nano Banana 2.1 (Khóa Reference Image)</option>
-            <option value="gemini-3-pro-image">Gemini 3 Pro Image (4K Studio)</option>
+            <option value="ffmpeg-real-composite">FFmpeg Studio Composite — Không tốn token ($0 / ảnh, giữ 100% pixel gốc)</option>
+            <option value="photoroom-bg-remove">Photoroom API Tách nền — 1.000 ảnh free, sau đó (~$0.02 / ảnh)</option>
+            <option value="fal-flux-kontext">Fal.ai FLUX Kontext — Ghép người cầm SP chuẩn (~$0.04 / ảnh)</option>
+            <option value="claid-ai-studio">Claid.ai Virtual Photoshoot — Ánh sáng &amp; bối cảnh (~$0.06 / ảnh)</option>
+            <option value="gemini-nano-banana-2.1">Gemini Nano Banana 2.1 — Khóa Reference Image (~$0.04–$0.08 / ảnh)</option>
+            <option value="gemini-3-pro-image">Gemini 3 Pro Image — 4K Studio cao cấp (~$0.10–$0.15 / ảnh)</option>
           </select>
         </div>
         <div class="field-group">
-          <label>🎥 Bộ não Tạo Chuyển Động Video (Veo 3.1 / Omni 1.2 / FFmpeg Cinema)</label>
+          <label>🎥 Bộ não Tạo Chuyển Động Video (Từ $0 đến TVC Cao Cấp)</label>
           <select id="cfg-video-model">
-            <option value="veo-3.1-generate-001">Google Veo 3.1 (Ingredients-to-Video + Native Audio Lip-Sync + 1080p/4K)</option>
-            <option value="gemini-omni-1.2-flash">Gemini Omni 1.2 Flash (Reference-to-Video R2V + Clip Mẫu 3s)</option>
-            <option value="ffmpeg-bokeh-cinema">FFmpeg Bokeh Cinema (Nền chuyển động từ Video Mẫu + 100% Ảnh Thật)</option>
+            <option value="ffmpeg-bokeh-cinema">FFmpeg Bokeh Cinema — Không tốn token ($0 / video, 100% ảnh thật)</option>
+            <option value="fal-wan-i2v">Fal.ai Wan 2.2/2.5 I2V — Giữ khối SP chắc (~$0.05 / giây ≈ $0.25/5s)</option>
+            <option value="fal-kling-turbo">Fal.ai Kling 2.5 Turbo — Người cầm SP mượt (~$0.04–$0.07 / giây)</option>
+            <option value="fal-seedance-pro">ByteDance Seedance 2.0/2.5 — Đa tham chiếu + Audio (~$0.08–$0.15 / giây)</option>
+            <option value="fal-kling-pro">Fal.ai Kling 3.0/4.0 Elements — 1080p chi tiết cao (~$0.14–$0.24 / giây)</option>
+            <option value="gemini-omni-1.2-flash">Gemini Omni 1.2 Flash — R2V + Clip Mẫu 3s (~$0.15–$0.25 / giây)</option>
+            <option value="veo-3.1-generate-001">Google Veo 3.1 — Ingredients-to-Video + Native Audio (~$0.20–$0.40 / giây)</option>
           </select>
         </div>
         <div class="field-group">
           <label>🎙️ Bộ não Sinh Giọng Đọc & Âm Thanh</label>
           <select id="cfg-tts-model">
-            <option value="google-vi-natural">Giọng Nữ Tiếng Việt Tự Nhiên + Nhạc Nền Ấm (Miễn phí)</option>
-            <option value="gemini-3.8-flash-tts">Gemini 3.8 Flash TTS (Giọng Kore / Puck truyền cảm)</option>
-            <option value="windows-sapi-vi">Windows Local Speech + Studio Ambience</option>
+            <option value="windows-sapi-vi">Windows Local Speech + Nhạc nền — Không tốn token ($0 / video, offline)</option>
+            <option value="google-vi-natural">Giọng Nữ Tiếng Việt Tự Nhiên + Nhạc Nền — Miễn phí ($0 / video)</option>
+            <option value="fpt-vi">FPT.AI Speech v5 — 100K ký tự free, sau đó (~$0.006 / video 30s)</option>
+            <option value="vbee-vi">Vbee AIVoice API — Giọng Việt 3 miền tự nhiên (~$0.005–$0.01 / video 30s)</option>
+            <option value="gemini-3.8-flash-tts">Gemini 3.8 Flash TTS — Giọng Kore / Puck (~$0.01–$0.02 / video 30s)</option>
+            <option value="elevenlabs-v3">ElevenLabs Flash/Multilingual — Cảm xúc &amp; Voice Clone (~$0.03–$0.05 / video 30s)</option>
           </select>
         </div>
         <div class="field-group">
-          <label>🔑 Gemini API Key (Tùy chọn — Để trống nếu dùng chế độ Local/Miễn phí)</label>
-          <input type="password" id="cfg-gemini-key" placeholder="Nhập GEMINI_API_KEY nếu muốn gọi Cloud AI..." />
+          <label>🔑 Gemini API Key (Tùy chọn)</label>
+          <input type="password" id="cfg-gemini-key" placeholder="Nhập GEMINI_API_KEY..." />
         </div>
-        <div class="field-group" style="justify-content:flex-end;">
-          <label>&nbsp;</label>
-          <button class="btn btn-orange" onclick="saveAiConfigFromUi()">💾 Lưu Cấu Hình Bộ Não & Công Cụ</button>
+        <div class="field-group">
+          <label>🔑 Fal.ai Key (`FAL_KEY` cho Wan / Kling / FLUX)</label>
+          <input type="password" id="cfg-fal-key" placeholder="Nhập FAL_KEY nếu dùng Fal.ai..." />
+        </div>
+        <div class="field-group">
+          <label>🔑 Vbee / FPT.AI Key (Tùy chọn cho TTS Việt)</label>
+          <input type="password" id="cfg-vi-tts-key" placeholder="Nhập VBEE_API_KEY hoặc FPT_API_KEY..." />
+        </div>
+        <div class="field-group" style="justify-content:flex-end; gap:8px;">
+          <label style="display:flex; align-items:center; gap:6px; font-weight:500; cursor:pointer;">
+            <input type="checkbox" id="cfg-selective-ai" /> Chỉ gen AI 2 cảnh đầu (10s AI + 20s Ảnh thật &lt;$1/video)
+          </label>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn" style="background:#0f766e;color:#fff;" onclick="applyUnderOneDollarPreset()">⚡ Preset Tối Ưu &lt;$1/Video</button>
+            <button class="btn btn-orange" onclick="saveAiConfigFromUi()">💾 Lưu Cấu Hình Bộ Não & Công Cụ</button>
+          </div>
         </div>
       </div>
     </section>

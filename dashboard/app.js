@@ -1601,6 +1601,8 @@ function syncAiConfigToUi() {
   setVal('cfg-image-model', cfg.imageModel);
   setVal('cfg-video-model', cfg.videoModel);
   setVal('cfg-tts-model', cfg.ttsModel);
+  const selEl = document.getElementById('cfg-selective-ai');
+  if (selEl) selEl.checked = Boolean(cfg.selectiveAiOnly);
 
   const setText = (id, val) => {
     const el = document.getElementById(id);
@@ -1612,13 +1614,33 @@ function syncAiConfigToUi() {
   setText('pill-tts', cfg.ttsModel || 'google-vi-natural');
 }
 
+function applyUnderOneDollarPreset() {
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+  };
+  setVal('cfg-llm-model', 'ollama:qwen3.5:9b');
+  setVal('cfg-image-model', 'fal-flux-kontext');
+  setVal('cfg-video-model', 'fal-wan-i2v');
+  setVal('cfg-tts-model', 'vbee-vi');
+  const selEl = document.getElementById('cfg-selective-ai');
+  if (selEl) selEl.checked = true;
+  saveAiConfigFromUi();
+}
+
 async function saveAiConfigFromUi() {
+  const ttsModel = document.getElementById('cfg-tts-model')?.value;
+  const viTtsKey = document.getElementById('cfg-vi-tts-key')?.value || '';
   const payload = {
     llmModel: document.getElementById('cfg-llm-model')?.value,
     imageModel: document.getElementById('cfg-image-model')?.value,
     videoModel: document.getElementById('cfg-video-model')?.value,
-    ttsModel: document.getElementById('cfg-tts-model')?.value,
-    geminiApiKey: document.getElementById('cfg-gemini-key')?.value || ''
+    ttsModel,
+    selectiveAiOnly: Boolean(document.getElementById('cfg-selective-ai')?.checked),
+    geminiApiKey: document.getElementById('cfg-gemini-key')?.value || '',
+    falApiKey: document.getElementById('cfg-fal-key')?.value || '',
+    vbeeApiKey: ttsModel === 'vbee-vi' ? viTtsKey : '',
+    fptApiKey: ttsModel === 'fpt-vi' ? viTtsKey : ''
   };
   appState.aiConfig = { ...(appState.aiConfig || {}), ...payload };
   syncAiConfigToUi();

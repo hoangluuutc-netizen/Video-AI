@@ -30,6 +30,12 @@
 - Trong `export-cutlist.mjs`: ưu tiên dùng ảnh PNG đã tách nền sẵn (`referenceImages.transparent`); chỉ áp dụng `colorkey=0xFFFFFF:0.06:0.03` khi ảnh đầu vào có nền trắng đặc (JPG) để tránh làm lủng chi tiết sản phẩm màu trắng.
 - Trong `verify-integrity.mjs`: khi `hasOwnReplacedAssets === true`, bổ sung kiểm tra khung hình đen (`blackdetect`) và độ lệch thời lượng audio/video thay vì chỉ trả `OK`.
 
+### Gói 6 — Chuẩn hóa danh sách lựa chọn Model AI trên Dashboard (`dashboard/index.html` + `scripts/dashboard-server.mjs`)
+- Mỗi phần việc (Kịch bản LLM, Tạo/Ghép ảnh, Tạo chuyển động Video, Giọng đọc TTS) có danh sách đầy đủ các công cụ AI phù hợp.
+- **Lựa chọn mặc định đầu tiên** luôn là model **không tốn token (`$0`)**.
+- **Thứ tự sắp xếp:** Từ thấp đến cao theo hướng tối ưu dần (miễn phí `0đ` → giá rẻ → cân bằng → cao cấp nhất).
+- **Hiển thị chi phí:** Sau mỗi lựa chọn đều ghi rõ **giá ước tính** để người dùng chủ động kiểm soát ngân sách trước khi chạy.
+
 ## 3. Quy tắc kiểm tra sau mỗi gói
 1. `node scripts/validate-assets.mjs`
 2. `cd studio && npm.cmd run typecheck`

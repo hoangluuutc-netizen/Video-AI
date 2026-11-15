@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { buildScenePrompt, readJson } from './lib/prompt-builder.mjs';
+import { FAL_IMAGE_ENDPOINTS, FAL_VIDEO_ENDPOINTS, generateFalImage, generateFalVideo } from './lib/fal-client.mjs';
 
 const ROOT = process.cwd();
 const INTERACTIONS_URL = 'https://generativelanguage.googleapis.com/v1beta/interactions';
@@ -37,6 +38,7 @@ function parseArgs(argv) {
   let mode = '';
   let sceneFilter = '';
   let dryRun = false;
+  let selective = false;
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -46,11 +48,27 @@ function parseArgs(argv) {
       sceneFilter = argv[++i];
     } else if (arg === '--dry-run') {
       dryRun = true;
+    } else if (arg === '--selective') {
+      selective = true;
     } else if (!arg.startsWith('--')) {
       campaignArg = arg;
     }
   }
-  return { campaignArg, mode, sceneFilter, dryRun };
+  return { campaignArg, mode, sceneFilter, dryRun, selective };
+}
+
+function collectReferenceAbsPaths(product, character) {
+  const out = [];
+  const candidates = [
+    ...Object.values(product.referenceImages || {}),
+    ...Object.values(character.referenceImages || {})
+  ];
+  for (const rel of candidates) {
+    if (!rel) continue;
+    const abs = path.isAbsolute(rel) ? rel : path.join(ROOT, rel);
+    if (fs.existsSync(abs)) out.push(abs);
+  }
+  return out;
 }
 
 function guessMimeType(filePath) {
@@ -112,9 +130,10 @@ function extractBase64Media(response, kind) {
 }
 
 async function processSceneKeyframe(scene, ctx) {
-  const { campaignDir, product, character, apiKey, dryRun } = ctx;
+  const { campaignDir, product, character, apiKey, falKey, dryRun } = ctx;
   const { keyframePrompt } = buildScenePrompt(scene, product, character);
-  const refParts = collectReferenceParts(product, character);
+  const refAbs = collectReferenceAbsPaths(product, character);
+  const refParts = refAbs.map(toImagePart);
   const input = [...refParts, { type: 'text', text: keyframePrompt }];
   const model = process.env.GEMINI_IMAGE_MODEL || 'gemini-nano-banana-2.1';
   const relOut = path.posix.join('media', 'keyframes', `${scene.id}.png`);
@@ -125,20 +144,26 @@ async function processSceneKeyframe(scene, ctx) {
     return { sceneId: scene.id, updated: false };
   }
 
-  const response = await callInteractionsApi(apiKey, model, input);
-  const b64 = extractBase64Media(response, 'image');
-  if (!b64) {
-    throw new Error(`Không nhận được dữ liệu ảnh từ API cho cảnh "${scene.id}"`);
-  }
   fs.mkdirSync(path.dirname(absOut), { recursive: true });
-  fs.writeFileSync(absOut, Buffer.from(b64, 'base64'));
+  if (FAL_IMAGE_ENDPOINTS[model]) {
+    if (!falKey) throw new Error(`Thiếu FAL_KEY để gọi ${model}.`);
+    const buf = await generateFalImage({ apiKey: falKey, modelKey: model, prompt: keyframePrompt, referenceImagePaths: refAbs });
+    fs.writeFileSync(absOut, buf);
+  } else {
+    const response = await callInteractionsApi(apiKey, model, input);
+    const b64 = extractBase64Media(response, 'image');
+    if (!b64) {
+      throw new Error(`Không nhận được dữ liệu ảnh từ API cho cảnh "${scene.id}"`);
+    }
+    fs.writeFileSync(absOut, Buffer.from(b64, 'base64'));
+  }
   scene.keyframeSrc = relOut;
   scene.qcStatus = 'pending';
   return { sceneId: scene.id, updated: true, out: relOut };
 }
 
 async function processSceneVideo(scene, ctx) {
-  const { campaignDir, product, character, apiKey, dryRun } = ctx;
+  const { campaignDir, product, character, apiKey, falKey, dryRun } = ctx;
   if (scene.qcStatus !== 'approved') {
     console.warn(`[BỎ QUA][video] Cảnh "${scene.id}" có qcStatus="${scene.qcStatus || 'pending'}" (chưa được duyệt "approved").`);
     return { sceneId: scene.id, updated: false, skipped: true };
@@ -161,21 +186,35 @@ async function processSceneVideo(scene, ctx) {
     return { sceneId: scene.id, updated: false };
   }
 
-  // Truyền đồng thời Keyframe Đầu + Keyframe Cuối (nếu có) + Ảnh Nhân vật + Ảnh Sản phẩm (Ingredients-to-Video / Frames-to-Video)
-  const refParts = collectReferenceParts(product, character);
   const endKeyframeAbs = scene.endKeyframeSrc
     ? (path.isAbsolute(scene.endKeyframeSrc) ? scene.endKeyframeSrc : path.join(campaignDir, scene.endKeyframeSrc))
     : '';
-  const endPart = endKeyframeAbs && fs.existsSync(endKeyframeAbs) ? [toImagePart(endKeyframeAbs)] : [];
-  const chosenPrompt = model.includes('omni') ? omniFlashR2VPrompt : (veo3Prompt || videoPrompt);
-  const input = [toImagePart(keyframeAbs), ...endPart, ...refParts.slice(0, 2), { type: 'text', text: chosenPrompt }];
-  const response = await callInteractionsApi(apiKey, model, input);
-  const b64 = extractBase64Media(response, 'video');
-  if (!b64) {
-    throw new Error(`Không nhận được dữ liệu video từ API cho cảnh "${scene.id}"`);
-  }
   fs.mkdirSync(path.dirname(absOut), { recursive: true });
-  fs.writeFileSync(absOut, Buffer.from(b64, 'base64'));
+
+  if (FAL_VIDEO_ENDPOINTS[model]) {
+    if (!falKey) throw new Error(`Thiếu FAL_KEY để gọi ${model}.`);
+    const buf = await generateFalVideo({
+      apiKey: falKey,
+      modelKey: model,
+      prompt: veo3Prompt || videoPrompt,
+      startImagePath: keyframeAbs,
+      endImagePath: endKeyframeAbs,
+      durationSec: Number(scene.durationSec || 5)
+    });
+    fs.writeFileSync(absOut, buf);
+  } else {
+    // Truyền đồng thời Keyframe Đầu + Keyframe Cuối (nếu có) + Ảnh Nhân vật + Ảnh Sản phẩm (Ingredients-to-Video / Frames-to-Video)
+    const refParts = collectReferenceParts(product, character);
+    const endPart = endKeyframeAbs && fs.existsSync(endKeyframeAbs) ? [toImagePart(endKeyframeAbs)] : [];
+    const chosenPrompt = model.includes('omni') ? omniFlashR2VPrompt : (veo3Prompt || videoPrompt);
+    const input = [toImagePart(keyframeAbs), ...endPart, ...refParts.slice(0, 2), { type: 'text', text: chosenPrompt }];
+    const response = await callInteractionsApi(apiKey, model, input);
+    const b64 = extractBase64Media(response, 'video');
+    if (!b64) {
+      throw new Error(`Không nhận được dữ liệu video từ API cho cảnh "${scene.id}"`);
+    }
+    fs.writeFileSync(absOut, Buffer.from(b64, 'base64'));
+  }
   scene.videoSrc = relOut;
   return { sceneId: scene.id, updated: true, out: relOut };
 }
@@ -184,12 +223,13 @@ async function main() {
   loadEnvFile();
   const aiCfg = loadAiConfig();
   if (!process.env.GEMINI_API_KEY && aiCfg.geminiApiKey) process.env.GEMINI_API_KEY = aiCfg.geminiApiKey;
+  if (!process.env.FAL_KEY && aiCfg.falApiKey) process.env.FAL_KEY = aiCfg.falApiKey;
   if (!process.env.GEMINI_IMAGE_MODEL && aiCfg.imageModel) process.env.GEMINI_IMAGE_MODEL = aiCfg.imageModel;
   if (!process.env.GEMINI_VIDEO_MODEL && aiCfg.videoModel) process.env.GEMINI_VIDEO_MODEL = aiCfg.videoModel;
-  const { campaignArg, mode, sceneFilter, dryRun } = parseArgs(process.argv.slice(2));
+  const { campaignArg, mode, sceneFilter, dryRun, selective } = parseArgs(process.argv.slice(2));
 
   if (mode !== 'keyframe' && mode !== 'video') {
-    console.error('Cách dùng: node scripts/generate-media.mjs <campaign.json> --mode <keyframe|video> [--scene <id>] [--dry-run]');
+    console.error('Cách dùng: node scripts/generate-media.mjs <campaign.json> --mode <keyframe|video> [--scene <id>] [--selective] [--dry-run]');
     process.exit(1);
   }
 
@@ -199,9 +239,16 @@ async function main() {
     process.exit(1);
   }
 
+  const activeModel = mode === 'keyframe' ? (process.env.GEMINI_IMAGE_MODEL || 'gemini-nano-banana-2.1') : (process.env.GEMINI_VIDEO_MODEL || 'gemini-omni-1.2-flash');
+  const usesFal = Boolean(FAL_IMAGE_ENDPOINTS[activeModel] || FAL_VIDEO_ENDPOINTS[activeModel]);
   const apiKey = process.env.GEMINI_API_KEY || '';
-  if (!dryRun && !apiKey) {
+  const falKey = process.env.FAL_KEY || '';
+  if (!dryRun && !usesFal && !apiKey) {
     console.error('Thiếu GEMINI_API_KEY trong biến môi trường hoặc file .env (dùng --dry-run để kiểm tra thử).');
+    process.exit(1);
+  }
+  if (!dryRun && usesFal && !falKey) {
+    console.error(`Thiếu FAL_KEY để gọi ${activeModel} (thêm vào .env hoặc Cấu hình Bộ não).`);
     process.exit(1);
   }
 
@@ -215,18 +262,23 @@ async function main() {
   const character = readJson(path.join(ROOT, 'assets', 'characters', campaign.characterId, 'character.json'));
   const campaignDir = path.dirname(campaignPath);
 
-  const targets = campaign.scenes.filter((s) => {
+  let targets = campaign.scenes.filter((s) => {
     const isAi = s.type === 'ai-lifestyle' || s.type === 'ai-experience';
     if (!isAi) return false;
     return sceneFilter ? s.id === sceneFilter : true;
   });
+
+  if ((selective || aiCfg.selectiveAiOnly) && !sceneFilter && targets.length > 2) {
+    console.log(`[Selective AI <$1] Giới hạn chỉ sinh AI cho 2 cảnh đầu (${targets.slice(0, 2).map((t) => t.id).join(', ')}), các cảnh sau giữ nguyên ảnh thật.`);
+    targets = targets.slice(0, 2);
+  }
 
   if (targets.length === 0) {
     console.log('Không có cảnh AI nào khớp điều kiện để xử lý.');
     return;
   }
 
-  const ctx = { campaignDir, product, character, apiKey, dryRun };
+  const ctx = { campaignDir, product, character, apiKey, falKey, dryRun };
   const worker = mode === 'keyframe' ? processSceneKeyframe : processSceneVideo;
   const results = await Promise.allSettled(targets.map((s) => worker(s, ctx)));
 

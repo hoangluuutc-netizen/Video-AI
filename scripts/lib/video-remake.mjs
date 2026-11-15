@@ -1,5 +1,6 @@
 // Nhân bản kịch bản từ video mẫu sang sản phẩm của bạn (7 ngành hàng, 5 phong cách, đếm từ ~2.8 từ/giây).
 import { generateJson } from './gemini-client.mjs';
+import { generateOllamaJson } from './ollama-client.mjs';
 
 export const STYLE_PRESETS = {
   'ugc-iphone': { label: 'UGC chân thực (quay điện thoại, ánh sáng tự nhiên)', prompt: 'authentic UGC look, shot on a modern smartphone, handheld micro-shake, natural window light, real home environment, slightly imperfect framing' },
@@ -138,10 +139,10 @@ const REMAKE_SCHEMA = {
   required: ['title', 'hookVariants', 'shots', 'caption']
 };
 
-export async function aiRemake(apiKey, { model, xray, breakdown, product }) {
+function buildRemakePrompt({ xray, breakdown, product }) {
   const style = STYLE_PRESETS[product.style] || STYLE_PRESETS['ugc-iphone'];
   const ref = breakdown?.shots?.length ? breakdown.shots : xray.shots;
-  const text = `Dựng lại video quảng cáo cho sản phẩm của tôi, GIỮ NGUYÊN số cảnh, thời lượng từng cảnh, vai trò và nhịp của video mẫu.
+  return `Dựng lại video quảng cáo cho sản phẩm của tôi, GIỮ NGUYÊN số cảnh, thời lượng từng cảnh, vai trò và nhịp của video mẫu.
 
 SẢN PHẨM:
 - Tên: ${product.name}
@@ -161,8 +162,20 @@ YÊU CẦU:
 - Prompt hình ảnh bằng tiếng Anh, luôn kèm ràng buộc: "${FIDELITY_LOCK}"
 - Không sao chép nguyên văn lời thoại của video mẫu; chỉ học cấu trúc.
 - Cảnh trình diễn/bằng chứng nên khuyến nghị dùng clip/ảnh sản phẩm thật.`;
+}
+
+export async function aiRemake(apiKey, { model, xray, breakdown, product }) {
+  const text = buildRemakePrompt({ xray, breakdown, product });
   const res = await generateJson(apiKey, { model, input: text, schema: REMAKE_SCHEMA });
   res.engine = model;
+  for (const s of res.shots || []) s.maxWords = wordsFor(s.durationSec || (s.end - s.start));
+  return res;
+}
+
+export async function ollamaRemake({ model, xray, breakdown, product, baseUrl }) {
+  const text = buildRemakePrompt({ xray, breakdown, product });
+  const res = await generateOllamaJson({ model, prompt: text, schema: REMAKE_SCHEMA, baseUrl });
+  res.engine = model || 'ollama:qwen3.5:9b';
   for (const s of res.shots || []) s.maxWords = wordsFor(s.durationSec || (s.end - s.start));
   return res;
 }

@@ -6,7 +6,7 @@ import { analyzeSampleVideo } from './analyze-sample-video.mjs';
 import { generateCharacterSheet } from './generate-character-sheet.mjs';
 import { uploadVideo, DEFAULT_MODEL } from './lib/gemini-client.mjs';
 import { aiBreakdown } from './lib/video-forensics.mjs';
-import { aiRemake, templateRemake } from './lib/video-remake.mjs';
+import { aiRemake, ollamaRemake, templateRemake } from './lib/video-remake.mjs';
 
 const ROOT = process.cwd();
 const PORT = Number(process.env.PORT || 4173);
@@ -17,12 +17,12 @@ const SHEET_PATH = path.join(ROOT, 'campaigns', 'reel-sheet.json');
 const AI_CONFIG_PATH = path.join(ROOT, 'assets', 'brand-kit', 'ai-config.json');
 
   const DEFAULT_AI_CONFIG = {
-  llmModel: 'gemini-3.1-pro-preview',
-  imageModel: 'gemini-nano-banana-2.1',
-  videoModel: 'veo-3.1-generate-001',
-  ttsModel: 'google-vi-natural',
+  llmModel: 'local-ecommerce-director',
+  imageModel: 'ffmpeg-real-composite',
+  videoModel: 'ffmpeg-bokeh-cinema',
+  ttsModel: 'windows-sapi-vi',
   ttsVoice: 'Kore',
-  renderEngine: 'veo3-hybrid-real-lock',
+  renderEngine: 'ffmpeg-anchored-real',
   hasGeminiKey: false
 };
 
@@ -64,15 +64,18 @@ function listSubdirs(dir) {
 function loadAiConfig() {
   const saved = readJsonSafe(AI_CONFIG_PATH, {});
   const envPath = path.join(ROOT, '.env');
-  let envHasGemini = Boolean(process.env.GEMINI_API_KEY);
+  let envRaw = '';
   if (fs.existsSync(envPath)) {
-    const raw = fs.readFileSync(envPath, 'utf8');
-    if (/GEMINI_API_KEY=\S+/.test(raw)) envHasGemini = true;
+    envRaw = fs.readFileSync(envPath, 'utf8');
   }
+  const hasEnv = (k) => Boolean(process.env[k]) || new RegExp(`${k}=\\S+`).test(envRaw);
   return {
     ...DEFAULT_AI_CONFIG,
     ...saved,
-    hasGeminiKey: Boolean(saved.geminiApiKey || envHasGemini)
+    hasGeminiKey: Boolean(saved.geminiApiKey || hasEnv('GEMINI_API_KEY')),
+    hasFalKey: Boolean(saved.falApiKey || hasEnv('FAL_KEY')),
+    hasVbeeKey: Boolean(saved.vbeeApiKey || hasEnv('VBEE_API_KEY')),
+    hasFptKey: Boolean(saved.fptApiKey || hasEnv('FPT_API_KEY'))
   };
 }
 
@@ -247,11 +250,24 @@ const server = http.createServer(async (req, res) => {
         videoModel: body.videoModel || current.videoModel,
         ttsModel: body.ttsModel || current.ttsModel,
         ttsVoice: body.ttsVoice || current.ttsVoice,
-        renderEngine: body.renderEngine || current.renderEngine
+        renderEngine: body.renderEngine || current.renderEngine,
+        selectiveAiOnly: body.selectiveAiOnly !== undefined ? Boolean(body.selectiveAiOnly) : current.selectiveAiOnly
       };
       if (body.geminiApiKey !== undefined && body.geminiApiKey.trim() !== '') {
         updated.geminiApiKey = body.geminiApiKey.trim();
         process.env.GEMINI_API_KEY = updated.geminiApiKey;
+      }
+      if (body.falApiKey !== undefined && body.falApiKey.trim() !== '') {
+        updated.falApiKey = body.falApiKey.trim();
+        process.env.FAL_KEY = updated.falApiKey;
+      }
+      if (body.vbeeApiKey !== undefined && body.vbeeApiKey.trim() !== '') {
+        updated.vbeeApiKey = body.vbeeApiKey.trim();
+        process.env.VBEE_API_KEY = updated.vbeeApiKey;
+      }
+      if (body.fptApiKey !== undefined && body.fptApiKey.trim() !== '') {
+        updated.fptApiKey = body.fptApiKey.trim();
+        process.env.FPT_API_KEY = updated.fptApiKey;
       }
       fs.mkdirSync(path.dirname(AI_CONFIG_PATH), { recursive: true });
       fs.writeFileSync(AI_CONFIG_PATH, JSON.stringify(updated, null, 2) + '\n', 'utf8');
@@ -528,16 +544,37 @@ const server = http.createServer(async (req, res) => {
         pain: ''
       };
 
-      const remake = apiKey
-        ? await aiRemake(apiKey, ana.xray || { shots: [] }, ana.breakdown || null, productInput, { model: aiCfg.llmModel || DEFAULT_MODEL })
-        : templateRemake(ana.xray || { shots: [] }, ana.breakdown || null, productInput);
+      const chosenLlm = aiCfg.llmModel || DEFAULT_MODEL;
+      const useOllama = String(chosenLlm).startsWith('ollama:');
+      let remake;
+      let engineLabel = 'Template chuẩn';
+      if (useOllama) {
+        remake = await ollamaRemake({
+          model: chosenLlm,
+          xray: ana.xray || { shots: [] },
+          breakdown: ana.breakdown || null,
+          product: productInput,
+          baseUrl: aiCfg.ollamaBaseUrl
+        });
+        engineLabel = `Ollama Local (${chosenLlm})`;
+      } else if (apiKey) {
+        remake = await aiRemake(apiKey, {
+          model: chosenLlm,
+          xray: ana.xray || { shots: [] },
+          breakdown: ana.breakdown || null,
+          product: productInput
+        });
+        engineLabel = 'Gemini AI';
+      } else {
+        remake = templateRemake(ana.xray || { shots: [] }, ana.breakdown || null, productInput);
+      }
 
       return sendJson(res, 200, {
         ok: true,
         elapsedSec: ((Date.now() - startMs) / 1000).toFixed(1),
-        usedAi: Boolean(apiKey),
+        usedAi: Boolean(useOllama || apiKey),
         remake,
-        output: `Đã nhân bản công thức (${apiKey ? 'Gemini AI' : 'Template chuẩn'}) cho "${prod.name}" (${remake.shots?.length || 0} cảnh).`
+        output: `Đã nhân bản công thức (${engineLabel}) cho "${prod.name}" (${remake.shots?.length || 0} cảnh).`
       });
     } catch (e) {
       return sendJson(res, 500, { ok: false, output: `Lỗi nhân bản kịch bản: ${e.message}` });
