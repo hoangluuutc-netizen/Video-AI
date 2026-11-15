@@ -65,67 +65,65 @@ export function generateMuseKeyframesAndPack(campaignArg = 'campaigns/sample-cam
     const endAbs = path.join(campaignDir, endRel);
     const defaultAbs = path.join(campaignDir, defaultRel);
 
-    // 1. Tạo KHUNG HÌNH ĐẦU (Start Frame: Bối cảnh Bokeh + Nhân vật thật & Sản phẩm thật cân đối)
-    if (thumbAbs && fs.existsSync(thumbAbs)) {
-      execFileSync('ffmpeg', [
-        '-y', '-v', 'error',
-        '-i', thumbAbs,
-        '-i', charAbs,
-        '-i', prodAbs,
-        '-filter_complex',
-        `[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=42:6,eq=${museStyle.ffmpegEq}[bg];` +
-          `[bg]drawbox=x=44:y=320:w=476:h=760:color=#1E293B@0.88:t=fill,` +
-          `drawbox=x=44:y=320:w=476:h=760:color=#FF5A1F@0.95:t=5,` +
-          `drawbox=x=556:y=320:w=480:h=760:color=#FFFFFF@0.96:t=fill,` +
-          `drawbox=x=556:y=320:w=480:h=760:color=#FF5A1F@0.95:t=5[bg2];` +
-          `[1:v]scale=452:736:force_original_aspect_ratio=decrease,pad=452:736:(ow-iw)/2:(oh-ih)/2:color=#0F172A[ch];` +
-          `[2:v]scale=448:728:force_original_aspect_ratio=decrease,pad=448:728:(ow-iw)/2:(oh-ih)/2:color=white[pr];` +
-          `[bg2][ch]overlay=56:332[tmp1];` +
-          `[tmp1][pr]overlay=572:336`,
-        '-frames:v', '1',
-        startAbs
-      ]);
-    } else {
-      execFileSync('ffmpeg', [
-        '-y', '-v', 'error',
-        '-f', 'lavfi', '-i', 'color=c=#0F172A:s=1080x1920:d=1',
-        '-i', charAbs,
-        '-i', prodAbs,
-        '-filter_complex',
-        `[0:v]drawbox=x=44:y=320:w=476:h=760:color=#1E293B@0.95:t=fill,` +
-          `drawbox=x=556:y=320:w=480:h=760:color=#FFFFFF@0.98:t=fill[bg];` +
-          `[1:v]scale=452:736:force_original_aspect_ratio=decrease,pad=452:736:(ow-iw)/2:(oh-ih)/2:color=#0F172A[ch];` +
-          `[2:v]scale=448:728:force_original_aspect_ratio=decrease,pad=448:728:(ow-iw)/2:(oh-ih)/2:color=white[pr];` +
-          `[bg][ch]overlay=56:332[tmp1];` +
-          `[tmp1][pr]overlay=572:336`,
-        '-frames:v', '1',
-        startAbs
-      ]);
+    const hasChar = Boolean(charAbs && fs.existsSync(charAbs));
+    const hasProd = Boolean(prodAbs && fs.existsSync(prodAbs));
+    const hasThumb = Boolean(thumbAbs && fs.existsSync(thumbAbs));
+    const safeChar = hasChar ? charAbs : prodAbs;
+    const safeProd = hasProd ? prodAbs : charAbs;
+
+    if (!safeChar && !safeProd) {
+      throw new Error(`Thiếu cả ảnh Nhân vật và ảnh Sản phẩm thật cho chiến dịch "${campaign.id}".`);
     }
 
+    const bgInputArgs = hasThumb
+      ? ['-i', thumbAbs]
+      : ['-f', 'lavfi', '-i', 'color=c=#0F172A:s=1080x1920:d=1'];
+
+    // 1. Tạo KHUNG HÌNH ĐẦU (Start Frame: Bối cảnh Bokeh + Nhân vật thật & Sản phẩm thật cân đối)
+    const startBgFilter = hasThumb
+      ? `[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=42:6,eq=${museStyle.ffmpegEq}[bg];`
+      : `[0:v]copy[bg];`;
+    execFileSync('ffmpeg', [
+      '-y', '-v', 'error',
+      ...bgInputArgs,
+      '-i', safeChar,
+      '-i', safeProd,
+      '-filter_complex',
+      `${startBgFilter}` +
+        `[bg]drawbox=x=44:y=320:w=476:h=760:color=#1E293B@0.88:t=fill,` +
+        `drawbox=x=44:y=320:w=476:h=760:color=#FF5A1F@0.95:t=5,` +
+        `drawbox=x=556:y=320:w=480:h=760:color=#FFFFFF@0.96:t=fill,` +
+        `drawbox=x=556:y=320:w=480:h=760:color=#FF5A1F@0.95:t=5[bg2];` +
+        `[1:v]scale=452:736:force_original_aspect_ratio=decrease,pad=452:736:(ow-iw)/2:(oh-ih)/2:color=#0F172A[ch];` +
+        `[2:v]scale=448:728:force_original_aspect_ratio=decrease,pad=448:728:(ow-iw)/2:(oh-ih)/2:color=white[pr];` +
+        `[bg2][ch]overlay=56:332[tmp1];` +
+        `[tmp1][pr]overlay=572:336`,
+      '-frames:v', '1',
+      startAbs
+    ]);
+
     // 2. Tạo KHUNG HÌNH CUỐI (End Frame: Push-in Cận cảnh Sản phẩm thật 100% + Góc Nhân vật thật)
-    if (thumbAbs && fs.existsSync(thumbAbs)) {
-      execFileSync('ffmpeg', [
-        '-y', '-v', 'error',
-        '-i', thumbAbs,
-        '-i', prodAbs,
-        '-i', charAbs,
-        '-filter_complex',
-        `[0:v]scale=1160:2060:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=45:6,eq=${museStyle.ffmpegEq}[bg];` +
-          `[bg]drawbox=x=150:y=260:w=780:h=980:color=#FFFFFF@0.97:t=fill,` +
-          `drawbox=x=150:y=260:w=780:h=980:color=#FF5A1F@0.95:t=6,` +
-          `drawbox=x=64:y=156:w=276:h=366:color=#0F172A@0.95:t=fill,` +
-          `drawbox=x=64:y=156:w=276:h=366:color=#38BDF8@0.95:t=4[bg2];` +
-          `[1:v]scale=720:920:force_original_aspect_ratio=decrease,pad=720:920:(ow-iw)/2:(oh-ih)/2:color=white[pr];` +
-          `[2:v]scale=260:350:force_original_aspect_ratio=decrease,pad=260:350:(ow-iw)/2:(oh-ih)/2:color=#0F172A[ch];` +
-          `[bg2][pr]overlay=180:290[tmp1];` +
-          `[tmp1][ch]overlay=72:164`,
-        '-frames:v', '1',
-        endAbs
-      ]);
-    } else {
-      fs.copyFileSync(startAbs, endAbs);
-    }
+    const endBgFilter = hasThumb
+      ? `[0:v]scale=1160:2060:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=45:6,eq=${museStyle.ffmpegEq}[bg];`
+      : `[0:v]copy[bg];`;
+    execFileSync('ffmpeg', [
+      '-y', '-v', 'error',
+      ...bgInputArgs,
+      '-i', safeProd,
+      '-i', safeChar,
+      '-filter_complex',
+      `${endBgFilter}` +
+        `[bg]drawbox=x=150:y=260:w=780:h=980:color=#FFFFFF@0.97:t=fill,` +
+        `drawbox=x=150:y=260:w=780:h=980:color=#FF5A1F@0.95:t=6,` +
+        `drawbox=x=64:y=156:w=276:h=366:color=#0F172A@0.95:t=fill,` +
+        `drawbox=x=64:y=156:w=276:h=366:color=#38BDF8@0.95:t=4[bg2];` +
+        `[1:v]scale=720:920:force_original_aspect_ratio=decrease,pad=720:920:(ow-iw)/2:(oh-ih)/2:color=white[pr];` +
+        `[2:v]scale=260:350:force_original_aspect_ratio=decrease,pad=260:350:(ow-iw)/2:(oh-ih)/2:color=#0F172A[ch];` +
+        `[bg2][pr]overlay=180:290[tmp1];` +
+        `[tmp1][ch]overlay=72:164`,
+      '-frames:v', '1',
+      endAbs
+    ]);
 
     // Đồng bộ file keyframe mặc định
     fs.copyFileSync(startAbs, defaultAbs);

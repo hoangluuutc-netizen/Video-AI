@@ -224,6 +224,13 @@ async function initDashboard() {
 
   populateSelectors();
   runAllAssistants();
+
+  // Khôi phục chiến dịch đang lưu trên server (nếu có) để giữ nguyên cảnh, góc máy & Muse Style đã chỉnh
+  const activeId = (document.getElementById('inp-campaign-id')?.value || 'sample-campaign').trim();
+  const savedCamp = (appState.campaigns || []).find((c) => c.id === activeId);
+  if (savedCamp && Array.isArray(savedCamp.scenes) && savedCamp.scenes.length > 0) {
+    loadCampaignFromSelect(true);
+  }
   renderSheetTable();
 }
 
@@ -1514,18 +1521,31 @@ async function triggerBackendAction(action, estSec = 5) {
   logConsole(`${data.ok ? '✅ THÀNH CÔNG' : '❌ LỖI'} (${data.elapsedSec || 0}s):\n${data.output}`);
 }
 
-function loadCampaignFromSelect() {
+function loadCampaignFromSelect(silent = false) {
   const slug = (document.getElementById('inp-campaign-id').value || 'sample-campaign').trim();
   const found = (appState.campaigns || []).find((c) => c.id === slug);
   if (!found) {
-    alert(`Không tìm thấy chiến dịch "${slug}" trong bộ nhớ hiện tại.`);
+    if (!silent) alert(`Không tìm thấy chiến dịch "${slug}" trong bộ nhớ hiện tại.`);
     return;
+  }
+  if (found.productId && document.getElementById('inp-product')) {
+    document.getElementById('inp-product').value = found.productId;
+  }
+  if (found.characterId && document.getElementById('inp-character')) {
+    document.getElementById('inp-character').value = found.characterId;
+  }
+  if (found.museStyle && document.getElementById('inp-muse-style')) {
+    document.getElementById('inp-muse-style').value = found.museStyle;
   }
   document.getElementById('inp-mode').value = found.mode === 'real-footage' ? 'real-footage' : 'hybrid-ai';
   scenesList = structuredClone(found.scenes || []);
   renderScenesTable();
+  renderVeo3StudioCards();
+  renderThreeCovers();
+  renderExistingAssetPreviews();
+  renderTruthLockSummary();
   updatePhonePreview();
-  logConsole(`Đã nạp chiến dịch "${slug}" (${scenesList.length} cảnh).`);
+  if (!silent) logConsole(`Đã nạp chiến dịch "${slug}" (${scenesList.length} cảnh).`);
 }
 
 // 6. Trợ lý 07: Kiểm duyệt PASS / FAIL & Sổ Vận Hành Reel

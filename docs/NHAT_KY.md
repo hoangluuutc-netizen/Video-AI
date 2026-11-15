@@ -31,3 +31,14 @@
      - Tự động tạo 8 ảnh Keyframe chuẩn `1080×1920` (`media/keyframes/<scene>-start.png` và `<scene>-end.png`) ghép 100% Nhân vật thật + Sản phẩm thật trên nền Bokeh trích từ 4 phân cảnh của Video Mẫu.
      - Bổ sung 4 bộ lọc màu điện ảnh `MUSE_STYLE_PRESETS` (`TVC Studio Sang Trọng`, `Lifestyle Đời Thường`, `Shopee Mall Sắc Nét`, `TikTok High-Retention`) áp dụng trực tiếp cho cả Prompt AI và bộ lọc `ffmpegEq` khi dựng video thật.
      - Hiển thị trực quan cặp ảnh `KHUNG ĐẦU (START) ➔ KHUNG CUỐI (END)` cùng nút `📋 Copy Whisk 3-Slot` và `📂 Mở muse-ai-pack.json` ngay trên giao diện Mục `05 / 08`.
+
+- Rà soát, gỡ lỗi và tối ưu toàn dự án (2026-11-15):
+  - Khắc phục lỗi mất trạng thái khi tải lại trang: `initDashboard()` và `loadCampaignFromSelect()` trong `dashboard/app.js` tự động khôi phục chiến dịch đã lưu (`museStyle`, `cameraPreset`, `scenes`, ảnh/video tham chiếu) thay vì bị ghi đè về mặc định.
+  - Gia cố `scripts/generate-muse-pack.mjs`: xử lý an toàn khi thiếu 1 trong 2 ảnh gốc và luôn tạo đủ cặp `Start Frame` + `End Frame` ngay cả khi chưa có thumbnail Video Mẫu.
+  - Gia cố `scripts/export-cutlist.mjs`: dùng `-stream_loop -1` và modulo thời lượng Video Mẫu cho lớp nền Bokeh để không bao giờ hụt frame khi chiến dịch dài hơn Video Mẫu.
+  - Đồng bộ `scripts/generate-media.mjs` đọc fallback cấu hình từ `assets/brand-kit/ai-config.json` và truyền cả `Start Frame` + `End Frame` khi gọi Veo 3.1 / Omni 1.2.
+  - Kiểm tra cú pháp toàn bộ `.js`/`.mjs`, TypeScript `studio/` (`tsc --noEmit`), `validate-assets.mjs` và chạy trọn vẹn `run-optimal-pipeline.mjs` đạt 100%.
+- Nâng cấp chất lượng Video Studio Pro (`scripts/export-cutlist.mjs`):
+  - Tự động tách nền trắng ảnh sản phẩm (`colorkey=0xFFFFFF:0.06:0.03`) để sản phẩm nổi 3D trực tiếp lên nền Bokeh, loại bỏ hoàn toàn mảng trắng hình chữ nhật.
+  - Bổ sung phông nền Bokeh chuyển động cho toàn bộ 4 cảnh (kể cả cảnh 3 & 4), kết hợp chuyển động Ken Burns (`zoompan`) 30fps cho nhân vật (crop chân dung/nửa thân cân đối) và hiệu ứng nổi 3D (`sin`) cho sản phẩm.
+  - Vẽ trực tiếp Thanh Hook / Badge thông số / Thẻ giá Flash Sale và Phụ đề Tiếng Việt có dấu sắc nét lên file `ffmpeg-9x16.mp4` bằng `drawtext` UTF-8.

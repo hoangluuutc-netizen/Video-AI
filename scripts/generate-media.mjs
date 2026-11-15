@@ -22,6 +22,16 @@ function loadEnvFile() {
   }
 }
 
+function loadAiConfig() {
+  const cfgPath = path.join(ROOT, 'assets', 'brand-kit', 'ai-config.json');
+  if (!fs.existsSync(cfgPath)) return {};
+  try {
+    return JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
 function parseArgs(argv) {
   let campaignArg = 'campaigns/sample-campaign/campaign.json';
   let mode = '';
@@ -151,10 +161,14 @@ async function processSceneVideo(scene, ctx) {
     return { sceneId: scene.id, updated: false };
   }
 
-  // Truyền đồng thời Keyframe + Ảnh Nhân vật + Ảnh Sản phẩm (Ingredients-to-Video / R2V)
+  // Truyền đồng thời Keyframe Đầu + Keyframe Cuối (nếu có) + Ảnh Nhân vật + Ảnh Sản phẩm (Ingredients-to-Video / Frames-to-Video)
   const refParts = collectReferenceParts(product, character);
+  const endKeyframeAbs = scene.endKeyframeSrc
+    ? (path.isAbsolute(scene.endKeyframeSrc) ? scene.endKeyframeSrc : path.join(campaignDir, scene.endKeyframeSrc))
+    : '';
+  const endPart = endKeyframeAbs && fs.existsSync(endKeyframeAbs) ? [toImagePart(endKeyframeAbs)] : [];
   const chosenPrompt = model.includes('omni') ? omniFlashR2VPrompt : (veo3Prompt || videoPrompt);
-  const input = [toImagePart(keyframeAbs), ...refParts.slice(0, 2), { type: 'text', text: chosenPrompt }];
+  const input = [toImagePart(keyframeAbs), ...endPart, ...refParts.slice(0, 2), { type: 'text', text: chosenPrompt }];
   const response = await callInteractionsApi(apiKey, model, input);
   const b64 = extractBase64Media(response, 'video');
   if (!b64) {
@@ -168,6 +182,10 @@ async function processSceneVideo(scene, ctx) {
 
 async function main() {
   loadEnvFile();
+  const aiCfg = loadAiConfig();
+  if (!process.env.GEMINI_API_KEY && aiCfg.geminiApiKey) process.env.GEMINI_API_KEY = aiCfg.geminiApiKey;
+  if (!process.env.GEMINI_IMAGE_MODEL && aiCfg.imageModel) process.env.GEMINI_IMAGE_MODEL = aiCfg.imageModel;
+  if (!process.env.GEMINI_VIDEO_MODEL && aiCfg.videoModel) process.env.GEMINI_VIDEO_MODEL = aiCfg.videoModel;
   const { campaignArg, mode, sceneFilter, dryRun } = parseArgs(process.argv.slice(2));
 
   if (mode !== 'keyframe' && mode !== 'video') {
