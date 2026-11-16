@@ -31,6 +31,10 @@ async function mockServer(routes) {
       }
       const r = h(req, raw);
       if (r.hang) return; // không bao giờ trả lời
+      if (r.destroy) {
+        req.socket.destroy(); // mô phỏng VoiceStudio/engine sập giữa chừng
+        return;
+      }
       if (r.buffer) {
         res.writeHead(r.status || 200, { 'Content-Type': 'audio/wav' }).end(r.buffer);
       } else {
@@ -75,6 +79,16 @@ test('findEngineInModelList chỉ nhận engine thật (không phải bí danh c
   assert.equal(findEngineInModelList(MODELS_WITHOUT_VOXCPM2, 'voxcpm2'), null);
   assert.equal(findEngineInModelList(MODELS_WITH_VOXCPM2, 'tts-1'), null);
   assert.equal(findEngineInModelList({}, 'voxcpm2'), null);
+});
+
+test('fixture THẬT VoiceStudio v0.5.8: trước khi cài → null, sau khi cài → voxcpm2; bí danh tts-1 không bao giờ được nhận', () => {
+  const fx = (name) => JSON.parse(fs.readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'));
+  const before = fx('voicestudio-v0.5.8-models-before-voxcpm2.json');
+  const after = fx('voicestudio-v0.5.8-models-with-voxcpm2.json');
+  assert.equal(findEngineInModelList(before, 'voxcpm2'), null);
+  assert.equal(findEngineInModelList(after, 'voxcpm2'), 'voxcpm2');
+  assert.equal(findEngineInModelList(after, 'tts-1'), null);
+  assert.ok(before.data.some((m) => m.id === 'omnivoice'), 'fixture thật có OmniVoice (CC-BY-NC) trong danh sách');
 });
 
 test('checkLocalTts đọc /v1/models: có voxcpm2 → engine voxcpm2', async () => {
@@ -184,6 +198,21 @@ test('timeout ném lỗi rõ ràng', async () => {
     );
   } finally {
     s.close();
+  }
+});
+
+test('máy chủ ngắt kết nối giữa lúc sinh giọng → lỗi nói rõ mất kết nối (không chỉ "fetch failed")', async () => {
+  const s = await mockServer({
+    'GET /v1/models': () => ({ json: MODELS_WITH_VOXCPM2 }),
+    'POST /v1/audio/speech': () => ({ destroy: true })
+  });
+  try {
+    await assert.rejects(
+      synthesizeLocalTts('x', { cfg: cfgFor(s.baseUrl), voiceProfile: { voiceId: 'v' } }),
+      /Mất kết nối tới TTS local .*\/v1\/audio\/speech.*thiếu RAM/
+    );
+  } finally {
+    await s.close();
   }
 });
 

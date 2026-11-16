@@ -90,7 +90,12 @@ async function fetchWithTimeout(url, opts, timeoutMs, fetchImpl = fetch) {
     return await fetchImpl(url, { ...opts, signal: ac.signal });
   } catch (e) {
     if (e.name === 'AbortError') throw new Error(`TTS local quá thời gian (${Math.round(timeoutMs / 1000)}s) tại ${url}`);
-    throw e;
+    // Node fetch chỉ báo "fetch failed"; nguyên nhân thật (ECONNRESET, ECONNREFUSED…) nằm ở e.cause.
+    // Đã gặp thật 2026-11-16: engine VoxCPM2 chiếm ~12 GB RAM rồi sập giữa lúc sinh giọng, kéo theo VoiceStudio tắt.
+    const cause = e.cause?.code || e.cause?.message || e.message;
+    throw new Error(
+      `Mất kết nối tới TTS local tại ${url} (${cause}) — VoiceStudio có thể đã tắt hoặc engine bị sập (thiếu RAM?). Mở lại VoiceStudio rồi thử lại.`
+    );
   } finally {
     clearTimeout(timer);
   }
