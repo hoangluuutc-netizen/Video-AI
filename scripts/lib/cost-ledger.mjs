@@ -86,6 +86,42 @@ export function estimateAiCost({
   return { items, totalUsd };
 }
 
+// Ước tính chi phí 1 video cho Dashboard: N cảnh AI, mỗi cảnh 1 keyframe + clip Fal (Fal tính tròn 5s/clip).
+export function estimateVideoCost({
+  imageModel = 'ffmpeg-real-composite',
+  videoModel = 'ffmpeg-bokeh-cinema',
+  ttsModel = 'google-vi-natural',
+  aiSceneCount = 1,
+  sceneSec = 5,
+  maxUsd = 0.5
+} = {}) {
+  const n = Math.min(8, Math.max(0, Math.round(Number(aiSceneCount) || 0)));
+  const sec = Math.max(1, Number(sceneSec) || 5);
+  const est = estimateAiCost({
+    imageModel,
+    videoModel,
+    ttsModel,
+    aiScenes: Array.from({ length: n }, () => ({ durationSec: sec })),
+    keyframes: n
+  });
+  const limit = Number.isFinite(Number(maxUsd)) ? Number(maxUsd) : 0.5;
+  return { ...est, aiSceneCount: n, maxUsd: limit, withinBudget: est.totalUsd <= limit };
+}
+
+// Chuẩn hóa 2 trường kiểm soát chi phí gửi từ Dashboard; giá trị trống/sai thì giữ cấu hình cũ.
+export function normalizeCostSettings(input = {}, current = {}) {
+  const count = Number(input.selectiveAiCount);
+  const rawBudget = input.maxCostUsdPerVideo;
+  const budget = rawBudget === '' || rawBudget === null || rawBudget === undefined ? NaN : Number(rawBudget);
+  return {
+    selectiveAiCount: count === 1 || count === 2 ? count : (current.selectiveAiCount ?? 1),
+    maxCostUsdPerVideo:
+      Number.isFinite(budget) && budget >= 0 && budget <= 5
+        ? Math.round(budget * 100) / 100
+        : (current.maxCostUsdPerVideo ?? 0.5)
+  };
+}
+
 export function assertWithinBudget(estimate, maxUsd = 0.5) {
   const total = Number(estimate?.totalUsd || 0);
   const limit = Number(maxUsd ?? 0.5);

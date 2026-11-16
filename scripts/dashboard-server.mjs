@@ -14,6 +14,7 @@ import {
   generateKolScript,
   renderKolTalkingVideo
 } from './lib/kol-studio.mjs';
+import { estimateVideoCost, normalizeCostSettings } from './lib/cost-ledger.mjs';
 
 const ROOT = process.cwd();
 const PORT = Number(process.env.PORT || 4173);
@@ -23,14 +24,16 @@ const CAMPAIGNS_DIR = path.join(ROOT, 'campaigns');
 const SHEET_PATH = path.join(ROOT, 'campaigns', 'reel-sheet.json');
 const AI_CONFIG_PATH = path.join(ROOT, 'assets', 'brand-kit', 'ai-config.json');
 
-  const DEFAULT_AI_CONFIG = {
+const DEFAULT_AI_CONFIG = {
   llmModel: 'local-ecommerce-director',
   imageModel: 'ffmpeg-real-composite',
   videoModel: 'ffmpeg-bokeh-cinema',
   ttsModel: 'windows-sapi-vi',
   ttsVoice: 'Kore',
   renderEngine: 'ffmpeg-anchored-real',
-  hasGeminiKey: false
+  hasGeminiKey: false,
+  selectiveAiCount: 1,
+  maxCostUsdPerVideo: 0.5
 };
 
 const MIME_TYPES = {
@@ -258,7 +261,8 @@ const server = http.createServer(async (req, res) => {
         ttsModel: body.ttsModel || current.ttsModel,
         ttsVoice: body.ttsVoice || current.ttsVoice,
         renderEngine: body.renderEngine || current.renderEngine,
-        selectiveAiOnly: body.selectiveAiOnly !== undefined ? Boolean(body.selectiveAiOnly) : current.selectiveAiOnly
+        selectiveAiOnly: body.selectiveAiOnly !== undefined ? Boolean(body.selectiveAiOnly) : current.selectiveAiOnly,
+        ...normalizeCostSettings(body, current)
       };
       if (body.geminiApiKey !== undefined && body.geminiApiKey.trim() !== '') {
         updated.geminiApiKey = body.geminiApiKey.trim();
@@ -282,6 +286,24 @@ const server = http.createServer(async (req, res) => {
         ok: true,
         output: `Đã lưu cấu hình Bộ não AI & Công cụ (${updated.llmModel} | ${updated.imageModel} | ${updated.videoModel} | ${updated.ttsModel}).`,
         state: loadWorkspaceState()
+      });
+    } catch (e) {
+      return sendJson(res, 500, { ok: false, output: e.message });
+    }
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/cost-estimate') {
+    try {
+      const body = await readBody(req);
+      return sendJson(res, 200, {
+        ok: true,
+        ...estimateVideoCost({
+          imageModel: body.imageModel,
+          videoModel: body.videoModel,
+          ttsModel: body.ttsModel,
+          aiSceneCount: body.aiSceneCount,
+          maxUsd: body.maxCostUsdPerVideo
+        })
       });
     } catch (e) {
       return sendJson(res, 500, { ok: false, output: e.message });

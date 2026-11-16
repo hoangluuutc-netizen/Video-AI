@@ -37,32 +37,47 @@ body {
   gap: 24px;
 }
 
-/* Topbar */
-.topbar {
-  background: var(--bg-white);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 12px 22px;
-  display: flex;
+/* Thanh lệnh dính: điều hướng + tiến độ gộp làm 1 khối gọn */
+.command-bar {
+  position: sticky;
+  top: 8px;
+  z-index: 50;
+  background: #141414;
+  color: #FFFFFF;
+  border-radius: var(--radius-lg);
+  padding: 10px 14px 12px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "brand status stats actions"
+    "nav nav nav nav"
+    "progress progress progress progress";
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  box-shadow: 0 8px 24px rgba(20, 20, 20, 0.04);
+  gap: 8px 14px;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.22);
 }
+
+.command-bar .brand-pill { grid-area: brand; }
+.command-bar .telemetry-status { grid-area: status; }
+.command-bar .telemetry-stats { grid-area: stats; }
+.command-bar .nav-actions { grid-area: actions; }
+.command-bar .nav-tabs { grid-area: nav; }
+.command-bar .progress-track { grid-area: progress; }
 
 .brand-pill {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   font-weight: 800;
-  font-size: 15px;
+  font-size: 14px;
   letter-spacing: -0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .brand-dot {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 999px;
   background: var(--orange);
   display: inline-block;
@@ -70,36 +85,125 @@ body {
 
 .nav-tabs {
   display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
+  gap: 4px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  min-width: 0;
+  flex: 1;
+  scrollbar-width: none;
+  margin: 0 -4px;
+  padding: 0 4px;
+}
+
+.nav-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .nav-tab {
-  border: 1px solid var(--border);
-  background: var(--bg-card);
-  color: var(--text-dark);
+  border: 1px solid transparent;
+  background: transparent;
+  color: #D4D4D8;
   font-size: 12px;
   font-weight: 700;
-  padding: 7px 14px;
+  padding: 6px 11px;
   border-radius: 999px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.nav-tab:hover,
-.nav-tab.active {
-  background: var(--text-dark);
+.nav-tab:hover {
+  background: #262626;
   color: #FFFFFF;
-  border-color: var(--text-dark);
+}
+
+.nav-tab.active {
+  background: #FFFFFF;
+  color: var(--text-dark);
+}
+
+.nav-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.nav-action {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #3F3F46;
+  background: #262626;
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.nav-action:hover {
+  border-color: var(--orange);
+}
+
+.nav-action.active {
+  border-color: var(--orange);
+  color: var(--orange);
+}
+
+.nav-action--kol {
+  border-color: #DB2777;
+}
+
+.nav-action--primary {
+  background: #16A34A;
+  border-color: #16A34A;
+}
+
+.nav-action--primary:hover {
+  background: #15803D;
+  border-color: #15803D;
 }
 
 .server-badge {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  padding: 6px 12px;
+  padding: 3px 10px;
   border-radius: 999px;
   background: #DCFCE7;
   color: var(--green);
+  white-space: nowrap;
+  display: inline-flex;
+  gap: 4px;
+}
+
+@media (max-width: 1279px) {
+  .stat-elapsed,
+  .server-badge .server-label {
+    display: none;
+  }
+
+  .server-badge {
+    padding: 3px 6px;
+  }
+}
+
+/* Màn hình vừa & nhỏ: tách thành 4 hàng để trạng thái không bị ép */
+@media (max-width: 959px) {
+  .command-bar {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "brand actions"
+      "nav nav"
+      "status stats"
+      "progress progress";
+    gap: 6px 10px;
+  }
+
+  .command-bar .nav-actions {
+    justify-content: flex-end;
+  }
 }
 
 /* Slide Card */
@@ -768,33 +872,43 @@ table.clean-table th {
   display: block;
 }
 
-/* Telemetry & Progress Bar */
-.telemetry-bar {
-  background: #141414;
-  color: #FFFFFF;
-  border-radius: var(--radius-lg);
-  padding: 16px 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  position: sticky;
-  top: 10px;
-  z-index: 50;
-  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.22);
+/* Telemetry & Progress Bar (nằm trong .command-bar) */
+.telemetry-status {
+  font-size: 12px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.telemetry-top {
+.telemetry-status strong {
+  color: var(--orange);
+  margin-right: 4px;
+}
+
+.telemetry-stats {
+  font-size: 12px;
   display: flex;
-  justify-content: space-between;
+  gap: 14px;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  font-size: 13px;
+  flex-shrink: 0;
+  color: #A1A1AA;
+  font-weight: 600;
+}
+
+.telemetry-stats strong {
+  color: #FFFFFF;
+  font-weight: 800;
+  margin-left: 3px;
+}
+
+#job-percent-text {
+  color: var(--orange);
 }
 
 .progress-track {
   width: 100%;
-  height: 10px;
+  height: 4px;
   background: #2E2E2E;
   border-radius: 999px;
   overflow: hidden;
@@ -824,4 +938,217 @@ table.clean-table th {
 
 .brain-pill strong {
   color: var(--orange);
+}
+
+/* Chip "công cụ đang dùng" bên trong khu cài đặt (nền sáng) */
+.brain-pills--card .brain-pill {
+  background: var(--bg-white);
+  border-color: var(--border);
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 5px 11px;
+}
+
+.brain-pills--card .brain-pill strong {
+  color: var(--text-dark);
+}
+
+/* Giá của lựa chọn đang chọn — không bị cắt như chữ trong ô select */
+.cost-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  min-height: 17px;
+}
+
+.cost-chip {
+  display: inline-block;
+  font-weight: 800;
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  margin-right: 6px;
+  background: var(--orange-soft);
+  color: #B4400F;
+  border: 1px solid var(--orange-border);
+}
+
+.cost-chip.is-free {
+  background: #DCFCE7;
+  color: var(--green);
+  border-color: #86EFAC;
+}
+
+/* Khu kiểm soát chi phí */
+.cost-panel {
+  background: var(--bg-white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 18px 24px;
+  align-items: start;
+}
+
+.cost-title {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  margin-bottom: 10px;
+}
+
+.check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+.check-row input {
+  margin-top: 3px;
+  accent-color: var(--orange);
+}
+
+.cost-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.cost-estimate {
+  border-left: 3px solid var(--green);
+  padding: 4px 0 4px 16px;
+}
+
+.cost-estimate.is-over {
+  border-left-color: var(--red);
+}
+
+.cost-estimate-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.cost-total {
+  display: block;
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.cost-verdict {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--green);
+  margin: 2px 0 8px;
+}
+
+.cost-estimate.is-over .cost-verdict {
+  color: var(--red);
+}
+
+.cost-breakdown {
+  list-style: none;
+  font-size: 12px;
+  color: var(--text-muted);
+  display: grid;
+  gap: 3px;
+}
+
+.cost-breakdown li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cost-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* Nhảy tới mục không bị thanh lệnh che */
+.slide-card {
+  scroll-margin-top: calc(var(--command-h, 96px) + 18px);
+}
+
+/* Bàn phím: thấy rõ đang ở đâu */
+:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
+
+.command-bar :focus-visible {
+  outline-color: #FFFFFF;
+}
+
+@media (max-width: 760px) {
+  body {
+    padding: 12px 10px 48px;
+  }
+
+  .command-bar {
+    top: 4px;
+    padding: 8px 10px 10px;
+    border-radius: var(--radius-md);
+  }
+
+  .brand-pill {
+    font-size: 13px;
+  }
+
+  .command-bar .nav-actions {
+    min-width: 0;
+    overflow-x: auto;
+    justify-content: flex-start;
+    scrollbar-width: none;
+  }
+
+  .nav-actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-action--primary {
+    order: -1;
+  }
+
+  .telemetry-status strong {
+    display: none;
+  }
+
+  .telemetry-stats {
+    gap: 10px;
+  }
+
+  .cost-panel {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+
+  .cost-actions {
+    justify-content: stretch;
+  }
+
+  .cost-actions .btn {
+    flex: 1 1 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -170,9 +170,65 @@ function getSelectedCharacter() {
   return appState.characters.find((c) => c.id === cid) || appState.characters[0] || { id: 'sample-kol', name: 'Nhân vật của bạn' };
 }
 
+function prefersReducedMotion() {
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+}
+
 function scrollToSlide(id) {
   const el = document.getElementById(id);
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (el) el.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+}
+
+// Thanh lệnh dính: đo chiều cao để các mục không bị che khi nhảy tới, và tô sáng bước đang xem.
+function setupCommandBar() {
+  const bar = document.getElementById('command-bar');
+  if (!bar) return;
+  const setHeight = () => document.documentElement.style.setProperty('--command-h', `${Math.round(bar.offsetHeight)}px`);
+  setHeight();
+  if ('ResizeObserver' in window) new ResizeObserver(setHeight).observe(bar);
+
+  const navButtons = [...document.querySelectorAll('.nav-tab[data-target], .nav-action[data-target]')];
+  const sections = navButtons
+    .map((b) => document.getElementById(b.dataset.target))
+    .filter(Boolean);
+  if (!('IntersectionObserver' in window) || !sections.length) return;
+
+  const visible = new Map();
+  const markActive = () => {
+    let bestId = null;
+    let bestTop = Infinity;
+    for (const [id, top] of visible) {
+      if (top < bestTop) {
+        bestTop = top;
+        bestId = id;
+      }
+    }
+    if (!bestId) return;
+    for (const b of navButtons) {
+      const on = b.dataset.target === bestId;
+      b.classList.toggle('active', on);
+      if (on) b.setAttribute('aria-current', 'step');
+      else b.removeAttribute('aria-current');
+      if (on && b.classList.contains('nav-tab')) {
+        const nav = b.parentElement;
+        const left = b.offsetLeft - nav.offsetLeft - 16;
+        if (left < nav.scrollLeft || b.offsetLeft + b.offsetWidth > nav.scrollLeft + nav.clientWidth) {
+          nav.scrollTo({ left: Math.max(0, left), behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+        }
+      }
+    }
+  };
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) visible.set(e.target.id, e.boundingClientRect.top);
+        else visible.delete(e.target.id);
+      }
+      markActive();
+    },
+    { rootMargin: `-${bar.offsetHeight + 24}px 0px -55% 0px`, threshold: 0 }
+  );
+  sections.forEach((s) => io.observe(s));
 }
 
 function logConsole(text) {
@@ -211,13 +267,15 @@ async function initDashboard() {
       };
       syncAiConfigToUi();
       serverOnline = true;
-      statusEl.textContent = '🟢 Đã kết nối Local Server (Chạy lệnh thật)';
+      statusEl.innerHTML = '<span aria-hidden="true">🟢</span><span class="server-label">Đã kết nối</span>';
+      statusEl.title = 'Đã kết nối Local Server — các nút sẽ chạy lệnh thật trên máy';
       statusEl.style.background = '#DCFCE7';
       statusEl.style.color = '#15803D';
     }
   } catch {
     serverOnline = false;
-    statusEl.textContent = '🟠 Chế độ xem trực tiếp (Chạy node scripts/dashboard-server.mjs để kết nối CLI)';
+    statusEl.innerHTML = '<span aria-hidden="true">🟠</span><span class="server-label">Chỉ xem</span>';
+    statusEl.title = 'Chưa kết nối Local Server — chạy node scripts/dashboard-server.mjs (hoặc start-dashboard.bat) để các nút chạy lệnh thật';
     statusEl.style.background = '#FEF3C7';
     statusEl.style.color = '#B45309';
   }
@@ -1601,20 +1659,139 @@ function syncAiConfigToUi() {
   setVal('cfg-image-model', cfg.imageModel);
   setVal('cfg-video-model', cfg.videoModel);
   setVal('cfg-tts-model', cfg.ttsModel);
+  setVal('cfg-ai-scene-count', String(cfg.selectiveAiCount ?? 1));
+  const budgetEl = document.getElementById('cfg-max-cost');
+  if (budgetEl) budgetEl.value = Number(cfg.maxCostUsdPerVideo ?? 0.5).toFixed(2);
   const selEl = document.getElementById('cfg-selective-ai');
   if (selEl) selEl.checked = Boolean(cfg.selectiveAiOnly);
 
-  const setText = (id, val) => {
-    const el = document.getElementById(id);
-    if (el && val) el.textContent = val;
-  };
-  setText('pill-llm', cfg.llmModel || 'gemini-3.1-pro-preview');
-  setText('pill-img', cfg.imageModel || 'ffmpeg-real-composite');
-  setText('pill-vid', cfg.videoModel || 'ffmpeg-natural-1080p');
-  setText('pill-tts', cfg.ttsModel || 'google-vi-natural');
+  refreshBrainSummary();
+  scheduleCostEstimate();
 }
 
-function applyUnderOneDollarPreset() {
+// Tên ngắn của lựa chọn đang chọn (phần trước dấu " — ") để hiện trên chip "Đang dùng".
+function selectedOptionParts(selectId) {
+  const sel = document.getElementById(selectId);
+  const text = sel?.selectedOptions?.[0]?.textContent?.trim() || '';
+  const [name, ...rest] = text.split(' — ');
+  const detail = rest.join(' — ');
+  const priceMatch = detail.match(/\(([^()]*\$[^()]*)\)\s*$/);
+  return {
+    name: name || sel?.value || '—',
+    price: priceMatch ? priceMatch[1].trim() : '',
+    note: priceMatch ? detail.slice(0, priceMatch.index).trim() : detail
+  };
+}
+
+function refreshBrainSummary() {
+  const pills = { 'pill-llm': 'cfg-llm-model', 'pill-img': 'cfg-image-model', 'pill-vid': 'cfg-video-model', 'pill-tts': 'cfg-tts-model' };
+  for (const [pillId, selectId] of Object.entries(pills)) {
+    const el = document.getElementById(pillId);
+    if (el) el.textContent = selectedOptionParts(selectId).name;
+  }
+  for (const hint of document.querySelectorAll('.cost-hint[data-hint-for]')) {
+    const { price, note } = selectedOptionParts(hint.dataset.hintFor);
+    // "$0 / ảnh, giữ 100% pixel gốc" → chip "$0 / ảnh" + ghi chú "giữ 100% pixel gốc"
+    const [chipText, ...extra] = price.split(/,\s*/);
+    hint.textContent = '';
+    if (chipText) {
+      const chip = document.createElement('span');
+      chip.className = 'cost-chip' + (/\$0(?![.\d])/.test(chipText) ? ' is-free' : '');
+      chip.textContent = chipText;
+      hint.appendChild(chip);
+    }
+    hint.appendChild(document.createTextNode([note, ...extra].filter(Boolean).join(', ')));
+  }
+}
+
+const COST_STEP_LABELS = { keyframe: 'Ảnh keyframe', video: 'Video AI', tts: 'Giọng đọc' };
+let costEstimateTimer = null;
+
+function scheduleCostEstimate() {
+  clearTimeout(costEstimateTimer);
+  costEstimateTimer = setTimeout(refreshCostEstimate, 250);
+}
+
+function readCostInputs() {
+  const selective = Boolean(document.getElementById('cfg-selective-ai')?.checked);
+  const count = Number(document.getElementById('cfg-ai-scene-count')?.value || 1);
+  const budget = Number(document.getElementById('cfg-max-cost')?.value);
+  return {
+    imageModel: document.getElementById('cfg-image-model')?.value,
+    videoModel: document.getElementById('cfg-video-model')?.value,
+    ttsModel: document.getElementById('cfg-tts-model')?.value,
+    // Không giới hạn thì giả định mọi cảnh của chiến dịch 4 cảnh đều dùng AI.
+    aiSceneCount: selective ? count : 4,
+    selective,
+    maxCostUsdPerVideo: Number.isFinite(budget) ? budget : 0.5
+  };
+}
+
+async function refreshCostEstimate() {
+  const box = document.getElementById('cost-estimate');
+  const totalEl = document.getElementById('cost-total');
+  const verdictEl = document.getElementById('cost-verdict');
+  const listEl = document.getElementById('cost-breakdown');
+  if (!box || !totalEl || !verdictEl || !listEl) return;
+  const countSel = document.getElementById('cfg-ai-scene-count');
+  const input = readCostInputs();
+  if (countSel) countSel.disabled = !input.selective;
+
+  if (!serverOnline) {
+    totalEl.textContent = '—';
+    verdictEl.textContent = 'Bật Local Server để tính chi phí.';
+    listEl.textContent = '';
+    box.classList.remove('is-over');
+    return;
+  }
+  try {
+    const res = await fetch('/api/cost-estimate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input)
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.output || 'Không tính được chi phí');
+    totalEl.textContent = `$${data.totalUsd.toFixed(2)}`;
+    box.classList.toggle('is-over', !data.withinBudget);
+    const scope = input.selective ? `${data.aiSceneCount} cảnh AI × 5s` : 'mọi cảnh dùng AI (giả định 4 × 5s)';
+    verdictEl.textContent = data.withinBudget
+      ? `Trong ngân sách $${data.maxUsd.toFixed(2)} — ${scope}`
+      : `Vượt ngân sách $${data.maxUsd.toFixed(2)} — giảm số cảnh AI hoặc chọn công cụ rẻ hơn. Lệnh chạy thật sẽ bị chặn.`;
+    listEl.textContent = '';
+    for (const it of data.items || []) {
+      const li = document.createElement('li');
+      const label = document.createElement('span');
+      label.textContent = COST_STEP_LABELS[it.step] || it.step;
+      const val = document.createElement('span');
+      val.textContent = `$${Number(it.usd).toFixed(2)}`;
+      li.append(label, val);
+      listEl.appendChild(li);
+    }
+  } catch (e) {
+    totalEl.textContent = '—';
+    verdictEl.textContent = `Không tính được chi phí: ${e.message}`;
+    box.classList.remove('is-over');
+  }
+}
+
+function setupCostControls() {
+  const ids = ['cfg-llm-model', 'cfg-image-model', 'cfg-video-model', 'cfg-tts-model', 'cfg-selective-ai', 'cfg-ai-scene-count', 'cfg-max-cost'];
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    el.addEventListener('change', () => {
+      refreshBrainSummary();
+      scheduleCostEstimate();
+    });
+    if (el.type === 'number') el.addEventListener('input', scheduleCostEstimate);
+  }
+  refreshBrainSummary();
+  scheduleCostEstimate();
+}
+
+// Preset tiết kiệm: Ollama local + 1 cảnh AI (FLUX Kontext + Wan 5s) + Vbee ≈ $0.30, ngân sách $0.50.
+function applyBudgetPreset() {
   const setVal = (id, val) => {
     const el = document.getElementById(id);
     if (el) el.value = val;
@@ -1623,10 +1800,15 @@ function applyUnderOneDollarPreset() {
   setVal('cfg-image-model', 'fal-flux-kontext');
   setVal('cfg-video-model', 'fal-wan-i2v');
   setVal('cfg-tts-model', 'vbee-vi');
+  setVal('cfg-ai-scene-count', '1');
+  setVal('cfg-max-cost', '0.50');
   const selEl = document.getElementById('cfg-selective-ai');
   if (selEl) selEl.checked = true;
   saveAiConfigFromUi();
 }
+
+// Giữ tên cũ để không vỡ nơi khác đang gọi.
+const applyUnderOneDollarPreset = applyBudgetPreset;
 
 async function saveAiConfigFromUi() {
   const ttsModel = document.getElementById('cfg-tts-model')?.value;
@@ -1637,6 +1819,8 @@ async function saveAiConfigFromUi() {
     videoModel: document.getElementById('cfg-video-model')?.value,
     ttsModel,
     selectiveAiOnly: Boolean(document.getElementById('cfg-selective-ai')?.checked),
+    selectiveAiCount: Number(document.getElementById('cfg-ai-scene-count')?.value || 1),
+    maxCostUsdPerVideo: document.getElementById('cfg-max-cost')?.value ?? '',
     geminiApiKey: document.getElementById('cfg-gemini-key')?.value || '',
     falApiKey: document.getElementById('cfg-fal-key')?.value || '',
     vbeeApiKey: ttsModel === 'vbee-vi' ? viTtsKey : '',
@@ -2057,4 +2241,8 @@ function assignFootageToScenes(clipId, targetSceneIdx = null) {
   updatePhonePreview();
 }
 
-window.addEventListener('DOMContentLoaded', initDashboard);
+window.addEventListener('DOMContentLoaded', () => {
+  setupCommandBar();
+  setupCostControls();
+  initDashboard();
+});

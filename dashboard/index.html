@@ -8,51 +8,40 @@
 </head>
 <body>
   <div class="app-shell">
-    <!-- Thanh điều hướng trên cùng -->
-    <header class="topbar">
-      <div class="brand-pill">
-        <span class="brand-dot"></span>
-        <span>ĐỘI LÀM VIDEO A.I. • 7 TRỢ LÝ</span>
-      </div>
-      <nav class="nav-tabs">
-        <button class="nav-tab active" onclick="scrollToSlide('slide-01')">01 Tổng quan</button>
-        <button class="nav-tab" onclick="scrollToSlide('slide-02')">02 Khóa Người & SP Thật</button>
-        <button class="nav-tab" onclick="scrollToSlide('slide-03')">03 Phễu Hook (15→1)</button>
-        <button class="nav-tab" onclick="scrollToSlide('slide-04')">04 Kịch bản 6 khối</button>
-        <button class="nav-tab" onclick="scrollToSlide('slide-05')">05 Kéo Thả & Đạo diễn</button>
-        <button class="nav-tab" onclick="scrollToSlide('slide-06')">06 Giọng Đọc & Dựng Reel</button>
-        <button class="nav-tab" onclick="scrollToSlide('slide-07')">07 Kiểm duyệt SSIM</button>
-        <button class="nav-tab" style="background:var(--orange);color:#FFF;border-color:var(--orange);" onclick="toggleHelpDrawer('help-brain-settings');scrollToSlide('brain-settings-card')">⚙️ Cài đặt Bộ não</button>
-        <a class="nav-tab" href="kol-studio.html" style="text-decoration:none;background:linear-gradient(135deg,#ec4899,#f97316);color:#FFF;border-color:#ec4899;font-weight:900;">🌟 KOL AI Studio</a>
-        <button class="nav-tab" style="background:#16A34A;color:#FFF;border-color:#16A34A;font-weight:900;" onclick="runFullAutoPilot()">⚡ Chạy Tự Động Toàn Bộ (Auto-Pilot)</button>
-      </nav>
-      <span id="server-status" class="server-badge">Đang kiểm tra kết nối...</span>
-    </header>
-
-    <!-- THANH TRẠNG THÁI TIẾN ĐỘ THỜI GIAN THỰC & BỘ NÃO ĐANG DÙNG -->
-    <div class="telemetry-bar">
-      <div class="telemetry-top">
-        <div>
-          <strong style="color:var(--orange);">⚡ TRẠNG THÁI:</strong>
+    <!-- THANH LỆNH DÍNH: điều hướng 7 bước + tiến độ việc đang chạy (gộp 1 khối để không che nội dung) -->
+    <header class="command-bar" id="command-bar">
+        <div class="brand-pill">
+          <span class="brand-dot" aria-hidden="true"></span>
+          <span>Đội Làm Video A.I.</span>
+        </div>
+        <div class="telemetry-status" role="status" aria-live="polite">
+          <strong>Trạng thái:</strong>
           <span id="job-status-text">Sẵn sàng — Chờ lệnh từ bạn</span>
         </div>
-        <div style="display:flex;gap:16px;align-items:center;font-weight:800;">
-          <span>📊 Tiến độ: <strong id="job-percent-text" style="color:var(--orange);">0%</strong></span>
-          <span>⏱️ Đã xử lý: <strong id="job-elapsed-text">00:00s</strong></span>
-          <span>⏳ Dự kiến còn lại: <strong id="job-eta-text">--</strong></span>
+        <div class="telemetry-stats">
+          <span>Tiến độ <strong id="job-percent-text">0%</strong></span>
+          <span class="stat-elapsed">Đã chạy <strong id="job-elapsed-text">00:00s</strong></span>
+          <span>Còn lại <strong id="job-eta-text">--</strong></span>
+          <span id="server-status" class="server-badge">Đang kiểm tra kết nối...</span>
         </div>
-      </div>
-      <div class="progress-track">
-        <div id="job-progress-fill" class="progress-fill"></div>
-      </div>
-      <div class="brain-pills">
-        <span class="brain-pill">🧠 Kịch bản: <strong id="pill-llm">gemini-3.1-pro-preview</strong></span>
-        <span class="brain-pill">🖼️ Ghép Ảnh Thật: <strong id="pill-img">FFmpeg + Gemini Nano Banana 2.1</strong></span>
-        <span class="brain-pill">🎥 Dựng Video: <strong id="pill-vid">FFmpeg 1080×1920 + Gemini Omni 1.1</strong></span>
-        <span class="brain-pill">🎙️ Giọng Đọc & Âm Thanh: <strong id="pill-tts">Giọng Việt Tự Nhiên (48kHz Stereo)</strong></span>
-        <button class="icon-pill-btn" style="margin-left:auto;background:#262626;color:#FFF;border-color:#52525B;" onclick="scrollToSlide('brain-settings-card')">⚙️ Đổi Bộ Não / API Key</button>
-      </div>
-    </div>
+        <nav class="nav-tabs" id="nav-tabs" aria-label="Các bước làm video">
+          <button class="nav-tab active" data-target="slide-01" onclick="scrollToSlide('slide-01')">01 Tổng quan</button>
+          <button class="nav-tab" data-target="slide-02" onclick="scrollToSlide('slide-02')">02 Khóa Người & SP Thật</button>
+          <button class="nav-tab" data-target="slide-03" onclick="scrollToSlide('slide-03')">03 Phễu Hook (15→1)</button>
+          <button class="nav-tab" data-target="slide-04" onclick="scrollToSlide('slide-04')">04 Kịch bản 6 khối</button>
+          <button class="nav-tab" data-target="slide-05" onclick="scrollToSlide('slide-05')">05 Kéo Thả & Đạo diễn</button>
+          <button class="nav-tab" data-target="slide-06" onclick="scrollToSlide('slide-06')">06 Giọng Đọc & Dựng Reel</button>
+          <button class="nav-tab" data-target="slide-07" onclick="scrollToSlide('slide-07')">07 Kiểm duyệt SSIM</button>
+        </nav>
+        <div class="nav-actions">
+          <button class="nav-action" data-target="brain-settings-card" onclick="scrollToSlide('brain-settings-card')">⚙️ Bộ não & chi phí</button>
+          <a class="nav-action nav-action--kol" href="kol-studio.html">🌟 KOL Studio</a>
+          <button class="nav-action nav-action--primary" onclick="runFullAutoPilot()">⚡ Chạy Auto-Pilot</button>
+        </div>
+        <div class="progress-track" aria-hidden="true">
+          <div id="job-progress-fill" class="progress-fill"></div>
+        </div>
+    </header>
 
     <!-- BẢNG CÀI ĐẶT CÁC CÔNG CỤ & BỘ NÃO AI -->
     <section id="brain-settings-card" class="slide-card" style="padding:24px;">
@@ -70,7 +59,15 @@
         • <strong>Bộ não Kịch bản (LLM):</strong> Chọn mô hình phân tích sản phẩm, chấm điểm 15 Hook và viết lời đọc 6 khối.<br/>
         • <strong>Bộ não Ghép Cảnh Người Thật & SP Thật:</strong> Chọn <em>"FFmpeg Studio Composite (Giữ 100% Pixel Gốc)"</em> nếu muốn ghép trực tiếp ảnh người thật và ảnh sản phẩm thật không tốn phí API, hoặc chọn <em>"Gemini Nano Banana 2.1"</em> khi có `GEMINI_API_KEY`.<br/>
         • <strong>Bộ não Giọng Đọc Tiếng Việt (TTS):</strong> Mặc định dùng <em>"Giọng Việt Tự Nhiên (Google/Edge Neural + Nhạc nền ấm)"</em> phát ra tiếng ngay mà không cần key; nếu có `GEMINI_API_KEY` bạn có thể chọn <em>"Gemini 3.8 Flash TTS"</em>.<br/>
+        • <strong>Kiểm soát chi phí:</strong> giới hạn số cảnh dùng AI (1 cảnh ≈ 5s) và đặt ngân sách tối đa mỗi video. Khi chạy, hệ thống tự dừng nếu ước tính vượt ngân sách.<br/>
         • Sau khi chọn xong, bấm <strong>💾 Lưu Cấu Hình Bộ Não</strong>.
+      </div>
+
+      <div class="brain-pills brain-pills--card" aria-label="Công cụ đang dùng">
+        <span class="brain-pill">🧠 Kịch bản: <strong id="pill-llm">—</strong></span>
+        <span class="brain-pill">🖼️ Ghép ảnh: <strong id="pill-img">—</strong></span>
+        <span class="brain-pill">🎥 Dựng video: <strong id="pill-vid">—</strong></span>
+        <span class="brain-pill">🎙️ Giọng đọc: <strong id="pill-tts">—</strong></span>
       </div>
 
       <div class="idea-box">
@@ -82,6 +79,7 @@
             <option value="gemini-3-flash-preview">Gemini 3 Flash — Nhanh, tiết kiệm (~$0.001 / video)</option>
             <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro — Phân tích sâu TMĐT (~$0.01 / video)</option>
           </select>
+          <p class="cost-hint" data-hint-for="cfg-llm-model"></p>
         </div>
         <div class="field-group">
           <label>🖼️ Bộ não Tạo/Ghép Cảnh Từ Ảnh Thật</label>
@@ -93,6 +91,7 @@
             <option value="gemini-nano-banana-2.1">Gemini Nano Banana 2.1 — Khóa Reference Image (~$0.04–$0.08 / ảnh)</option>
             <option value="gemini-3-pro-image">Gemini 3 Pro Image — 4K Studio cao cấp (~$0.10–$0.15 / ảnh)</option>
           </select>
+          <p class="cost-hint" data-hint-for="cfg-image-model"></p>
         </div>
         <div class="field-group">
           <label>🎥 Bộ não Tạo Chuyển Động Video (Từ $0 đến TVC Cao Cấp)</label>
@@ -105,6 +104,7 @@
             <option value="gemini-omni-1.2-flash">Gemini Omni 1.2 Flash — R2V + Clip Mẫu 3s (~$0.15–$0.25 / giây)</option>
             <option value="veo-3.1-generate-001">Google Veo 3.1 — Ingredients-to-Video + Native Audio (~$0.20–$0.40 / giây)</option>
           </select>
+          <p class="cost-hint" data-hint-for="cfg-video-model"></p>
         </div>
         <div class="field-group">
           <label>🎙️ Bộ não Sinh Giọng Đọc & Âm Thanh</label>
@@ -116,6 +116,7 @@
             <option value="gemini-3.8-flash-tts">Gemini 3.8 Flash TTS — Giọng Kore / Puck (~$0.01–$0.02 / video 30s)</option>
             <option value="elevenlabs-v3">ElevenLabs Flash/Multilingual — Cảm xúc &amp; Voice Clone (~$0.03–$0.05 / video 30s)</option>
           </select>
+          <p class="cost-hint" data-hint-for="cfg-tts-model"></p>
         </div>
         <div class="field-group">
           <label>🔑 Gemini API Key (Tùy chọn)</label>
@@ -129,14 +130,39 @@
           <label>🔑 Vbee / FPT.AI Key (Tùy chọn cho TTS Việt)</label>
           <input type="password" id="cfg-vi-tts-key" placeholder="Nhập VBEE_API_KEY hoặc FPT_API_KEY..." />
         </div>
-        <div class="field-group" style="justify-content:flex-end; gap:8px;">
-          <label style="display:flex; align-items:center; gap:6px; font-weight:500; cursor:pointer;">
-            <input type="checkbox" id="cfg-selective-ai" /> Chỉ gen AI 2 cảnh đầu (10s AI + 20s Ảnh thật &lt;$1/video)
+      </div>
+
+      <!-- KIỂM SOÁT CHI PHÍ (Gói 7.1: selectiveAiCount + maxCostUsdPerVideo) -->
+      <div class="cost-panel">
+        <div class="cost-controls">
+          <h3 class="cost-title">Kiểm soát chi phí mỗi video</h3>
+          <label class="check-row" for="cfg-selective-ai">
+            <input type="checkbox" id="cfg-selective-ai" />
+            <span>Chỉ dùng AI cho cảnh mở đầu, các cảnh sau giữ ảnh thật</span>
           </label>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button class="btn" style="background:#0f766e;color:#fff;" onclick="applyUnderOneDollarPreset()">⚡ Preset Tối Ưu &lt;$1/Video</button>
-            <button class="btn btn-orange" onclick="saveAiConfigFromUi()">💾 Lưu Cấu Hình Bộ Não & Công Cụ</button>
+          <div class="cost-fields">
+            <div class="field-group">
+              <label for="cfg-ai-scene-count">Số cảnh dùng AI</label>
+              <select id="cfg-ai-scene-count">
+                <option value="1">1 cảnh (~5s AI)</option>
+                <option value="2">2 cảnh (~10s AI)</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label for="cfg-max-cost">Ngân sách tối đa (USD)</label>
+              <input type="number" id="cfg-max-cost" min="0" max="5" step="0.05" value="0.50" inputmode="decimal" />
+            </div>
           </div>
+        </div>
+        <div class="cost-estimate" id="cost-estimate" aria-live="polite">
+          <span class="cost-estimate-label">Ước tính mỗi video</span>
+          <strong class="cost-total" id="cost-total">—</strong>
+          <p class="cost-verdict" id="cost-verdict">Đang tính…</p>
+          <ul class="cost-breakdown" id="cost-breakdown"></ul>
+        </div>
+        <div class="cost-actions">
+          <button class="btn btn-outline" onclick="applyBudgetPreset()">⚡ Preset tiết kiệm (≤ $0.50/video)</button>
+          <button class="btn btn-orange" onclick="saveAiConfigFromUi()">💾 Lưu cấu hình bộ não & công cụ</button>
         </div>
       </div>
     </section>
