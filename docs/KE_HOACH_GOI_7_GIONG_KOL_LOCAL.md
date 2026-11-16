@@ -884,3 +884,9 @@ test('perShot gán từ theo thời gian cảnh cắt', () => assert.deepEqual(s
 | Video "KOL nói" lời chưa duyệt bị đăng | Trung bình | `scriptHash` + dấu nháp + trạng thái Sổ Vận Hành; sửa lời là mất duyệt |
 | FFmpeg thiếu `h264_qsv` / `libass` / `amix normalize` | Trung bình | Tự dò + fallback + option xám trên Dashboard |
 | Giọng clone lệch giữa các cảnh | Trung bình | Cố định `voice-ref.wav` + `referenceText` + `seed`; KOL nghe duyệt giọng mẫu trước khi gắn `voiceProfile` |
+
+---
+
+### Quyết định sau Task 0 (17-11-2026)
+- **Chốt Hướng 1:** Giữ **Vbee / FPT.AI** cho sản xuất ngay (không đổi mã; nhân vật `mode: "clone"` chưa gắn `voiceProfile` hoặc chạy `--allow-generic-voice` có nhãn `"GIỌNG TẠM"`).
+- **Hướng phát triển bổ sung sau này:** Thử **Hướng 2 (`Supertonic-3`, $0 ONNX CPU trong VoiceStudio, OpenRAIL-M)** và khảo sát các engine nhẹ thay thế VoxCPM2 trên CPU gồm **`VieNeu-TTS` (v3 Turbo / 0.3B ONNX CPU, có clone tiếng Việt — cần kiểm tra giấy phép thương mại)** và **`Kokoro-82M` (`Kokoro-Vietnamese-Lite` ONNX, Apache-2.0, không clone)**.

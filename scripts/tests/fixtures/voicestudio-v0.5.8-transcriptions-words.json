@@ -1,0 +1,72 @@
+{
+  "task": "transcribe",
+  "language": "vi",
+  "duration": 4,
+  "text": "Đừng mua bình giữ nhiệt Enoch 304 cao cấp 750.",
+  "segments": [
+    {
+      "id": 0,
+      "seek": 0,
+      "start": 0,
+      "end": 3.42,
+      "text": " Đừng mua bình giữ nhiệt Enoch 304 cao cấp 750.",
+      "tokens": [],
+      "temperature": 0,
+      "avg_logprob": 0,
+      "compression_ratio": 0,
+      "no_speech_prob": 0
+    }
+  ],
+  "words": [
+    {
+      "word": "Đừng",
+      "start": 0,
+      "end": 0.24
+    },
+    {
+      "word": "mua",
+      "start": 0.24,
+      "end": 0.46
+    },
+    {
+      "word": "bình",
+      "start": 0.46,
+      "end": 0.68
+    },
+    {
+      "word": "giữ",
+      "start": 0.68,
+      "end": 0.88
+    },
+    {
+      "word": "nhiệt",
+      "start": 0.88,
+      "end": 1.18
+    },
+    {
+      "word": "Enoch",
+      "start": 1.18,
+      "end": 1.54
+    },
+    {
+      "word": "304",
+      "start": 1.54,
+      "end": 2.32
+    },
+    {
+      "word": "cao",
+      "start": 2.32,
+      "end": 2.7
+    },
+    {
+      "word": "cấp",
+      "start": 2.7,
+      "end": 2.98
+    },
+    {
+      "word": "750.",
+      "start": 2.98,
+      "end": 3.42
+    }
+  ]
+}

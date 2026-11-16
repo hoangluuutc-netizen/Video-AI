@@ -91,5 +91,6 @@
   "mode": "real-footage",
   "voiceoverSrc": "media/audio/voiceover-full.mp3",
   "subtitlesSrtSrc": "media/audio/subtitles.srt",
-  "subtitlesAssSrc": "media/audio/subtitles.ass"
+  "subtitlesAssSrc": "media/audio/subtitles.ass",
+  "subtitlesWordsSrc": "media/audio/words.json"
 }

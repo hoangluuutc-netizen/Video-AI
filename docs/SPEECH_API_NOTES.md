@@ -55,8 +55,8 @@ Ghi chú đã kiểm: âm nền sine trong `normalizeAndFitAudio` (`sine` mặc 
 | Ghi nhận đồng ý trong VoiceStudio | `voicestudio voices consent set <id> <file-âm-thanh-đồng-ý> --field consent_text=…` | Bắt buộc **file ghi âm** chủ giọng đọc lời đồng ý → nên dùng cho KOL thật (bổ sung cho `assets/private/consents/`) | |
 | Danh sách giọng | `GET /v1/audio/voices` | _(chưa lưu fixture)_ | |
 | Xóa giọng (cho `revoke-voice.mjs`) | — chưa có, đang in hướng dẫn xóa thủ công — | _(Task 0)_ | |
-| Bóc băng | `POST /v1/audio/transcriptions` multipart, `response_format=verbose_json`, `timestamp_granularities[]=word` | Có trả `words[]` không? _(Task 0)_ | `transcriptionsPath` |
-| Model căn chỉnh WhisperX cho `vi` + giấy phép | — | _(Task 0)_ | Nếu CC-BY-NC → không dùng `voicestudio-whisperx` cho thương mại |
+| Bóc băng | `POST /v1/audio/transcriptions` multipart, `response_format=verbose_json`, `timestamp_granularities[]=word` | ✅ **Chạy thật đúng (HTTP 200)**: trả `words[]` (10 từ có `word`, `start`, `end`). Fixture thật: `scripts/tests/fixtures/voicestudio-v0.5.8-transcriptions-words.json` | Không |
+| Model căn chỉnh WhisperX cho `vi` + giấy phép | — | WhisperX không có sẵn `wav2vec2` cho `vi` → VoiceStudio rơi về native word timestamps của Whisper / CTranslate2 (`faster-whisper`, giấy phép **MIT** — dùng thương mại được) | Không |
 
 Lưu response thật làm fixture: `scripts/tests/fixtures/voicestudio-*.json`.
 
@@ -79,9 +79,9 @@ Lưu response thật làm fixture: `scripts/tests/fixtures/voicestudio-*.json`.
 
 | Công cụ | Kết quả | RAM đỉnh | Ghi chú |
 |---|---|---|---|
-| faster-whisper `small` int8 (căn từ, 4 cảnh chiến dịch mẫu) | **Chạy được end-to-end**: 4/4 cảnh nguồn `asr`, giữ đúng chữ gốc | _chưa đo đúng_ (bộ đo bắt nhầm tiến trình trung gian của uv) | 164 s gồm lần đầu tải model ~0,5 GB |
+| faster-whisper `small` int8 (căn từ, 4 cảnh chiến dịch mẫu) | **Chạy được end-to-end**: 4/4 cảnh nguồn `asr`, giữ đúng chữ gốc | **1.042,8 MB (~1,04 GB)** (`PeakWorkingSet64`) | Lần đầu 164 s (tải model ~0,5 GB); lần đo lại (model đã cache): **211,7 s** |
 | VoiceStudio · VoxCPM2, CPU, `bfloat16`, giọng clone `eb076aff` — **2 lần đo đủ trọng số** | **Không sinh được câu nào (~20 từ).** Mỗi lần: nạp model ~1 phút, sinh câu chạy **~2 phút 15 s không ra âm thanh rồi tiến trình chết** (`sidecar closed pipe mid-generate`, không có traceback Python); ngay sau đó **cả VoiceStudio đóng hẳn** (không có dòng tắt máy chủ trong log, không có sự kiện Windows hết bộ nhớ) | Lần 1: **14,2 GB** riêng tiến trình VoxCPM2 (~15,1 GB cả VoiceStudio); lần 2: **~12 GB** (~12,8 GB cả VoiceStudio) | Lần đo đầu tiên (trước đó) hỏng vì mạng đứt khi tải `model.safetensors` — không tính. RTF ước **≥ 22** (≥ 135 s mà chưa ra nổi ~6 s âm thanh) |
-| Demucs `htdemucs` | _chưa đo_ | | |
+| Demucs `htdemucs` + `faster-whisper small` (`xray_speech.py`, `video-m-u` 38 s) | **Chạy được end-to-end**: `0 từ/giây` (video mẫu không có lời thoại tiếng Việt) | **15.282 MB** (`Get-Process python* PeakWorkingSet64`, lưu ý có thể gộp tiến trình Python của VoiceStudio chạy song song) | **218,6 s** (gồm lần đầu tải trọng số `htdemucs` ~80 MB từ `dl.fbaipublicfiles.com`, cần mạng ngoài sandbox) |
 
 Engine thay thế đã tra (sổ giấy phép `backend/config/model_licenses.json` + mã engine của VoiceStudio): **Supertonic-3** — ONNX chạy CPU, 31 ngôn ngữ **có tiếng Việt**, model ~400 MB, giấy phép **OpenRAIL-M** (cho thương mại kèm giới hạn mục đích — phải đọc điều khoản), **chỉ có giọng dựng sẵn, không nhân bản giọng**. KittenTTS / CosyVoice (Apache-2.0) chưa xác minh tiếng Việt. OmniVoice / OmniVoice-GGUF bị loại (CC-BY-NC).
 
@@ -101,4 +101,9 @@ Engine thay thế đã tra (sổ giấy phép `backend/config/model_licenses.jso
 2. **Thử tiếp, rẻ:** Supertonic-3 trong VoiceStudio làm lựa chọn giọng Việt `$0` chạy CPU (không clone) — người dùng nghe thử chất lượng và đọc điều khoản OpenRAIL-M trước.
 3. **Khi bắt buộc cần giọng KOL clone:** VoxCPM2 trên GPU thuê theo giờ (VoiceStudio có tài liệu remote GPU) — giọng KOL rời máy → văn bản đồng ý phải có `allowCloudProcessing: true`; là một gói việc riêng.
 
-**Quyết định:** _(chờ người dùng)_
+**Quyết định (17-11-2026 — Đã chốt với người dùng):**
+1. **Chốt Hướng 1 cho sản xuất ngay:** Giữ **Vbee / FPT.AI** (`~$0.005–0.01/video`, 1–3s/câu, giọng Việt 3 miền tự nhiên, không đổi mã). Nhân vật `mode: "clone"` tạm thời không gắn `voiceProfile` (hoặc chạy `--allow-generic-voice` có nhãn `"GIỌNG TẠM"`).
+2. **Hướng phát triển tiếp theo (Hướng 2 — sau này):** Thử **`Supertonic-3`** trong VoiceStudio (`$0`, ONNX CPU ~400 MB, có tiếng Việt, không clone) sau khi người dùng duyệt điều khoản **BigScience OpenRAIL-M**.
+3. **Đề xuất công cụ nhẹ thay thế VoxCPM2 (cho lộ trình sau):**
+   - **Có clone giọng tiếng Việt trên CPU (`$0` token):** **`VieNeu-TTS` (bản mở v3 Turbo / 0.3B qua ONNX Runtime CPU)** — chuyên biệt tiếng Việt, chạy torch-free ONNX int8 nhẹ hơn nhiều so với VoxCPM2 (12–14 GB RAM), hỗ trợ clone từ 3–5s; cần kiểm tra kỹ giấy phép bản open-weights trước khi dùng thương mại (tránh v4 độc quyền).
+   - **Giọng dựng sẵn siêu nhẹ, giấy phép thương mại sạch (`$0`):** **`Kokoro-82M` (`Kokoro-Vietnamese-Lite` ONNX)** — 82M tham số (int8 ~9 MB), nhanh hơn thời gian thực trên 1 luồng CPU, giấy phép **Apache-2.0**.

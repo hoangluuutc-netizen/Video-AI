@@ -270,3 +270,20 @@ test('withManagedLocalTts chạy thẳng khi server đã sẵn sàng', async () 
     await s.close();
   }
 });
+
+test('fixture THẬT VoiceStudio v0.5.8: POST /v1/audio/transcriptions trả words[] khớp transcribeLocalAsr', async () => {
+  const fx = JSON.parse(fs.readFileSync(new URL('./fixtures/voicestudio-v0.5.8-transcriptions-words.json', import.meta.url), 'utf8'));
+  const tmp = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'asr-fx-')), 'a.wav');
+  fs.writeFileSync(tmp, WAV);
+  const s = await mockServer({
+    'POST /v1/audio/transcriptions': () => ({ json: fx })
+  });
+  try {
+    const r = await transcribeLocalAsr(tmp, { cfg: cfgFor(s.baseUrl) });
+    assert.ok(Array.isArray(r.words) && r.words.length === fx.words.length);
+    assert.deepEqual(r.words[0], { w: fx.words[0].word, start: fx.words[0].start, end: fx.words[0].end });
+    assert.equal(r.text, fx.text);
+  } finally {
+    await s.close();
+  }
+});
