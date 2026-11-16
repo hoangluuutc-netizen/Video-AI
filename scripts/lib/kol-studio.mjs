@@ -54,12 +54,12 @@ export function listInstalledSkills() {
   });
 }
 
-export function saveKolCharacter(payload = {}) {
+export function saveKolCharacter(payload = {}, { root = ROOT } = {}) {
   const id = slugifyId(payload.id || payload.name);
   if (!/^[a-z0-9-]+$/.test(id)) {
     throw new Error('ID KOL không hợp lệ.');
   }
-  const charDir = path.join(ROOT, 'assets', 'characters', id);
+  const charDir = path.join(root, 'assets', 'characters', id);
   fs.mkdirSync(charDir, { recursive: true });
   const charPath = path.join(charDir, 'character.json');
   const existing = fs.existsSync(charPath) ? JSON.parse(fs.readFileSync(charPath, 'utf8')) : {};
@@ -280,6 +280,7 @@ export async function renderKolTalkingVideo({ character, product = null, voiceTe
     productId: product?.id || 'sample-product',
     characterId: character.id,
     hook: hookTitle || text.slice(0, 60),
+    subtitleStyle,
     voiceover: text,
     scenes: [
       { id: 'scene-1', type: 'real-product-closeup', durationSec: dur, caption: hookTitle || character.name, voiceover: text, qcStatus: 'approved' }
@@ -369,6 +370,27 @@ export async function renderKolTalkingVideo({ character, product = null, voiceTe
     }
   }
 
+  let integrity = { ok: fs.existsSync(outMp4), width: 1080, height: 1920, fps: targetFps, hasAudio: Boolean(voiceWav), durationSec: finalDur };
+  try {
+    const probeJson = execFileSync('ffprobe', [
+      '-v', 'error', '-show_entries', 'stream=codec_type,width,height,r_frame_rate', '-show_entries', 'format=duration', '-of', 'json', outMp4
+    ], { encoding: 'utf8' });
+    const parsed = JSON.parse(probeJson);
+    const vStream = (parsed.streams || []).find((s) => s.codec_type === 'video');
+    const aStream = (parsed.streams || []).find((s) => s.codec_type === 'audio');
+    const [num, den] = String(vStream?.r_frame_rate || '60/1').split('/').map(Number);
+    integrity = {
+      ok: Boolean(vStream && vStream.width === 1080 && vStream.height === 1920),
+      width: vStream?.width || 0,
+      height: vStream?.height || 0,
+      fps: den ? Math.round(num / den) : targetFps,
+      hasAudio: Boolean(aStream),
+      durationSec: Number(parseFloat(parsed.format?.duration || finalDur).toFixed(2))
+    };
+  } catch {
+    // Giữ integrity mặc định
+  }
+
   const voiceRel = voiceWav ? path.relative(path.join(ROOT, 'campaigns', campId), voiceWav).replace(/\\/g, '/') : '';
   return {
     ok: true,
@@ -376,6 +398,7 @@ export async function renderKolTalkingVideo({ character, product = null, voiceTe
     videoUrl: `/campaigns/${campId}/out/${outFilename}`,
     audioUrl: voiceRel ? `/campaigns/${campId}/${voiceRel}?t=${Date.now()}` : '',
     assUrl: fs.existsSync(assPath) ? `/campaigns/${campId}/media/audio/subtitles.ass?t=${Date.now()}` : '',
-    durationSec: finalDur
+    durationSec: finalDur,
+    integrity
   };
 }

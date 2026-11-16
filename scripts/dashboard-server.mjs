@@ -805,6 +805,22 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  if (req.method === 'POST' && url.pathname === '/api/kol/sync-studio') {
+    try {
+      const body = await readBody(req);
+      const kolId = String(body.characterId || '').replace(/[^a-z0-9-]/g, '');
+      if (!kolId) throw new Error('Thiếu characterId.');
+      const campRel = path.posix.join('campaigns', `kol-${kolId}`, 'campaign.json');
+      if (!fs.existsSync(path.join(ROOT, campRel))) {
+        throw new Error(`Chưa có chiến dịch kol-${kolId}. Hãy bấm "Dựng Video KOL AI" trước khi đồng bộ.`);
+      }
+      const result = runNodeScript('scripts/sync-studio.mjs', [campRel]);
+      return sendJson(res, 200, { ok: true, output: result.output || `Đã đồng bộ kol-${kolId} sang Remotion Studio.` });
+    } catch (e) {
+      return sendJson(res, 400, { ok: false, output: e.message });
+    }
+  }
+
   if (req.method === 'POST' && url.pathname === '/api/kol/lipsync-ai') {
     try {
       const body = await readBody(req);

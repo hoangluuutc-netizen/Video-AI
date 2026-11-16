@@ -271,6 +271,14 @@ async function renderTalkingKol() {
       audioEl.src = res.audioUrl;
       audioEl.style.display = 'block';
     }
+    const qcEl = document.getElementById('kol-integrity-badge');
+    if (qcEl && res.integrity) {
+      const q = res.integrity;
+      qcEl.textContent = q.ok
+        ? `✅ QC Đạt: ${q.width}×${q.height} • ${q.fps}fps • ${q.hasAudio ? 'Có tiếng AAC' : 'Chưa có tiếng'} (${q.durationSec}s)`
+        : `⚠️ QC Cảnh báo: ${q.width}×${q.height} • ${q.fps}fps`;
+      qcEl.style.color = q.ok ? '#4ADE80' : '#FACC15';
+    }
     const linksEl = document.getElementById('kol-download-links');
     linksEl.innerHTML = `<a class="btn btn-primary" href="${res.videoUrl}" download="kol-${kolId}-9x16.mp4">⬇️ Tải Video MP4</a>` +
       (res.assUrl ? `<a class="btn btn-secondary" href="${res.assUrl}" download="subtitles.ass">⬇️ Tải Phụ Đề .ASS</a>` : '');
@@ -334,6 +342,21 @@ async function approveKolScript() {
     setStatus(res.output);
   } catch (e) {
     setStatus(`Lỗi duyệt kịch bản: ${e.message}`);
+  }
+}
+
+async function syncKolToStudio() {
+  const kolId = document.getElementById('kol-id').value.trim();
+  if (!kolId) {
+    setStatus('Vui lòng chọn hoặc lưu hồ sơ KOL trước.');
+    return;
+  }
+  try {
+    setStatus(`Đang đồng bộ kol-${kolId} sang Remotion Studio...`);
+    const res = await apiJson('/api/kol/sync-studio', 'POST', { characterId: kolId });
+    setStatus(res.output);
+  } catch (e) {
+    setStatus(`Lỗi đồng bộ Remotion: ${e.message}`);
   }
 }
 

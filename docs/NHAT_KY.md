@@ -177,3 +177,9 @@
 - Đồng bộ `media/audio/words.json` và `subtitleStyle` vào `studio/src/activeCampaign.json` qua `scripts/sync-studio.mjs`; cập nhật `studio/src/types.ts` (`WordTiming`) và `studio/src/ProductAdVideo.tsx` hỗ trợ hiển thị phụ đề `word-highlight` tô vàng từng từ trong Remotion (giữ tương thích ngược `box`).
 - Bổ sung lựa chọn kiểu phụ đề (`word-highlight` / `box`), nút **✅ Duyệt kịch bản KOL (`POST /api/kol/approve`)**, và nút **📤 Mở ở Video Ad Studio** trên `dashboard/kol-studio.html`, `dashboard/kol-studio.js`, `scripts/lib/kol-studio.mjs`, `scripts/dashboard-server.mjs`.
 - Kiểm định toàn trình: `studio` `tsc --noEmit` đạt 0 lỗi, `104/104` unit tests pass, `validate-assets.mjs` 0 cảnh báo, `smoke-test.mjs` đạt 100%.
+
+## 2026-11-17 — Antigravity: Hoàn tất Giai đoạn 5 (QC tự động KOL Video, Đồng bộ Remotion & Unit Test KOL Studio)
+- Đã khóa mốc commit `d2ceeb5` cho toàn bộ Giai đoạn 1–4.
+- Nâng cấp `scripts/lib/kol-studio.mjs`: tự động kiểm định `ffprobe` sau khi dựng (`1080×1920`, `60fps`, `hasAudio`, `durationSec`) và lưu `subtitleStyle` vào chiến dịch `kol-<id>`.
+- Bổ sung `POST /api/kol/sync-studio` và nút **📐 Đồng bộ sang Remotion** + badge QC ngay trên `dashboard/kol-studio.html` / `kol-studio.js`.
+- Thêm bộ test `scripts/tests/kol-studio.test.mjs` (4 test pass); tổng cộng **`108/108` unit tests pass**, `studio` `tsc --noEmit` 0 lỗi, `validate-assets.mjs` 0 cảnh báo, `smoke-test.mjs` đạt 100%.

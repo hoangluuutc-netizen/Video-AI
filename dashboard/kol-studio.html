@@ -230,6 +230,7 @@
             <button class="btn btn-green" onclick="renderTalkingKol()">🎬 Dựng Video KOL AI (60fps $0)</button>
             <button class="btn btn-blue" onclick="generateLipSyncAi()">✨ Tạo Clip Lip-Sync AI (Veo 3.1 / Omni 1.2)</button>
             <button class="btn btn-secondary" onclick="approveKolScript()">✅ Duyệt kịch bản KOL</button>
+            <button class="btn btn-secondary" onclick="syncKolToStudio()">📐 Đồng bộ sang Remotion</button>
             <button class="btn btn-secondary" onclick="openInAdStudio()">📤 Mở ở Video Ad Studio</button>
             <button class="btn btn-secondary" onclick="copyTextById('kol-veo-prompt')">📋 Copy Prompt Veo 3.1</button>
           </div>
@@ -247,6 +248,7 @@
           <div style="margin-top:14px;">
             <audio id="kol-audio-player" controls style="width:100%;display:none;"></audio>
           </div>
+          <div id="kol-integrity-badge" style="text-align:center;margin-top:10px;font-size:13px;font-weight:700;"></div>
           <div id="kol-download-links" class="btn-row" style="justify-content:center;"></div>
 
           <div class="field" style="margin-top:16px;">
