@@ -2596,6 +2596,56 @@ async function renderRemotionFromUi(ratio = '9x16') {
   }
 }
 
+async function openSelectedAssetPath(kind) {
+  if (kind === 'footage') {
+    const clipId = document.getElementById('inp-sample-video')?.value;
+    const clip = (appState.catalog?.clips || []).find((c) => c.id === clipId);
+    return openProjectFile(clip?.filePath || 'assets/footage');
+  }
+  if (kind === 'product') {
+    const prod = getSelectedProduct();
+    const imgPath = prod?.referenceImages?.transparent || prod?.referenceImages?.front || (prod?.id ? `assets/products/${prod.id}` : 'assets/products');
+    return openProjectFile(imgPath);
+  }
+  if (kind === 'character') {
+    const charId = document.getElementById('inp-character')?.value;
+    const ch = (appState.characters || []).find((c) => c.id === charId);
+    const imgPath = ch?.referenceImages?.portrait || ch?.referenceImages?.halfBody || (charId ? `assets/characters/${charId}` : 'assets/characters');
+    return openProjectFile(imgPath);
+  }
+}
+
+function validateMiniFile(file, kind) {
+  if (!file) return false;
+  const name = file.name.toLowerCase();
+  if (kind === 'footage') {
+    if (!/\.(mp4|mov|m4v)$/.test(name) && !file.type.startsWith('video/')) {
+      alert('Video mẫu chỉ tiếp nhận định dạng .mp4, .mov hoặc .m4v!');
+      return false;
+    }
+  } else {
+    if (!/\.(png|jpg|jpeg|webp)$/.test(name) && !file.type.startsWith('image/')) {
+      alert('Ảnh sản phẩm / nhân vật chỉ tiếp nhận định dạng .png, .jpg, .jpeg hoặc .webp!');
+      return false;
+    }
+  }
+  return true;
+}
+
+function handleMiniDrop(e, kind) {
+  e.preventDefault();
+  e.stopPropagation();
+  if (e.currentTarget) e.currentTarget.classList.remove('dragover');
+  const file = e.dataTransfer?.files?.[0];
+  if (validateMiniFile(file, kind)) uploadAndPreviewAsset(file, kind);
+}
+
+function handleMiniFileInput(input, kind) {
+  const file = input?.files?.[0];
+  if (validateMiniFile(file, kind)) uploadAndPreviewAsset(file, kind);
+  if (input) input.value = '';
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   setupCommandBar();
   setupCostControls();

@@ -325,8 +325,16 @@
 
       <div class="idea-box">
         <div class="field-group">
-          <label>🎬 Video mẫu dùng để phân tích (`assets/footage/`)</label>
+          <label style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+            <span>🎬 Video mẫu dùng để phân tích (`assets/footage/`)</span>
+            <button type="button" class="icon-pill-btn" onclick="openSelectedAssetPath('footage')" title="Mở thẳng thư mục hoặc file video mẫu trên máy">📂 Mở đường dẫn</button>
+          </label>
           <select id="inp-sample-video" onchange="onSampleVideoSelectChange()"></select>
+          <div class="mini-dropzone" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="handleMiniDrop(event,'footage')" onclick="document.getElementById('mini-file-footage').click()" style="margin-top:6px;padding:8px 10px;border:1.5px dashed #FDBA74;border-radius:8px;background:#FFF7ED;cursor:pointer;font-size:11.5px;line-height:1.4;">
+            <strong>📥 Kéo thả Video mẫu vào đây</strong> hoặc bấm chọn file
+            <div style="color:#64748B;">• Định dạng: <code>.mp4, .mov, .m4v</code> • Yêu cầu: ≤ 90s, tên file không dấu, có tiếng rõ.</div>
+            <input id="mini-file-footage" type="file" accept=".mp4,.mov,.m4v,video/*" style="display:none;" onchange="handleMiniFileInput(this,'footage')" />
+          </div>
         </div>
         <div class="field-group">
           <label>🔗 Hoặc dán Link TikTok / Shorts / Reels</label>
@@ -357,12 +365,28 @@
           </div>
         </div>
         <div class="field-group">
-          <label>📦 Sản phẩm của bạn dùng để thay thế (`assets/products/`)</label>
+          <label style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+            <span>📦 Sản phẩm của bạn dùng để thay thế (`assets/products/`)</span>
+            <button type="button" class="icon-pill-btn" onclick="openSelectedAssetPath('product')" title="Mở thẳng thư mục hoặc ảnh sản phẩm trên máy">📂 Mở đường dẫn</button>
+          </label>
           <select id="inp-product" onchange="onProductChange()"></select>
+          <div class="mini-dropzone" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="handleMiniDrop(event,'product')" onclick="document.getElementById('mini-file-product').click()" style="margin-top:6px;padding:8px 10px;border:1.5px dashed #CBD5E1;border-radius:8px;background:#F8FAFC;cursor:pointer;font-size:11.5px;line-height:1.4;">
+            <strong>📥 Kéo thả Ảnh sản phẩm vào đây</strong> hoặc bấm chọn file
+            <div style="color:#64748B;">• Định dạng: <code>.png, .jpg, .webp</code> • Yêu cầu: ≥ 720px, rõ logo/bao bì; ưu tiên PNG tách nền.</div>
+            <input id="mini-file-product" type="file" accept=".png,.jpg,.jpeg,.webp,image/*" style="display:none;" onchange="handleMiniFileInput(this,'product')" />
+          </div>
         </div>
         <div class="field-group">
-          <label>🧑 Nhân vật của bạn dùng để thay thế (`assets/characters/`)</label>
+          <label style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+            <span>🧑 Nhân vật của bạn dùng để thay thế (`assets/characters/`)</span>
+            <button type="button" class="icon-pill-btn" onclick="openSelectedAssetPath('character')" title="Mở thẳng thư mục hoặc ảnh nhân vật trên máy">📂 Mở đường dẫn</button>
+          </label>
           <select id="inp-character" onchange="onProductChange()"></select>
+          <div class="mini-dropzone" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="handleMiniDrop(event,'character')" onclick="document.getElementById('mini-file-character').click()" style="margin-top:6px;padding:8px 10px;border:1.5px dashed #CBD5E1;border-radius:8px;background:#F8FAFC;cursor:pointer;font-size:11.5px;line-height:1.4;">
+            <strong>📥 Kéo thả Ảnh nhân vật / KOL vào đây</strong> hoặc bấm chọn file
+            <div style="color:#64748B;">• Định dạng: <code>.png, .jpg, .webp</code> • Yêu cầu: chính diện, đủ sáng, không che mặt, ≥ 720px.</div>
+            <input id="mini-file-character" type="file" accept=".png,.jpg,.jpeg,.webp,image/*" style="display:none;" onchange="handleMiniFileInput(this,'character')" />
+          </div>
         </div>
         <div class="field-group">
           <label>Chế độ thay thế & Mã chiến dịch (Slug)</label>

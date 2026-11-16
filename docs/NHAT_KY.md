@@ -189,3 +189,4 @@
 - Bổ sung API `POST /api/studio/render` và nút **🎬 Render Remotion MP4 (9:16)** tại Mục `06 / 08` trên `dashboard/index.html` / `app.js`.
 - Cập nhật `README.md` hoàn chỉnh toàn hệ thống (Video Ad Studio + KOL AI Studio + 6 Agent Skills + Batch CSV + Remotion Word-Highlight).
 - Kiểm định cuối cùng đạt 100%: `110/110` unit tests pass, `studio` `tsc --noEmit` 0 lỗi, `validate-assets.mjs` 0 cảnh báo, `smoke-test.mjs` đạt 100%. Đẩy hoàn tất lên `origin main`.
+- Bổ sung tại Mục `02 / 08` (`dashboard/index.html`, `dashboard/app.js`): ô Kéo & Thả + bấm chọn file trực tiếp, nút **📂 Mở đường dẫn** chạy thẳng tới file/thư mục trên Windows Explorer, kèm ghi chú định dạng tiếp nhận và yêu cầu ngắn gọn chống lỗi cho cả 3 mục (**Video mẫu**, **Sản phẩm của bạn**, **Nhân vật của bạn**).
