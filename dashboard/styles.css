@@ -1076,6 +1076,46 @@ table.clean-table th {
   justify-content: flex-end;
 }
 
+.tool-warn {
+  color: #B45309;
+  font-weight: 700;
+}
+
+/* Gói 7 — lời thoại video mẫu (X-Ray) */
+.speech-xray {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--orange-border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.speech-xray:has(.speech-empty) {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.speech-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.speech-empty,
+.speech-hook,
+.speech-transcript {
+  color: var(--text-muted);
+}
+
+.speech-transcript {
+  font-style: italic;
+  max-width: 80ch;
+}
+
 /* Nhảy tới mục không bị thanh lệnh che */
 .slide-card {
   scroll-margin-top: calc(var(--command-h, 96px) + 18px);

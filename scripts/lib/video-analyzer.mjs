@@ -115,6 +115,73 @@ function estimateBpm(flux, hop) {
   return { value: Math.round(60 / (best.lag * hop)), confidence: round(confidence, 2) };
 }
 
+// ===== Gói 7 — Task 12: X-Ray lời thoại video mẫu =====
+// words: [{w,start,end}] (giây, theo video gốc). Hàm thuần — tính tốc độ nói, hook 3s đầu, lời theo từng cảnh cắt.
+export function summarizeSpeech(words, shots, durationSec) {
+  const ws = (words || []).filter((w) => w && w.w && Number.isFinite(w.start) && Number.isFinite(w.end));
+  const join = (arr) => arr.map((w) => String(w.w).trim()).filter(Boolean).join(' ');
+  if (!ws.length) {
+    return { transcript: '', wordsPerSec: 0, hookText3s: '', speechCoverage: 0, perShot: (shots || []).map((s) => ({ index: s.index, text: '' })) };
+  }
+  const span = Math.max(0.1, ws[ws.length - 1].end - ws[0].start);
+  const spoken = ws.reduce((acc, w) => acc + Math.max(0, w.end - w.start), 0);
+  return {
+    transcript: join(ws),
+    wordsPerSec: round(ws.length / span, 2),
+    hookText3s: join(ws.filter((w) => w.start < 3)),
+    speechCoverage: round(Math.min(1, spoken / Math.max(0.1, durationSec || span)), 2),
+    perShot: (shots || []).map((s) => ({ index: s.index, text: join(ws.filter((w) => w.start >= s.start && w.start < s.end)) }))
+  };
+}
+
+function extractWav(absPath, outWav, { maxSec = 90, rate = 16000 } = {}) {
+  const r = spawnSync(FFMPEG, ['-y', '-v', 'error', '-t', String(maxSec), '-i', absPath, '-vn', '-ac', '1', '-ar', String(rate), outWav], {
+    windowsHide: true
+  });
+  return r.status === 0;
+}
+
+// 3 lựa chọn (aiCfg.xrayAudioModel): none | voicestudio-asr | demucs-faster-whisper-local.
+// Thiếu công cụ → null kèm gợi ý; không bao giờ làm hỏng phân tích cũ.
+export async function analyzeSpeechTrack(absPath, { durationSec, shots, model = 'none', root = process.cwd(), workDir, transcribe = null } = {}) {
+  if (!model || model === 'none') return null;
+  const { default: fs } = await import('node:fs');
+  const { default: path } = await import('node:path');
+  const dir = workDir || path.join(root, 'assets', 'footage', 'analysis', '_speech');
+  fs.mkdirSync(dir, { recursive: true });
+
+  try {
+    if (model === 'voicestudio-asr') {
+      const wav = path.join(dir, 'sample-16k.wav');
+      if (!extractWav(absPath, wav)) throw new Error('Không trích được âm thanh từ video mẫu.');
+      const fn = transcribe || (await import('./local-tts-client.mjs')).makeDefaultTranscriber();
+      const r = await fn(wav);
+      if (!r?.words?.length) throw new Error('VoiceStudio không trả về timestamp từng từ (words[]).');
+      return { tool: model, ...summarizeSpeech(r.words, shots, durationSec), musicBpm: null, words: r.words };
+    }
+    if (model === 'demucs-faster-whisper-local') {
+      const { findSpeechPython } = await import('./word-aligner.mjs');
+      const py = findSpeechPython({ root });
+      if (!py) throw new Error('Chưa có tools/speech/.venv (Task 0) — chưa chạy được Demucs + faster-whisper.');
+      const r = spawnSync(py, ['-I', path.join(root, 'tools', 'speech', 'xray_speech.py'), '--video', absPath, '--out', dir, '--max-sec', '90'], {
+        encoding: 'utf8',
+        windowsHide: true,
+        maxBuffer: 32 * 1024 * 1024
+      });
+      const speechPath = path.join(dir, 'speech.json');
+      if (r.status !== 0 || !fs.existsSync(speechPath)) throw new Error(`xray_speech.py lỗi: ${String(r.stderr || '').slice(-300)}`);
+      const speech = JSON.parse(fs.readFileSync(speechPath, 'utf8'));
+      const noVocals = path.join(dir, 'no_vocals.wav');
+      const music = fs.existsSync(noVocals) ? analyzeAudioSync(noVocals, durationSec) : null;
+      return { tool: model, ...summarizeSpeech(speech.words, shots, durationSec), musicBpm: music?.bpm || null, words: speech.words };
+    }
+    throw new Error(`Lựa chọn X-Ray "${model}" không hợp lệ.`);
+  } catch (e) {
+    console.warn(`[X-Ray lời thoại] ${e.message}`);
+    return null;
+  }
+}
+
 export function pacingMetrics(shots, durationSec, cuts) {
   const n = shots.length || 1;
   const avg = durationSec / n;

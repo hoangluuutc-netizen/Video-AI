@@ -234,6 +234,15 @@
             <audio id="kol-audio-player" controls style="width:100%;display:none;"></audio>
           </div>
           <div id="kol-download-links" class="btn-row" style="justify-content:center;"></div>
+
+          <div class="field" style="margin-top:16px;">
+            <label for="kol-approved-by">Duyệt kịch bản (bắt buộc với KOL người thật)</label>
+            <div class="btn-row">
+              <input id="kol-approved-by" type="text" placeholder="Tên KOL hoặc người được KOL ủy quyền" />
+              <button class="btn btn-secondary" onclick="approveKolScript()">✅ KOL đã duyệt kịch bản này</button>
+            </div>
+            <p class="sub" id="kol-approval-note">Chưa duyệt thì video có dấu "BẢN NHÁP – CHỜ KOL DUYỆT". Sửa lời thoại sau khi duyệt sẽ phải duyệt lại.</p>
+          </div>
         </div>
       </div>
     </section>

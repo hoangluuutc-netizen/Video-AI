@@ -15,6 +15,11 @@ import {
   renderKolTalkingVideo
 } from './lib/kol-studio.mjs';
 import { estimateVideoCost, normalizeCostSettings } from './lib/cost-ledger.mjs';
+import { approveCampaignFile } from './kol-approve.mjs';
+import { normalizeToolChoices } from './lib/tool-choices.mjs';
+import { getLocalToolsStatus } from './lib/local-tools-status.mjs';
+import { analyzeSpeechTrack } from './lib/video-analyzer.mjs';
+import { prepareForHeavyPhase } from './lib/resource-gate.mjs';
 
 const ROOT = process.cwd();
 const PORT = Number(process.env.PORT || 4173);
@@ -33,7 +38,10 @@ const DEFAULT_AI_CONFIG = {
   renderEngine: 'ffmpeg-anchored-real',
   hasGeminiKey: false,
   selectiveAiCount: 1,
-  maxCostUsdPerVideo: 0.5
+  maxCostUsdPerVideo: 0.5,
+  subtitleAlignModel: 'heuristic-silence',
+  subtitleStyle: 'box',
+  xrayAudioModel: 'none'
 };
 
 const MIME_TYPES = {
@@ -262,7 +270,8 @@ const server = http.createServer(async (req, res) => {
         ttsVoice: body.ttsVoice || current.ttsVoice,
         renderEngine: body.renderEngine || current.renderEngine,
         selectiveAiOnly: body.selectiveAiOnly !== undefined ? Boolean(body.selectiveAiOnly) : current.selectiveAiOnly,
-        ...normalizeCostSettings(body, current)
+        ...normalizeCostSettings(body, current),
+        ...normalizeToolChoices(body, current)
       };
       if (body.geminiApiKey !== undefined && body.geminiApiKey.trim() !== '') {
         updated.geminiApiKey = body.geminiApiKey.trim();
@@ -289,6 +298,43 @@ const server = http.createServer(async (req, res) => {
       });
     } catch (e) {
       return sendJson(res, 500, { ok: false, output: e.message });
+    }
+  }
+
+  if (req.method === 'GET' && url.pathname === '/api/local-tools/status') {
+    try {
+      return sendJson(res, 200, { ok: true, ...(await getLocalToolsStatus(loadAiConfig(), { root: ROOT })) });
+    } catch (e) {
+      return sendJson(res, 500, { ok: false, output: e.message });
+    }
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/xray-speech') {
+    try {
+      const body = await readBody(req);
+      const aiCfg = loadAiConfig();
+      const model = body.model || aiCfg.xrayAudioModel || 'none';
+      if (model === 'none') throw new Error('Chọn công cụ "Tách nhạc & bóc băng" trong Bộ não & chi phí trước (đang là "Không tách").');
+      const clipId = String(body.clipId || '').replace(/[^a-zA-Z0-9_-]/g, '');
+      const anaPath = path.join(ASSETS_DIR, 'footage', 'analysis', clipId, 'analysis.json');
+      if (!clipId || !fs.existsSync(anaPath)) throw new Error('Chưa có analysis.json — phân tích video mẫu trước.');
+      const analysis = readJsonSafe(anaPath, null);
+      const videoAbs = path.join(ROOT, analysis.sampleVideo?.filePath || '');
+      if (!fs.existsSync(videoAbs)) throw new Error(`Không thấy video mẫu ${analysis.sampleVideo?.filePath}.`);
+      await prepareForHeavyPhase({ label: 'X-Ray lời thoại', minFreeGb: 6 });
+      const speech = await analyzeSpeechTrack(videoAbs, {
+        durationSec: analysis.sampleVideo?.durationSec,
+        shots: analysis.xray?.shots || [],
+        model,
+        root: ROOT,
+        workDir: path.join(ASSETS_DIR, 'footage', 'analysis', clipId, 'speech')
+      });
+      if (!speech) throw new Error('Không bóc băng được lời thoại (xem log máy chủ: thiếu công cụ hoặc VoiceStudio chưa chạy).');
+      analysis.xray = { ...(analysis.xray || {}), speech };
+      fs.writeFileSync(anaPath, JSON.stringify(analysis, null, 2) + '\n', 'utf8');
+      return sendJson(res, 200, { ok: true, output: `Đã bóc băng lời thoại (${speech.tool}): ${speech.wordsPerSec} từ/giây.`, speech, state: loadWorkspaceState() });
+    } catch (e) {
+      return sendJson(res, 400, { ok: false, output: e.message });
     }
   }
 
@@ -676,6 +722,26 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { ok: true, script, output: `Đã sinh kịch bản KOL (${script.engine}) — ${script.wordCount} từ (~${script.estimatedSec}s).` });
     } catch (e) {
       return sendJson(res, 500, { ok: false, output: e.message });
+    }
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/kol/approve') {
+    try {
+      const body = await readBody(req);
+      const campaignId = String(body.campaignId || '').trim();
+      if (!/^[a-z0-9][a-z0-9-]*$/i.test(campaignId)) throw new Error('campaignId không hợp lệ.');
+      const campPath = path.join(CAMPAIGNS_DIR, campaignId, 'campaign.json');
+      if (!fs.existsSync(campPath)) throw new Error(`Chưa có chiến dịch ${campaignId} — hãy dựng video KOL trước khi duyệt.`);
+      const r = approveCampaignFile(campPath, body.approvedBy);
+      return sendJson(res, 200, {
+        ok: true,
+        before: r.before,
+        output: r.required
+          ? `Đã ghi "${r.approvedBy}" duyệt kịch bản ${campaignId}. Dựng lại video để bỏ dấu "BẢN NHÁP".`
+          : `Đã ghi duyệt cho ${campaignId} (nhân vật này không nhân bản giọng người thật nên không bắt buộc).`
+      });
+    } catch (e) {
+      return sendJson(res, 400, { ok: false, output: e.message });
     }
   }
 

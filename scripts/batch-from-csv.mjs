@@ -3,7 +3,11 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { ROOT } from './lib/footage.mjs';
 import { readJson } from './lib/prompt-builder.mjs';
-import { runOptimalPipeline } from './run-optimal-pipeline.mjs';
+import { runOptimalPipeline, recordReelSheet } from './run-optimal-pipeline.mjs';
+import { generateCampaignVoiceover } from './generate-voiceover.mjs';
+import { runPhasedPipeline } from './lib/phased-batch.mjs';
+import { prepareForHeavyPhase } from './lib/resource-gate.mjs';
+import { resolveLocalTtsConfig, withManagedLocalTts, unloadLocalTts } from './lib/local-tts-client.mjs';
 
 function parseCsvLine(line) {
   const out = [];
@@ -161,15 +165,55 @@ async function main() {
     execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'analyze-sample-video.mjs')], { stdio: 'inherit' });
   }
 
-  const runner = autoRun
+  // --run --phased: tạo chiến dịch cho mọi SKU trước, rồi chạy theo PHA (Gói 7 — T9)
+  const phased = autoRun && args.includes('--phased');
+  const collected = [];
+  const runner = phased
     ? async (campPath) => {
-        await runOptimalPipeline(campPath, { skipSampleAnalysis: true });
+        collected.push(campPath);
       }
-    : async (campPath) => {
-        execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'generate-prompts.mjs'), campPath], { stdio: 'inherit' });
-      };
+    : autoRun
+      ? async (campPath) => {
+          await runOptimalPipeline(campPath, { skipSampleAnalysis: true });
+        }
+      : async (campPath) => {
+          execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'generate-prompts.mjs'), campPath], { stdio: 'inherit' });
+        };
 
   const summary = await runBatch(rows, { runner, resume, root: ROOT });
+  if (phased && collected.length) {
+    const node = (script, extra = []) => (c) =>
+      execFileSync(process.execPath, [path.join(ROOT, 'scripts', script), c, ...extra], { stdio: 'inherit' });
+    const aiCfgPath = path.join(ROOT, 'assets', 'brand-kit', 'ai-config.json');
+    const aiCfg = fs.existsSync(aiCfgPath) ? readJson(aiCfgPath) : {};
+    const usesLocalTts = /^(voicestudio|sidecar)-/.test(aiCfg.ttsModel || '');
+    const localCfg = usesLocalTts
+      ? resolveLocalTtsConfig({ ...aiCfg, localTts: { ...(aiCfg.localTts || {}), provider: aiCfg.ttsModel.startsWith('sidecar') ? 'sidecar' : 'voicestudio' } })
+      : null;
+    const result = await runPhasedPipeline(collected, {
+      prompts: node('generate-prompts.mjs'),
+      beforeVoice: () => prepareForHeavyPhase({ label: 'TTS (cả lô)', minFreeGb: usesLocalTts ? aiCfg.ttsMinFreeGb ?? 10 : 2 }),
+      withTts: localCfg
+        ? async (fn) => {
+            try {
+              return await withManagedLocalTts(localCfg, fn);
+            } finally {
+              await unloadLocalTts(localCfg).catch(() => false);
+            }
+          }
+        : null,
+      voice: (c) => generateCampaignVoiceover(c, { manageLocalTts: !localCfg }),
+      render: node('export-cutlist.mjs', ['--render-ffmpeg']),
+      verify: node('verify-integrity.mjs'),
+      record: (c) => recordReelSheet(c)
+    });
+    // campPath = campaigns/batch-<id>/campaign.json → <id>
+    const prodIdOf = (campPath) => path.basename(path.dirname(campPath)).replace(/^batch-/, '');
+    const failedIds = new Set(result.failed.map((f) => prodIdOf(f.id)));
+    summary.ok = summary.ok.filter((id) => !failedIds.has(id));
+    summary.failed.push(...result.failed.map((f) => ({ id: prodIdOf(f.id), error: `pha ${f.phase}: ${f.error}` })));
+    execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'validate-assets.mjs')], { stdio: 'inherit' });
+  }
   console.log(`\n=== TỔNG KẾT BATCH CSV ===`);
   console.log(`- Thành công (${summary.ok.length}): ${summary.ok.join(', ') || 'Không có'}`);
   console.log(`- Bỏ qua (--resume, ${summary.skipped.length}): ${summary.skipped.join(', ') || 'Không có'}`);

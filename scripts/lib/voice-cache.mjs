@@ -33,13 +33,18 @@ export function getCachedVoice(key, { cacheDir = DEFAULT_CACHE_DIR } = {}) {
   return fs.existsSync(filePath) ? filePath : null;
 }
 
-export function putCachedVoice(key, buffer, { cacheDir = DEFAULT_CACHE_DIR, characterId = '' } = {}) {
+// meta: dữ liệu phụ đi kèm (vd. { speechStart, speechEnd, speechSec }) để lần trúng cache vẫn căn từ chính xác
+export function getCachedVoiceMeta(key, { cacheDir = DEFAULT_CACHE_DIR } = {}) {
+  return readIndex(cacheDir).find((e) => e.key === key)?.meta || null;
+}
+
+export function putCachedVoice(key, buffer, { cacheDir = DEFAULT_CACHE_DIR, characterId = '', meta = null } = {}) {
   fs.mkdirSync(cacheDir, { recursive: true });
   const filePath = path.join(cacheDir, `${key}.wav`);
   writeAtomic(filePath, buffer);
 
   const entries = readIndex(cacheDir).filter((e) => e.key !== key);
-  entries.push({ key, characterId: characterId || '' });
+  entries.push(meta ? { key, characterId: characterId || '', meta } : { key, characterId: characterId || '' });
   writeAtomic(path.join(cacheDir, 'index.json'), JSON.stringify(entries, null, 2) + '\n');
   return filePath;
 }

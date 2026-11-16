@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { ROOT, loadCatalog } from './lib/footage.mjs';
-import { detectVideoCuts, buildShots, analyzeAudioSync, pacingMetrics } from './lib/video-analyzer.mjs';
+import { detectVideoCuts, buildShots, analyzeAudioSync, pacingMetrics, analyzeSpeechTrack } from './lib/video-analyzer.mjs';
 import { fileURLToPath } from 'node:url';
 
 function probeVideo(absPath) {
@@ -288,13 +288,40 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToP
   const productId = prodIdx >= 0 ? args[prodIdx + 1] : 'sample-product';
   const characterId = charIdx >= 0 ? args[charIdx + 1] : 'sample-kol';
 
-  try {
-    const res = analyzeSampleVideo({ videoArg, productId, characterId });
-    console.log(`Đã phân tích xong Video Mẫu "${res.sampleVideo.clipId}" (${res.sampleVideo.durationSec}s).`);
-    console.log(`Ý tưởng rút ra: ${res.extractedIdea}`);
-    console.log(`File phân tích: assets/footage/analysis/${res.sampleVideo.clipId}/analysis.json`);
-  } catch (err) {
-    console.error('LỖI phân tích video mẫu:', err.message);
-    process.exit(1);
-  }
+  // --speech hoặc --speech=<none|voicestudio-asr|demucs-faster-whisper-local>: thêm X-Ray lời thoại (Gói 7 — T12)
+  const speechArg = args.find((a) => a === '--speech' || a.startsWith('--speech='));
+
+  (async () => {
+    try {
+      const res = analyzeSampleVideo({ videoArg, productId, characterId });
+      console.log(`Đã phân tích xong Video Mẫu "${res.sampleVideo.clipId}" (${res.sampleVideo.durationSec}s).`);
+      console.log(`Ý tưởng rút ra: ${res.extractedIdea}`);
+      const anaRel = `assets/footage/analysis/${res.sampleVideo.clipId}/analysis.json`;
+      if (speechArg) {
+        const cfgPath = path.join(ROOT, 'assets', 'brand-kit', 'ai-config.json');
+        const aiCfg = fs.existsSync(cfgPath) ? JSON.parse(fs.readFileSync(cfgPath, 'utf8')) : {};
+        const model = speechArg.includes('=') ? speechArg.split('=')[1] : aiCfg.xrayAudioModel || 'demucs-faster-whisper-local';
+        const speech = await analyzeSpeechTrack(path.join(ROOT, res.sampleVideo.filePath), {
+          durationSec: res.sampleVideo.durationSec,
+          shots: res.xray?.shots || [],
+          model,
+          root: ROOT,
+          workDir: path.join(ROOT, 'assets', 'footage', 'analysis', res.sampleVideo.clipId, 'speech')
+        });
+        if (speech) {
+          const anaAbs = path.join(ROOT, anaRel);
+          const analysis = JSON.parse(fs.readFileSync(anaAbs, 'utf8'));
+          analysis.xray = { ...(analysis.xray || {}), speech };
+          fs.writeFileSync(anaAbs, JSON.stringify(analysis, null, 2) + '\n', 'utf8');
+          console.log(`X-Ray lời thoại (${model}): ${speech.wordsPerSec} từ/giây — hook 3s: "${speech.hookText3s}"`);
+        } else {
+          console.warn(`Không bóc băng được lời thoại bằng "${model}" (xem cảnh báo phía trên).`);
+        }
+      }
+      console.log(`File phân tích: ${anaRel}`);
+    } catch (err) {
+      console.error('LỖI phân tích video mẫu:', err.message);
+      process.exit(1);
+    }
+  })();
 }

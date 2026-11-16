@@ -2,9 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { readJson } from './lib/prompt-builder.mjs';
-import { generateAssSubtitles } from './lib/ass-subtitles.mjs';
+import crypto from 'node:crypto';
+import { generateAssSubtitles, buildSrtFromWords } from './lib/ass-subtitles.mjs';
 import { normalizeViForTts } from './lib/vi-text-normalize.mjs';
-import { voiceCacheKey, getCachedVoice, putCachedVoice } from './lib/voice-cache.mjs';
+import { voiceCacheKey, getCachedVoice, putCachedVoice, getCachedVoiceMeta } from './lib/voice-cache.mjs';
+import { isCloneCharacter, assertVoiceConsent } from './lib/kol-consent.mjs';
+import { resolveLocalTtsConfig, synthesizeLocalTts, withManagedLocalTts, unloadLocalTts } from './lib/local-tts-client.mjs';
+import { alignCampaignWords, detectSpeechBounds, boundsFromRaw } from './lib/word-aligner.mjs';
 
 const ROOT = process.cwd();
 const INTERACTIONS_URL = 'https://generativelanguage.googleapis.com/v1beta/interactions';
@@ -278,16 +282,61 @@ function normalizeAndFitAudio(rawMediaPath, finalWavPath, targetDurationSec, { h
   return Math.min(dur, Math.round((rawSec / tempo) * 1000) / 1000);
 }
 
-function formatSrtTime(sec) {
-  const msTotal = Math.max(0, Math.round(sec * 1000));
-  const h = Math.floor(msTotal / 3600000);
-  const m = Math.floor((msTotal % 3600000) / 60000);
-  const s = Math.floor((msTotal % 60000) / 1000);
-  const ms = msTotal % 1000;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(ms).padStart(3, '0')}`;
+const LOCAL_TTS_ENGINES = new Set(['voicestudio-voxcpm2', 'sidecar-voxcpm2']);
+const ENGINE_LABELS = {
+  'voicestudio-voxcpm2': 'VoiceStudio · VoxCPM2',
+  'sidecar-voxcpm2': 'VoxCPM2 Sidecar',
+  'vbee-vi': 'Vbee TTS',
+  'fpt-vi': 'FPT.AI TTS',
+  'google-vi-natural': 'Giọng Việt Tự Nhiên',
+  'windows-sapi-vi': 'Local Voice/Audio',
+  'existing-wav': 'Giữ giọng đã tạo'
+};
+
+function readJsonSafe(p, fallback) {
+  try {
+    return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
-export async function generateCampaignVoiceover(campaignPath) {
+function fileHash(p) {
+  try {
+    return crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex').slice(0, 16);
+  } catch {
+    return '';
+  }
+}
+
+// Gói 7 — T9: thứ tự engine thử cho 1 chiến dịch.
+// KOL người thật (mode "clone") chỉ được dùng engine local, không lặng lẽ thay giọng khác vào mặt KOL.
+export function pickVoiceRoute({ ttsModel = 'google-vi-natural', character = null, allowGenericVoice = false } = {}) {
+  if (isCloneCharacter(character)) {
+    const local = `${character.voiceProfile.provider === 'sidecar' ? 'sidecar' : 'voicestudio'}-voxcpm2`;
+    return allowGenericVoice
+      ? { engines: [local, 'google-vi-natural', 'windows-sapi-vi'], mustBeLocal: false }
+      : { engines: [local], mustBeLocal: true };
+  }
+  // Giữ hành vi cũ: chọn Windows SAPI thì vẫn thử Google trước, SAPI là đường cuối
+  if (ttsModel === 'windows-sapi-vi') return { engines: ['google-vi-natural', 'windows-sapi-vi'], mustBeLocal: false };
+  return { engines: [...new Set([ttsModel, 'google-vi-natural', 'windows-sapi-vi'])], mustBeLocal: false };
+}
+
+// Đo vùng tiếng nói trên FILE THÔ (trước khi trộn âm nền), rồi chuẩn hóa/khớp thời lượng
+function fitAndMeasure(rawPath, finalWav, dur, opts) {
+  const rawSec = probeDurationSec(rawPath) || dur;
+  const { tempo } = computeFitTempo(rawSec, dur);
+  const rawBounds = detectSpeechBounds(rawPath, { totalSec: rawSec });
+  const speechSec = normalizeAndFitAudio(rawPath, finalWav, dur, opts);
+  return { speechSec, ...boundsFromRaw(rawBounds, tempo, dur) };
+}
+
+// manageLocalTts=false: lô theo pha tự bật/tắt TTS local 1 lần cho cả lô (scripts/lib/phased-batch.mjs)
+export async function generateCampaignVoiceover(
+  campaignPath,
+  { allowGenericVoice = process.argv.includes('--allow-generic-voice'), manageLocalTts = true } = {}
+) {
   loadEnvFile();
   const aiCfg = loadAiConfig();
   const campaign = readJson(campaignPath);
@@ -300,155 +349,188 @@ export async function generateCampaignVoiceover(campaignPath) {
   const vbeeKey = aiCfg.vbeeApiKey || process.env.VBEE_API_KEY || '';
   const vbeeAppId = aiCfg.vbeeAppId || process.env.VBEE_APP_ID || '';
   const fptKey = aiCfg.fptApiKey || process.env.FPT_API_KEY || '';
+
+  const character = readJsonSafe(path.join(ROOT, 'assets', 'characters', campaign.characterId || '', 'character.json'), {});
+  const product = readJsonSafe(path.join(ROOT, 'assets', 'products', campaign.productId || '', 'product.json'), {});
+  // Gói 7 — T8: KOL người thật → chặn cứng nếu thiếu / hết hạn / đã thu hồi / sai ngành hàng
+  assertVoiceConsent({ character, product });
+
+  const route = pickVoiceRoute({ ttsModel: ttsEngine, character, allowGenericVoice });
+  const localEngine = route.engines.find((e) => LOCAL_TTS_ENGINES.has(e));
+  const localCfg = localEngine
+    ? resolveLocalTtsConfig({ ...aiCfg, localTts: { ...(aiCfg.localTts || {}), provider: localEngine.startsWith('sidecar') ? 'sidecar' : 'voicestudio' } })
+    : null;
+  const vp = character.voiceProfile || {};
+  const refAudioHash = vp.referenceAudio ? fileHash(path.join(ROOT, vp.referenceAudio)) : '';
+  const bgmPresent = hasCampaignBgm(campaign);
+  const voiceIdFor = (engine) =>
+    LOCAL_TTS_ENGINES.has(engine) ? vp.voiceId || character.id || 'default' : aiCfg.vbeeVoice || aiCfg.fptVoice || aiCfg.ttsVoice || 'default';
+
+  // Trả đường dẫn file thô, hoặc null nếu engine không khả dụng (thiếu key / chưa hỗ trợ)
+  async function synthRaw(engine, spoken, rawBase, dur) {
+    let buf = null;
+    let ext = 'mp3';
+    if (engine === 'vbee-vi') {
+      if (!vbeeKey) return null;
+      buf = await fetchVbeeTts(spoken, { apiKey: vbeeKey, appId: vbeeAppId, voiceCode: aiCfg.vbeeVoice || undefined });
+    } else if (engine === 'fpt-vi') {
+      if (!fptKey) return null;
+      buf = await fetchFptTts(spoken, { apiKey: fptKey, voice: aiCfg.fptVoice || 'banmai' });
+    } else if (engine.startsWith('gemini')) {
+      if (!geminiKey) return null;
+      buf = await fetchGeminiTts(spoken, geminiKey, aiCfg.ttsVoice || 'Kore');
+    } else if (engine === 'google-vi-natural') {
+      buf = await fetchGoogleTranslateViTts(spoken);
+    } else if (LOCAL_TTS_ENGINES.has(engine)) {
+      buf = await synthesizeLocalTts(spoken, { cfg: localCfg, voiceProfile: { ...vp, characterId: character.id }, root: ROOT });
+      ext = 'wav';
+    } else if (engine === 'windows-sapi-vi') {
+      const p = `${rawBase}.wav`;
+      generateWindowsSapiOrToneWav(spoken, p, dur);
+      return p;
+    } else {
+      return null;
+    }
+    const p = `${rawBase}.${ext}`;
+    fs.writeFileSync(p, buf);
+    return p;
+  }
+
   const sceneWavs = [];
   const manifest = [];
-  const srtLines = [];
-  let srtOffset = 0;
-  const bgmPresent = hasCampaignBgm(campaign);
+  let usedGeneric = false;
 
-  for (let i = 0; i < campaign.scenes.length; i++) {
-    const scene = campaign.scenes[i];
-    const text = cleanSpeechText(scene.subtitle || campaign.hookText || 'Sản phẩm chính hãng chất lượng cao');
-    const { spoken, tokens } = normalizeViForTts(text);
-    const dur = Math.max(1, Number(scene.durationSec || 4));
-    const wordCount = text.split(/\s+/).filter(Boolean).length;
-    const maxWords = Math.round(dur * 2.8);
-    if (wordCount > maxWords) {
-      console.warn(`[Cảnh báo nhịp thoại] Cảnh "${scene.id}" (${dur}s) có ${wordCount} từ (khuyên dùng <= ${maxWords} từ để không bị đọc vội).`);
-    }
-    srtLines.push(`${i + 1}\n${formatSrtTime(srtOffset)} --> ${formatSrtTime(srtOffset + dur)}\n${text}\n`);
-    srtOffset += dur;
-    const rawTmp = path.join(audioDir, `_raw-${scene.id}.mp3`);
-    const finalWav = path.join(audioDir, `${scene.id}.wav`);
-    const voiceId = aiCfg.vbeeVoice || aiCfg.fptVoice || aiCfg.ttsVoice || 'default';
-    const cacheKey = voiceCacheKey({ engine: ttsEngine, model: ttsEngine, voiceId, text: spoken, refAudioHash: '' });
-    let synthesized = false;
-    let usedEngine = ttsEngine;
-    let speechSec = dur;
-
-    const cachedPath = getCachedVoice(cacheKey);
-    if (cachedPath) {
-      fs.copyFileSync(cachedPath, finalWav);
-      speechSec = probeDurationSec(finalWav) || dur;
-      synthesized = true;
-      usedEngine = `${ttsEngine} (cache)`;
-      console.log(`[Cache] Cảnh "${scene.id}" (${dur}s)`);
-    }
-
-    if (!synthesized && ttsEngine === 'vbee-vi' && vbeeKey) {
-      try {
-        const buf = await fetchVbeeTts(spoken, { apiKey: vbeeKey, appId: vbeeAppId, voiceCode: aiCfg.vbeeVoice || undefined });
-        fs.writeFileSync(rawTmp, buf);
-        speechSec = normalizeAndFitAudio(rawTmp, finalWav, dur, { hasBgm: bgmPresent, sceneId: scene.id });
-        putCachedVoice(cacheKey, fs.readFileSync(finalWav), { characterId: campaign.characterId });
-        synthesized = true;
-        console.log(`OK [Vbee TTS] Cảnh "${scene.id}" (${dur}s)`);
-      } catch (e) {
-        console.warn(`[Vbee TTS fallback] Cảnh "${scene.id}": ${e.message}`);
+  const runScenes = async () => {
+    for (const scene of campaign.scenes) {
+      const text = cleanSpeechText(scene.subtitle || campaign.hookText || 'Sản phẩm chính hãng chất lượng cao');
+      const { spoken, tokens } = normalizeViForTts(text);
+      const dur = Math.max(1, Number(scene.durationSec || 4));
+      const wordCount = text.split(/\s+/).filter(Boolean).length;
+      const maxWords = Math.round(dur * 2.8);
+      if (wordCount > maxWords) {
+        console.warn(`[Cảnh báo nhịp thoại] Cảnh "${scene.id}" (${dur}s) có ${wordCount} từ (khuyên dùng <= ${maxWords} từ để không bị đọc vội).`);
       }
-    } else if (!synthesized && ttsEngine === 'fpt-vi' && fptKey) {
-      try {
-        const buf = await fetchFptTts(spoken, { apiKey: fptKey, voice: aiCfg.fptVoice || 'banmai' });
-        fs.writeFileSync(rawTmp, buf);
-        speechSec = normalizeAndFitAudio(rawTmp, finalWav, dur, { hasBgm: bgmPresent, sceneId: scene.id });
-        putCachedVoice(cacheKey, fs.readFileSync(finalWav), { characterId: campaign.characterId });
-        synthesized = true;
-        console.log(`OK [FPT.AI TTS] Cảnh "${scene.id}" (${dur}s)`);
-      } catch (e) {
-        console.warn(`[FPT.AI TTS fallback] Cảnh "${scene.id}": ${e.message}`);
-      }
-    } else if (!synthesized && ttsEngine.startsWith('gemini') && geminiKey) {
-      try {
-        const buf = await fetchGeminiTts(spoken, geminiKey, aiCfg.ttsVoice || 'Kore');
-        fs.writeFileSync(rawTmp, buf);
-        speechSec = normalizeAndFitAudio(rawTmp, finalWav, dur, { hasBgm: bgmPresent, sceneId: scene.id });
-        putCachedVoice(cacheKey, fs.readFileSync(finalWav), { characterId: campaign.characterId });
-        synthesized = true;
-        console.log(`OK [Gemini TTS] Cảnh "${scene.id}" (${dur}s)`);
-      } catch (e) {
-        console.warn(`[Gemini TTS fallback] Cảnh "${scene.id}": ${e.message}`);
-      }
-    }
+      const finalWav = path.join(audioDir, `${scene.id}.wav`);
+      const rawBase = path.join(audioDir, `_raw-${scene.id}`);
+      const steps = route.mustBeLocal ? [...route.engines] : route.engines.flatMap((e) => (e === 'windows-sapi-vi' ? ['existing-wav', e] : [e]));
 
-    if (!synthesized) {
-      try {
-        const buf = await fetchGoogleTranslateViTts(spoken);
-        fs.writeFileSync(rawTmp, buf);
-        speechSec = normalizeAndFitAudio(rawTmp, finalWav, dur, { hasBgm: bgmPresent, sceneId: scene.id });
-        putCachedVoice(cacheKey, fs.readFileSync(finalWav), { characterId: campaign.characterId });
-        synthesized = true;
-        usedEngine = 'google-vi-natural';
-        console.log(`OK [Giọng Việt Tự Nhiên] Cảnh "${scene.id}" (${dur}s)`);
-      } catch (e) {
-        console.warn(`[Offline TTS fallback] Cảnh "${scene.id}": ${e.message}`);
+      let result = null;
+      for (const engine of steps) {
+        const label = ENGINE_LABELS[engine] || engine;
+        if (engine === 'existing-wav') {
+          if (fs.existsSync(finalWav) && fs.statSync(finalWav).size > 15000) {
+            result = { engine, cacheKey: '', speechSec: probeDurationSec(finalWav) || dur };
+            console.log(`OK [${label}] Cảnh "${scene.id}" (${dur}s)`);
+            break;
+          }
+          continue;
+        }
+        const isLocal = LOCAL_TTS_ENGINES.has(engine);
+        const cacheKey = voiceCacheKey({
+          engine,
+          model: isLocal ? localCfg.model : engine,
+          voiceId: voiceIdFor(engine),
+          text: spoken,
+          refAudioHash: isLocal ? refAudioHash : ''
+        });
+        const cachedPath = getCachedVoice(cacheKey);
+        if (cachedPath) {
+          fs.copyFileSync(cachedPath, finalWav);
+          const meta = getCachedVoiceMeta(cacheKey) || {};
+          result = { engine, cacheKey, fromCache: true, speechSec: meta.speechSec ?? (probeDurationSec(finalWav) || dur), speechStart: meta.speechStart, speechEnd: meta.speechEnd };
+          console.log(`[Cache] Cảnh "${scene.id}" (${dur}s) — ${label}`);
+          break;
+        }
+        try {
+          const rawPath = await synthRaw(engine, spoken, rawBase, dur);
+          if (!rawPath) continue;
+          const fit = fitAndMeasure(rawPath, finalWav, dur, { hasBgm: bgmPresent, sceneId: scene.id });
+          fs.rmSync(rawPath, { force: true });
+          putCachedVoice(cacheKey, fs.readFileSync(finalWav), { characterId: campaign.characterId, meta: fit });
+          result = { engine, cacheKey, ...fit };
+          console.log(`OK [${label}] Cảnh "${scene.id}" (${dur}s)`);
+          break;
+        } catch (e) {
+          console.warn(`[${label} lỗi → thử engine tiếp] Cảnh "${scene.id}": ${e.message}`);
+        }
       }
-    }
 
-    if (!synthesized) {
-      if (fs.existsSync(finalWav) && fs.statSync(finalWav).size > 15000) {
-        putCachedVoice(cacheKey, fs.readFileSync(finalWav), { characterId: campaign.characterId });
-        speechSec = probeDurationSec(finalWav) || dur;
-        usedEngine = 'existing-wav';
-        console.log(`OK [Giữ Giọng Việt Tự Nhiên đã tạo] Cảnh "${scene.id}" (${dur}s)`);
-        synthesized = true;
-      } else {
-        const fallbackRaw = path.join(audioDir, `_sapi-${scene.id}.wav`);
-        generateWindowsSapiOrToneWav(spoken, fallbackRaw, dur);
-        speechSec = normalizeAndFitAudio(fallbackRaw, finalWav, dur, { hasBgm: bgmPresent, sceneId: scene.id });
-        if (fs.existsSync(fallbackRaw)) fs.rmSync(fallbackRaw, { force: true });
-        putCachedVoice(cacheKey, fs.readFileSync(finalWav), { characterId: campaign.characterId });
-        usedEngine = 'local-sapi';
-        console.log(`OK [Local Voice/Audio] Cảnh "${scene.id}" (${dur}s)`);
+      if (!result) {
+        throw new Error(
+          route.mustBeLocal
+            ? `Không sinh được giọng KOL "${character.id}" bằng ${ENGINE_LABELS[route.engines[0]]} (cảnh "${scene.id}"). Kiểm tra VoiceStudio đang chạy với engine VoxCPM2, hoặc chạy lại với --allow-generic-voice để dùng giọng tạm (video sẽ gắn nhãn "GIỌNG TẠM").`
+            : `Không sinh được giọng cho cảnh "${scene.id}".`
+        );
       }
-    }
+      if (isCloneCharacter(character) && !LOCAL_TTS_ENGINES.has(result.engine)) usedGeneric = true;
 
-    if (fs.existsSync(rawTmp)) fs.rmSync(rawTmp, { force: true });
-    scene.audioSrc = path.posix.join('media', 'audio', `${scene.id}.wav`);
-    sceneWavs.push(finalWav);
-    manifest.push({
-      sceneId: scene.id,
-      wav: scene.audioSrc,
-      text,
-      spoken,
-      tokens,
-      engine: usedEngine,
-      cacheKey,
-      speechSec
-    });
+      scene.audioSrc = path.posix.join('media', 'audio', `${scene.id}.wav`);
+      sceneWavs.push(finalWav);
+      manifest.push({
+        sceneId: scene.id,
+        wav: scene.audioSrc,
+        text,
+        spoken,
+        tokens,
+        engine: result.fromCache ? `${result.engine} (cache)` : result.engine,
+        cacheKey: result.cacheKey,
+        speechSec: result.speechSec,
+        ...(Number.isFinite(result.speechStart) && Number.isFinite(result.speechEnd)
+          ? { speechStart: result.speechStart, speechEnd: result.speechEnd }
+          : {})
+      });
+    }
+  };
+
+  if (localCfg && manageLocalTts) {
+    try {
+      await withManagedLocalTts(localCfg, runScenes);
+    } finally {
+      await unloadLocalTts(localCfg).catch(() => false);
+    }
+  } else {
+    await runScenes();
   }
 
   // Nối toàn bộ thành voiceover-full.mp3 để nghe thử trên trình duyệt
   const concatList = path.join(audioDir, 'concat-audio.txt');
-  fs.writeFileSync(
-    concatList,
-    sceneWavs.map((w) => `file '${w.replace(/\\/g, '/')}'`).join('\n') + '\n',
-    'utf8'
-  );
+  fs.writeFileSync(concatList, sceneWavs.map((w) => `file '${w.replace(/\\/g, '/')}'`).join('\n') + '\n', 'utf8');
   const fullMp3 = path.join(audioDir, 'voiceover-full.mp3');
-  execFileSync('ffmpeg', [
-    '-y', '-v', 'error',
-    '-f', 'concat', '-safe', '0', '-i', concatList,
-    '-c:a', 'libmp3lame', '-b:a', '192k', fullMp3
-  ]);
-
-  const srtPath = path.join(audioDir, 'subtitles.srt');
-  fs.writeFileSync(srtPath, srtLines.join('\n'), 'utf8');
-
-  const assPath = path.join(audioDir, 'subtitles.ass');
-  generateAssSubtitles(campaign.scenes, assPath, { width: 1080, height: 1920 });
+  execFileSync('ffmpeg', ['-y', '-v', 'error', '-f', 'concat', '-safe', '0', '-i', concatList, '-c:a', 'libmp3lame', '-b:a', '192k', fullMp3]);
 
   const manifestPath = path.join(audioDir, 'voice-manifest.json');
   const manifestTmp = `${manifestPath}.tmp-${process.pid}`;
   fs.writeFileSync(manifestTmp, JSON.stringify(manifest, null, 2) + '\n', 'utf8');
   fs.renameSync(manifestTmp, manifestPath);
 
+  // Gói 7 — T10/T11: căn thời gian từng từ → SRT theo cụm từ + ASS (highlight từng từ nếu bật)
+  const aligned = await alignCampaignWords(campaignDir, { model: aiCfg.subtitleAlignModel || 'heuristic-silence', root: ROOT });
+  const wordsByScene = Object.fromEntries(aligned.map((x) => [x.sceneId, x.words]));
+  const subtitleStyle = (campaign.subtitleStyle || aiCfg.subtitleStyle) === 'word-highlight' ? 'word-highlight' : 'box';
+
+  const srtPath = path.join(audioDir, 'subtitles.srt');
+  fs.writeFileSync(srtPath, buildSrtFromWords(campaign.scenes, wordsByScene), 'utf8');
+  const assPath = path.join(audioDir, 'subtitles.ass');
+  generateAssSubtitles(campaign.scenes, assPath, {
+    width: 1080,
+    height: 1920,
+    wordsByScene: subtitleStyle === 'word-highlight' ? wordsByScene : null
+  });
+
+  if (usedGeneric) {
+    campaign.voiceIsGeneric = true;
+    console.warn(`[KOL] Đã dùng GIỌNG TẠM cho "${character.id}" (--allow-generic-voice) — video sẽ gắn nhãn "GIỌNG TẠM".`);
+  } else {
+    delete campaign.voiceIsGeneric;
+  }
   campaign.voiceoverSrc = 'media/audio/voiceover-full.mp3';
   campaign.subtitlesSrtSrc = 'media/audio/subtitles.srt';
   campaign.subtitlesAssSrc = 'media/audio/subtitles.ass';
+  campaign.subtitlesWordsSrc = 'media/audio/words.json';
   const campTmp = `${campaignPath}.tmp-${process.pid}`;
   fs.writeFileSync(campTmp, JSON.stringify(campaign, null, 2) + '\n', 'utf8');
   fs.renameSync(campTmp, campaignPath);
-  console.log(`Đã tạo xong giọng đọc tại: ${path.relative(ROOT, fullMp3)} & phụ đề: .srt / .ass`);
+  console.log(`Đã tạo xong giọng đọc tại: ${path.relative(ROOT, fullMp3)} & phụ đề: .srt / .ass (căn từ: ${aligned[0]?.source || 'không có'})`);
   return { fullMp3, srtPath, assPath, manifestPath, sceneWavs };
 }
 

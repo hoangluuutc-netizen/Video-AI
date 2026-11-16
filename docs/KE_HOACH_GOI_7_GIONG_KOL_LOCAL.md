@@ -320,8 +320,8 @@ Kịch bản LLM / Ảnh / Video: VoiceStudio không có công cụ cho các h�
 |---|---|---|---|
 | **7.1 Nền tảng** | T1 → T6 | Không | ✅ **XONG** (`300e4da` + vá UI `e0e2ed2`) |
 | **7.0 Spike** | T0 | VoiceStudio + Python/uv — **người dùng ĐÃ DUYỆT** | Cổng quyết định; dò API thật. Cần giọng mẫu của chính người dùng |
-| **7.2a Không cần cài** | T0-Bước 1 → T5b → T8* → T10* → T11 | Không | Đồng ý/duyệt/thu hồi KOL, căn từ heuristic, phụ đề highlight từng từ, ước tính Fal đúng bậc 5s/10s |
-| **7.2b Sau T0** | T7 (+T7B nếu cần) → T9 → T10 (tầng 2–3) → T12 → phần còn lại của T8 | Cần T0 PASS | Giọng KOL thật qua VoiceStudio, lựa chọn TTS, căn từ bằng ASR, X-Ray lời thoại |
+| **7.2a Không cần cài** | T0-Bước 1 → T5b → T8* → T10* → T11 | Không | ✅ **XONG** (Claude) — kiểm thật: burn-in ASS + dấu nháp trên video |
+| **7.2b Sau T0** | T7 (+T7B nếu cần) → T9 → T10 (tầng 2–3) → T12 → phần còn lại của T8 | Cần T0 PASS | 🟡 **MÃ XONG** (Claude, test bằng máy chủ giả) — **chờ Task 0 xác minh với VoiceStudio + Python thật**. Chưa làm: T7B (chỉ khi cổng T0 yêu cầu), xóa giọng qua API VoiceStudio |
 
 **Phạm vi Mốc 7.2a** (đánh dấu * = làm một phần):
 
@@ -334,7 +334,8 @@ Kịch bản LLM / Ảnh / Video: VoiceStudio không có công cụ cho các h�
 - **T10\* — chỉ tầng 1:**
   - Làm `heuristicWordTimes`, `mapAsrToScript` (hàm thuần, test bằng dữ liệu ASR giả), `detectSpeechBounds`, `alignCampaignWords` với `heuristic-silence`.
   - Danh sách `#cfg-subtitle-align` hiện đủ 3 lựa chọn theo bảng A5-2, nhưng `faster-whisper-local` và `voicestudio-whisperx` **xám kèm chú thích "(cần Task 0)"**. Chưa có `getLocalToolsStatus` (T9) thì để xám cứng.
-  - **Bẫy cần tránh:** âm nền sine trộn vào giọng (khi không có nhạc nền) ở mức `volume=0.025` ≈ **−32 dBFS**, to hơn ngưỡng `silencedetect=noise=-35dB` → đo trên file đã trộn sẽ **không bao giờ thấy khoảng lặng**. Phải đo trên **file TTS thô trước khi trộn** ngay trong `generate-voiceover.mjs`, quy đổi theo `tempo` (`speechStart = rawStart / tempo`, `speechEnd = min(dur, rawEnd / tempo)`), rồi ghi `speechStart` / `speechEnd` vào `voice-manifest.json`. `detectSpeechBounds` chỉ là fallback khi manifest thiếu 2 trường này.
+  - **Đo vùng tiếng nói:** đo trên **file TTS thô trước khi trộn** ngay trong `generate-voiceover.mjs`, quy đổi theo `tempo` (`speechStart = rawStart / tempo`, `speechEnd = min(dur, rawEnd / tempo)`), ghi `speechStart` / `speechEnd` vào `voice-manifest.json` (và vào meta của cache giọng). `detectSpeechBounds` chỉ là fallback khi manifest thiếu 2 trường này.
+  - *Đính chính (đã đo thật):* bản 3 từng ghi âm nền sine ≈ −32 dBFS sẽ che ngưỡng −35 dB. **Sai** — bộ lọc `sine` mặc định biên độ 1/8 nên âm nền chỉ ≈ −50 dBFS, `silencedetect` vẫn đo đúng trên file đã trộn. Đo trên file thô vẫn được giữ vì chính xác hơn (trước atempo / fade).
 - **T11:** làm toàn bộ (dùng `words.json` từ heuristic). Thiếu `libass` → lựa chọn `word-highlight` xám + giữ `drawtext`.
 - **Khóa Mốc 7.2a** (theo Global Constraints), commit gợi ý: `git commit -m "Gói 7.2a: đồng ý/duyệt/thu hồi giọng KOL, căn từ heuristic + phụ đề highlight từng từ, ước tính Fal bậc 5s/10s"`.
 

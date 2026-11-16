@@ -5,6 +5,7 @@ import { analyzeSampleVideo } from './analyze-sample-video.mjs';
 import { generateCampaignVoiceover } from './generate-voiceover.mjs';
 import { readJson } from './lib/prompt-builder.mjs';
 import { prepareForHeavyPhase } from './lib/resource-gate.mjs';
+import { getApprovalState } from './lib/kol-consent.mjs';
 
 const ROOT = process.cwd();
 
@@ -99,26 +100,7 @@ export async function runOptimalPipeline(
   );
   runStep('Kiểm tra toàn bộ schema dự án (validate-assets.mjs)', 'scripts/validate-assets.mjs');
 
-  // Tự động cập nhật Sổ Vận Hành Reel (campaigns/reel-sheet.json)
-  const latestCampaign = readJson(campaignPath);
-  const sheetPath = path.join(ROOT, 'campaigns', 'reel-sheet.json');
-  const rawSheet = fs.existsSync(sheetPath) ? readJson(sheetPath) : { reels: [] };
-  const existing = Array.isArray(rawSheet) ? rawSheet : (rawSheet.reels || []);
-  const totalSec = (latestCampaign.scenes || []).reduce((acc, s) => acc + Number(s.durationSec || 0), 0);
-  const record = {
-    code: `REEL-${String(existing.length + 1).padStart(2, '0')}`,
-    campaignId: latestCampaign.id,
-    type: `Veo3.1 + Bokeh Cinema (${totalSec}s)`,
-    hook: latestCampaign.hookText,
-    durationSec: totalSec,
-    mode: latestCampaign.mode || 'real-footage',
-    status: 'PASS (100% Gốc + Có Tiếng)',
-    videoLink: `campaigns/${latestCampaign.id}/out/ffmpeg-9x16.mp4`,
-    updatedAt: new Date().toISOString().slice(0, 16).replace('T', ' ')
-  };
-  const filtered = existing.filter((r) => r.campaignId !== latestCampaign.id);
-  filtered.unshift(record);
-  fs.writeFileSync(sheetPath, JSON.stringify({ reels: filtered }, null, 2) + '\n', 'utf8');
+  const latestCampaign = recordReelSheet(campaignPath);
 
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
   console.log(`\n==========================================================`);
@@ -127,6 +109,38 @@ export async function runOptimalPipeline(
   console.log(`📋 Gói Prompt Veo 3.1 / ToolKichBan: campaigns/${latestCampaign.id}/veo3-prompts.json`);
   console.log(`🎙️ File Âm thanh thuyết minh:       campaigns/${latestCampaign.id}/media/audio/voiceover-full.mp3`);
   console.log(`==========================================================\n`);
+}
+
+// Tự động cập nhật Sổ Vận Hành Reel (campaigns/reel-sheet.json) — dùng chung cho Auto-Pilot và lô theo pha
+export function recordReelSheet(campaignPath) {
+  const latestCampaign = readJson(campaignPath);
+  const sheetPath = path.join(ROOT, 'campaigns', 'reel-sheet.json');
+  const rawSheet = fs.existsSync(sheetPath) ? readJson(sheetPath) : { reels: [] };
+  const existing = Array.isArray(rawSheet) ? rawSheet : (rawSheet.reels || []);
+  const totalSec = (latestCampaign.scenes || []).reduce((acc, s) => acc + Number(s.durationSec || 0), 0);
+  const charPath = path.join(ROOT, 'assets', 'characters', latestCampaign.characterId || '', 'character.json');
+  const character = fs.existsSync(charPath) ? readJson(charPath) : {};
+  const approvalState = getApprovalState(latestCampaign, character);
+  const needsKolApproval = approvalState === 'pending' || approvalState === 'stale';
+  const record = {
+    code: `REEL-${String(existing.length + 1).padStart(2, '0')}`,
+    campaignId: latestCampaign.id,
+    type: `Veo3.1 + Bokeh Cinema (${totalSec}s)`,
+    hook: latestCampaign.hookText,
+    durationSec: totalSec,
+    mode: latestCampaign.mode || 'real-footage',
+    status: needsKolApproval
+      ? 'CHỜ KOL DUYỆT'
+      : latestCampaign.voiceIsGeneric
+        ? 'PASS (GIỌNG TẠM)'
+        : 'PASS (100% Gốc + Có Tiếng)',
+    videoLink: `campaigns/${latestCampaign.id}/out/ffmpeg-9x16.mp4`,
+    updatedAt: new Date().toISOString().slice(0, 16).replace('T', ' ')
+  };
+  const filtered = existing.filter((r) => r.campaignId !== latestCampaign.id);
+  filtered.unshift(record);
+  fs.writeFileSync(sheetPath, JSON.stringify({ reels: filtered }, null, 2) + '\n', 'utf8');
+  return latestCampaign;
 }
 
 if (

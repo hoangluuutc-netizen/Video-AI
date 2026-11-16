@@ -16,6 +16,8 @@ outputs/
 assets/ai-cache/
 assets/voice-cache/
 assets/private/*
+!assets/private/README.md
+tools/speech/.venv/
 campaigns/*/media/
 campaigns/*/out/
 campaigns/*/cutlist.md
@@ -25,6 +27,8 @@ campaigns/*/cutlist.csv
 *.webm
 *.wav
 *.mp3
+# Giọng mẫu của KOL AI (mode "design", không phải người thật) được commit để tái tạo giọng
+!assets/characters/*/voice-ref.wav
 
 # OS & Editor
 .DS_Store

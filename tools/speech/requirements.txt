@@ -1,0 +1,9 @@
+# Công cụ giọng nói local (Gói 7). Cài trong tools/speech/.venv (gitignored) bằng uv + Python 3.11:
+#   uv venv tools/speech/.venv --python 3.11
+#   uv pip install --python tools/speech/.venv -r tools/speech/requirements.txt
+# Tất cả đều cho phép dùng thương mại (MIT). KHÔNG cài OmniVoice (CC-BY-NC).
+faster-whisper>=1.0
+demucs>=4.0.1
+soundfile
+# Chỉ cần khi Task 0 chọn sidecar dự phòng (Task 7B) — VoxCPM2, Apache-2.0:
+# voxcpm>=2.0.3

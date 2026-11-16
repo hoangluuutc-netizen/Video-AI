@@ -269,6 +269,7 @@ async function initDashboard() {
       serverOnline = true;
       statusEl.innerHTML = '<span aria-hidden="true">🟢</span><span class="server-label">Đã kết nối</span>';
       statusEl.title = 'Đã kết nối Local Server — các nút sẽ chạy lệnh thật trên máy';
+      refreshLocalToolsStatus();
       statusEl.style.background = '#DCFCE7';
       statusEl.style.color = '#15803D';
     }
@@ -365,6 +366,59 @@ function renderExistingAssetPreviews() {
   }
 }
 
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
+}
+
+// Gói 7 — T12: lời thoại video mẫu (văn bản bóc băng từ video bên ngoài → luôn escape)
+function renderSpeechXray(speech) {
+  const btn = `<button class="icon-pill-btn" onclick="runXraySpeech()">🗣️ Bóc băng lời thoại</button>`;
+  if (!speech) {
+    return `<div class="speech-xray"><span class="speech-empty">Chưa bóc băng lời thoại video mẫu.</span>${btn}</div>`;
+  }
+  const limit = 2.8;
+  const fast = speech.wordsPerSec > limit;
+  const transcript = speech.transcript.length > 320 ? `${speech.transcript.slice(0, 320)}…` : speech.transcript;
+  return `
+    <div class="speech-xray">
+      <div class="speech-stats">
+        <span class="badge-mech">🗣️ Tốc độ nói: <strong>${escapeHtml(speech.wordsPerSec)} từ/giây</strong>${fast ? ` (nhanh hơn ngưỡng ${limit})` : ''}</span>
+        ${speech.musicBpm?.value ? `<span class="badge-mech">🎵 BPM nhạc (đã tách giọng): <strong>${escapeHtml(speech.musicBpm.value)}</strong></span>` : ''}
+        <span class="badge-mech">🔧 Công cụ: <strong>${escapeHtml(speech.tool)}</strong></span>
+        ${btn}
+      </div>
+      <p class="speech-hook"><strong>Hook 3s đầu:</strong> ${escapeHtml(speech.hookText3s || '(không có lời)')}</p>
+      <p class="speech-transcript">${escapeHtml(transcript)}</p>
+    </div>`;
+}
+
+async function runXraySpeech() {
+  if (!serverOnline) {
+    logConsole('Cần Local Server để bóc băng lời thoại.');
+    return;
+  }
+  const clipId = appState.sampleAnalysis?.sampleVideo?.clipId;
+  if (!clipId) {
+    logConsole('Phân tích video mẫu trước, rồi mới bóc băng lời thoại.');
+    return;
+  }
+  const t0 = startJobProgress('Đang tách nhạc & bóc băng lời thoại video mẫu...', 90);
+  try {
+    const res = await fetch('/api/xray-speech', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clipId, model: document.getElementById('cfg-xray-audio')?.value })
+    });
+    const data = await res.json();
+    if (data.state) appState.sampleAnalysis = data.state.sampleAnalysis || appState.sampleAnalysis;
+    finishJobProgress(Boolean(data.ok), data.output, t0);
+    logConsole(data.output);
+    if (data.ok) renderSampleAnalysisCard();
+  } catch (e) {
+    finishJobProgress(false, `Lỗi bóc băng: ${e.message}`, t0);
+  }
+}
+
 function renderSampleAnalysisCard() {
   const box = document.getElementById('sample-analysis-container');
   if (!box) return;
@@ -446,6 +500,7 @@ function renderSampleAnalysisCard() {
           <span class="badge-mech">⚡ Hook 3s đầu: <strong>${hookStrength}</strong></span>
         </div>
         ${svgWave}
+        ${renderSpeechXray(xray.speech)}
       </div>
     `;
   }
@@ -1660,6 +1715,9 @@ function syncAiConfigToUi() {
   setVal('cfg-video-model', cfg.videoModel);
   setVal('cfg-tts-model', cfg.ttsModel);
   setVal('cfg-ai-scene-count', String(cfg.selectiveAiCount ?? 1));
+  setVal('cfg-subtitle-align', cfg.subtitleAlignModel);
+  setVal('cfg-subtitle-style', cfg.subtitleStyle);
+  setVal('cfg-xray-audio', cfg.xrayAudioModel);
   const budgetEl = document.getElementById('cfg-max-cost');
   if (budgetEl) budgetEl.value = Number(cfg.maxCostUsdPerVideo ?? 0.5).toFixed(2);
   const selEl = document.getElementById('cfg-selective-ai');
@@ -1692,7 +1750,8 @@ function refreshBrainSummary() {
   for (const hint of document.querySelectorAll('.cost-hint[data-hint-for]')) {
     const { price, note } = selectedOptionParts(hint.dataset.hintFor);
     // "$0 / ảnh, giữ 100% pixel gốc" → chip "$0 / ảnh" + ghi chú "giữ 100% pixel gốc"
-    const [chipText, ...extra] = price.split(/,\s*/);
+    const [chipText, ...extra] = price.split(/,\s+/); // ", " mới là ngăn ý; "0,3s" là số thập phân
+
     hint.textContent = '';
     if (chipText) {
       const chip = document.createElement('span');
@@ -1701,7 +1760,45 @@ function refreshBrainSummary() {
       hint.appendChild(chip);
     }
     hint.appendChild(document.createTextNode([note, ...extra].filter(Boolean).join(', ')));
+    // Lựa chọn cần công cụ local mà chưa sẵn sàng → nói rõ lý do ngay dưới ô chọn
+    const sel = document.getElementById(hint.dataset.hintFor);
+    const req = sel?.selectedOptions?.[0]?.dataset?.requires;
+    const why = req ? localToolUnavailableReason(req) : '';
+    if (why) {
+      const warn = document.createElement('span');
+      warn.className = 'tool-warn';
+      warn.textContent = ` Chưa sẵn sàng: ${why}`;
+      hint.appendChild(warn);
+    }
   }
+}
+
+// ===== Gói 7 — trạng thái công cụ local (VoiceStudio, Python, libass) =====
+let localToolsStatus = null;
+
+function localToolUnavailableReason(req) {
+  if (!localToolsStatus) return '';
+  if (req === 'voicestudio') return localToolsStatus.voicestudio?.ok ? '' : localToolsStatus.voicestudio?.detail || 'VoiceStudio chưa chạy (cần Task 0)';
+  if (req === 'speechPython') return localToolsStatus.speechPython ? '' : 'chưa cài tools/speech/.venv (cần Task 0)';
+  if (req === 'libass') return localToolsStatus.libass ? '' : 'FFmpeg thiếu libass';
+  return '';
+}
+
+async function refreshLocalToolsStatus() {
+  if (!serverOnline) return;
+  try {
+    const res = await fetch('/api/local-tools/status');
+    localToolsStatus = await res.json();
+  } catch {
+    localToolsStatus = null;
+    return;
+  }
+  for (const opt of document.querySelectorAll('option[data-requires]')) {
+    const why = localToolUnavailableReason(opt.dataset.requires);
+    opt.disabled = Boolean(why);
+    opt.title = why ? `Chưa sẵn sàng: ${why}` : '';
+  }
+  refreshBrainSummary();
 }
 
 const COST_STEP_LABELS = { keyframe: 'Ảnh keyframe', video: 'Video AI', tts: 'Giọng đọc' };
@@ -1776,7 +1873,11 @@ async function refreshCostEstimate() {
 }
 
 function setupCostControls() {
-  const ids = ['cfg-llm-model', 'cfg-image-model', 'cfg-video-model', 'cfg-tts-model', 'cfg-selective-ai', 'cfg-ai-scene-count', 'cfg-max-cost'];
+  const ids = [
+    'cfg-llm-model', 'cfg-image-model', 'cfg-video-model', 'cfg-tts-model',
+    'cfg-subtitle-align', 'cfg-subtitle-style', 'cfg-xray-audio',
+    'cfg-selective-ai', 'cfg-ai-scene-count', 'cfg-max-cost'
+  ];
   for (const id of ids) {
     const el = document.getElementById(id);
     if (!el) continue;
@@ -1821,6 +1922,9 @@ async function saveAiConfigFromUi() {
     selectiveAiOnly: Boolean(document.getElementById('cfg-selective-ai')?.checked),
     selectiveAiCount: Number(document.getElementById('cfg-ai-scene-count')?.value || 1),
     maxCostUsdPerVideo: document.getElementById('cfg-max-cost')?.value ?? '',
+    subtitleAlignModel: document.getElementById('cfg-subtitle-align')?.value,
+    subtitleStyle: document.getElementById('cfg-subtitle-style')?.value,
+    xrayAudioModel: document.getElementById('cfg-xray-audio')?.value,
     geminiApiKey: document.getElementById('cfg-gemini-key')?.value || '',
     falApiKey: document.getElementById('cfg-fal-key')?.value || '',
     vbeeApiKey: ttsModel === 'vbee-vi' ? viTtsKey : '',

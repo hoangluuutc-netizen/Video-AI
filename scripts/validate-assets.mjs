@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { validateVoiceProfile } from './lib/kol-consent.mjs';
 
 const ROOT = process.cwd();
 const VALID_SCENE_TYPES = new Set([
@@ -110,6 +111,10 @@ function main() {
     if (!Array.isArray(c.immutableTraits) || c.immutableTraits.length === 0) {
       errors.push(`[characters/${dir}] "immutableTraits" phải có ít nhất 1 mô tả khóa nhân vật.`);
     }
+    // Gói 7 — Task 8: hồ sơ giọng KOL (engine được phép, đồng ý khi clone, giọng mẫu người thật chỉ ở assets/private/)
+    const vr = validateVoiceProfile(c.voiceProfile, `characters/${dir}`, { root: ROOT });
+    errors.push(...vr.errors);
+    warnings.push(...vr.warnings);
     charIds.add(c.id);
   }
 

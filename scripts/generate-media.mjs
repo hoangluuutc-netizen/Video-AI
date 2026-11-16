@@ -3,7 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { buildScenePrompt, readJson } from './lib/prompt-builder.mjs';
 import { FAL_IMAGE_ENDPOINTS, FAL_VIDEO_ENDPOINTS, generateFalImage, generateFalVideo } from './lib/fal-client.mjs';
-import { PRICE_TABLE_USD, estimateAiCost, assertWithinBudget, recordCost } from './lib/cost-ledger.mjs';
+import { PRICE_TABLE_USD, estimateAiCost, assertWithinBudget, recordCost, falBilledSeconds } from './lib/cost-ledger.mjs';
 import { aiCacheKey, getCachedAi, putCachedAi } from './lib/ai-cache.mjs';
 
 function hashFiles(paths) {
@@ -313,11 +313,17 @@ async function main() {
     targets = targets.slice(0, selectiveAiCount);
   }
 
+  const estVideoModel = process.env.GEMINI_VIDEO_MODEL || aiCfg.videoModel || 'ffmpeg-bokeh-cinema';
   const est = estimateAiCost({
     imageModel: process.env.GEMINI_IMAGE_MODEL || aiCfg.imageModel || 'ffmpeg-real-composite',
-    videoModel: process.env.GEMINI_VIDEO_MODEL || aiCfg.videoModel || 'ffmpeg-bokeh-cinema',
+    videoModel: estVideoModel,
     ttsModel: aiCfg.ttsModel || 'google-vi-natural',
-    aiScenes: mode === 'video' ? targets : [],
+    // Fal tính theo clip (5s/10s), không theo đúng durationSec của cảnh
+    aiScenes: mode === 'video'
+      ? targets.map((t) => ({
+          durationSec: FAL_VIDEO_ENDPOINTS[estVideoModel] ? falBilledSeconds(t.durationSec, estVideoModel) : Number(t.durationSec || 5)
+        }))
+      : [],
     keyframes: mode === 'keyframe' ? targets.length : 0
   });
   const maxUsd = Number(aiCfg.maxCostUsdPerVideo ?? 0.5);

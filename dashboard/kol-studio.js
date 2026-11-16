@@ -282,6 +282,28 @@ async function renderTalkingKol() {
   }
 }
 
+async function approveKolScript() {
+  const kolId = document.getElementById('kol-id').value.trim();
+  const approvedBy = document.getElementById('kol-approved-by').value.trim();
+  const note = document.getElementById('kol-approval-note');
+  if (!kolId) {
+    setStatus('Vui lòng chọn hoặc lưu hồ sơ KOL trước.');
+    return;
+  }
+  if (!approvedBy) {
+    setStatus('Ghi tên người duyệt trước khi xác nhận.');
+    document.getElementById('kol-approved-by').focus();
+    return;
+  }
+  try {
+    const res = await apiJson('/api/kol/approve', 'POST', { campaignId: `kol-${kolId}`, approvedBy });
+    if (note) note.textContent = res.output;
+    setStatus(res.output);
+  } catch (e) {
+    setStatus(`Lỗi ghi duyệt: ${e.message}`);
+  }
+}
+
 async function loadSkillsHub() {
   try {
     const res = await apiJson('/api/kol/skills');

@@ -86,6 +86,13 @@ export function estimateAiCost({
   return { items, totalUsd };
 }
 
+// Số giây Fal thực sự tính tiền cho 1 clip: Kling làm tròn 5s/10s (cùng quy tắc fal-client.mjs),
+// Wan 2.2 I2V không nhận tham số thời lượng nên luôn trả 1 clip mặc định ~5s.
+export function falBilledSeconds(durationSec, modelKey = 'fal-kling-turbo') {
+  if (modelKey === 'fal-wan-i2v') return 5;
+  return Number(durationSec) >= 8 ? 10 : 5;
+}
+
 // Ước tính chi phí 1 video cho Dashboard: N cảnh AI, mỗi cảnh 1 keyframe + clip Fal (Fal tính tròn 5s/clip).
 export function estimateVideoCost({
   imageModel = 'ffmpeg-real-composite',

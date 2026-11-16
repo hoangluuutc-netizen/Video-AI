@@ -4,7 +4,67 @@ import { execFileSync } from 'node:child_process';
 import { ROOT, VERTICAL_FILTER, loadCatalog } from './lib/footage.mjs';
 import { inferMuseStyle, readJson } from './lib/prompt-builder.mjs';
 import { generateCampaignVoiceover } from './generate-voiceover.mjs';
-import { detectVideoEncoder, execFfmpegAsync, runWithConcurrency } from './lib/ffmpeg-encoder.mjs';
+import { detectVideoEncoder, execFfmpegAsync, runWithConcurrency, hasFfmpegFilter } from './lib/ffmpeg-encoder.mjs';
+import { getApprovalState } from './lib/kol-consent.mjs';
+import { generateSceneAss } from './lib/ass-subtitles.mjs';
+
+// Sinh ASS theo từng cảnh từ words.json (thời gian tương đối cảnh) để burn-in trong lượt encode của cảnh đó
+function ensureSceneAssFiles(campaign, campaignDir) {
+  const wordsPath = path.join(campaignDir, 'media', 'audio', 'words.json');
+  if (!fs.existsSync(wordsPath)) return 0;
+  let rows = [];
+  try {
+    rows = JSON.parse(fs.readFileSync(wordsPath, 'utf8'));
+  } catch {
+    return 0;
+  }
+  const byScene = Object.fromEntries(rows.map((r) => [r.sceneId, r.words]));
+  let n = 0;
+  for (const sc of campaign.scenes || []) {
+    if (!byScene[sc.id]?.length) continue;
+    generateSceneAss(sc, byScene[sc.id], path.join(campaignDir, 'media', 'audio', `scene-${sc.id}.ass`), { width: 1080, height: 1920 });
+    n++;
+  }
+  return n;
+}
+
+function escFilterPath(p) {
+  return p.replace(/\\/g, '/').replace(/:/g, '\\:');
+}
+
+// Kiểu phụ đề hiệu lực: chiến dịch ghi đè > cấu hình Bộ não > 'box' (như cũ)
+function resolveSubtitleStyle(campaign, aiCfg) {
+  const v = campaign?.subtitleStyle || aiCfg?.subtitleStyle || 'box';
+  return v === 'word-highlight' ? 'word-highlight' : 'box';
+}
+
+function loadAiCfgSafe() {
+  const p = path.join(ROOT, 'assets', 'brand-kit', 'ai-config.json');
+  try {
+    return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : {};
+  } catch {
+    return {};
+  }
+}
+
+// Lớp phủ chung cho mọi nhánh dựng: phụ đề ASS theo cảnh (nếu bật) + dấu "BẢN NHÁP" (nếu KOL chưa duyệt)
+function buildSceneOverlays(scene, idx, ctx, tmpDir, fontEsc) {
+  let assFilter = '';
+  const sceneAss = path.join(ctx.campaignDir, 'media', 'audio', `scene-${scene.id}.ass`);
+  if (ctx.burnAss && fs.existsSync(sceneAss)) {
+    assFilter = `,ass='${escFilterPath(sceneAss)}':fontsdir='C\\:/Windows/Fonts'`;
+  }
+  let draftFilter = '';
+  if (ctx.draftText && fontEsc) {
+    const draftFile = path.join(tmpDir, `draft-${idx}.txt`);
+    fs.writeFileSync(draftFile, ctx.draftText, 'utf8');
+    draftFilter =
+      `,drawtext=fontfile='${fontEsc}':textfile='${escFilterPath(draftFile)}':expansion=none` +
+      // Đặt ở vùng nền trống dưới phụ đề để không che sản phẩm / nhân vật
+      `:fontcolor=white:fontsize=38:box=1:boxcolor=#B91C1C@0.78:boxborderw=18:x=(w-text_w)/2:y=h-text_h-150`;
+  }
+  return { assFilter, draftFilter };
+}
 
 function csvCell(v) {
   return `"${String(v ?? '').replace(/"/g, '""')}"`;
@@ -100,6 +160,9 @@ export async function renderSceneSegmentAsync(scene, idx, ctx, tmpDir) {
   const hasVoiceover = audioAbs && fs.existsSync(audioAbs);
 
   const hasOwnAssets = Boolean(productImgAbs || charImgAbs);
+  const fontEsc = toFfmpegFontPath();
+  const { assFilter, draftFilter } = buildSceneOverlays(scene, idx, ctx, tmpDir, fontEsc);
+  const simpleVf = `${VERTICAL_FILTER}${assFilter}${draftFilter}`;
   const veoClipAbs = scene.videoSrc && fs.existsSync(path.join(campaignDir, scene.videoSrc))
     ? path.join(campaignDir, scene.videoSrc)
     : fs.existsSync(path.join(campaignDir, 'media', 'clips', `${scene.id}.mp4`))
@@ -111,10 +174,10 @@ export async function renderSceneSegmentAsync(scene, idx, ctx, tmpDir) {
     const args = ['-y', '-v', 'error', '-t', String(dur), '-i', veoClipAbs];
     if (hasVoiceover) {
       args.push('-i', audioAbs);
-      args.push('-vf', VERTICAL_FILTER, '-map', '0:v:0', '-map', '1:a:0');
+      args.push('-vf', simpleVf, '-map', '0:v:0', '-map', '1:a:0');
     } else {
       args.push('-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo');
-      args.push('-vf', VERTICAL_FILTER, '-map', '0:v:0', '-map', '1:a:0');
+      args.push('-vf', simpleVf, '-map', '0:v:0', '-map', '1:a:0');
     }
     args.push(
       ...enc.args,
@@ -136,10 +199,10 @@ export async function renderSceneSegmentAsync(scene, idx, ctx, tmpDir) {
     const args = ['-y', '-v', 'error', '-ss', String(start), '-t', String(dur), '-i', clipAbs];
     if (hasVoiceover) {
       args.push('-i', audioAbs);
-      args.push('-vf', VERTICAL_FILTER, '-map', '0:v:0', '-map', '1:a:0');
+      args.push('-vf', simpleVf, '-map', '0:v:0', '-map', '1:a:0');
     } else {
       args.push('-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo');
-      args.push('-vf', VERTICAL_FILTER, '-map', '0:v:0', '-map', clipMeta?.hasAudio ? '0:a:0' : '1:a:0');
+      args.push('-vf', simpleVf, '-map', '0:v:0', '-map', clipMeta?.hasAudio ? '0:a:0' : '1:a:0');
     }
     args.push(
       ...enc.args,
@@ -171,7 +234,6 @@ export async function renderSceneSegmentAsync(scene, idx, ctx, tmpDir) {
   }
 
   // Tạo file text UTF-8 cho phụ đề & banner để không lỗi dấu tiếng Việt
-  const fontEsc = toFfmpegFontPath();
   const subText = wrapVietnameseText(scene.subtitle || '', 36);
   const subFile = path.join(tmpDir, `sub-${idx}.txt`);
   fs.writeFileSync(subFile, subText || ' ', 'utf8');
@@ -187,13 +249,17 @@ export async function renderSceneSegmentAsync(scene, idx, ctx, tmpDir) {
   fs.writeFileSync(topFile, topBadgeText, 'utf8');
   const topFileEsc = topFile.replace(/\\/g, '/').replace(/:/g, '\\:');
 
-  const overlayGraphics = fontEsc
+  const topGraphics = fontEsc
     ? `,drawbox=x=80:y=96:w=920:h=86:color=#FF5A1F@0.94:t=fill` +
-      `,drawtext=fontfile='${fontEsc}':textfile='${topFileEsc}':expansion=none:fontcolor=white:fontsize=34:x=(w-text_w)/2:y=122` +
-      `,drawbox=x=56:y=1500:w=968:h=245:color=#09090B@0.82:t=fill` +
+      `,drawtext=fontfile='${fontEsc}':textfile='${topFileEsc}':expansion=none:fontcolor=white:fontsize=34:x=(w-text_w)/2:y=122`
+    : '';
+  const boxSubtitleGraphics = fontEsc
+    ? `,drawbox=x=56:y=1500:w=968:h=245:color=#09090B@0.82:t=fill` +
       `,drawbox=x=56:y=1500:w=968:h=6:color=#FF5A1F@0.95:t=fill` +
       `,drawtext=fontfile='${fontEsc}':textfile='${subFileEsc}':expansion=none:fontcolor=white:fontsize=34:line_spacing=10:x=(w-text_w)/2:y=1532`
     : '';
+  // Phụ đề "từ đang đọc" (ASS) thay cho khung phụ đề cả câu; giữ thanh hook phía trên và dấu nháp
+  const overlayGraphics = topGraphics + (assFilter || boxSubtitleGraphics) + draftFilter;
 
   const prodSrc = cleanProdAbs || productImgAbs;
 
@@ -254,6 +320,8 @@ export async function renderSceneSegmentAsync(scene, idx, ctx, tmpDir) {
   } else {
     if (hasVoiceover) args.push('-i', audioAbs);
     else args.push('-f', 'lavfi', '-i', `anullsrc=r=48000:cl=stereo:d=${dur}`);
+    const plainVf = `${assFilter}${draftFilter}`.replace(/^,/, '');
+    if (plainVf) args.push('-vf', plainVf);
     args.push('-map', '0:v:0', '-map', '1:a:0');
   }
 
@@ -398,6 +466,28 @@ async function main() {
     const encoder = detectVideoEncoder();
     console.log(`[FFmpeg Encoder] Dùng ${encoder.name}`);
 
+    // Gói 7 — T8: KOL người thật chưa duyệt kịch bản (hoặc lời đã sửa sau khi duyệt) → đóng dấu nháp
+    const approvalState = getApprovalState(campaign, character);
+    const draftLabels = [];
+    if (approvalState === 'pending' || approvalState === 'stale') draftLabels.push('BẢN NHÁP – CHỜ KOL DUYỆT');
+    if (campaign.voiceIsGeneric) draftLabels.push('GIỌNG TẠM');
+    if (draftLabels.length) console.warn(`[KOL] ${draftLabels.join(' | ')} (trạng thái duyệt: ${approvalState})`);
+
+    // Gói 7 — T11: phụ đề highlight từng từ, burn-in theo cảnh (cần libass)
+    const subtitleStyle = resolveSubtitleStyle(campaign, loadAiCfgSafe());
+    let burnAss = false;
+    if (subtitleStyle === 'word-highlight') {
+      burnAss = hasFfmpegFilter('ass');
+      if (!burnAss) console.warn('[Phụ đề] FFmpeg thiếu libass — giữ khung phụ đề cả câu (drawtext).');
+      else {
+        const n = ensureSceneAssFiles(campaign, dir);
+        if (!n) {
+          burnAss = false;
+          console.warn('[Phụ đề] Chưa có words.json — chạy lại với --regen-voice để căn từ; tạm giữ khung phụ đề cả câu.');
+        } else console.log(`[Phụ đề] Highlight từng từ: ${n} cảnh (burn-in ASS).`);
+      }
+    }
+
     const ctx = {
       campaignDir: dir,
       catalog,
@@ -407,7 +497,9 @@ async function main() {
       replaceSampleWithOwnAssets,
       campaignStyleId: campaign.museStyle || 'tvc-studio-luxury',
       product,
-      encoder
+      encoder,
+      draftText: draftLabels.join(' | '),
+      burnAss
     };
     const segFiles = await runWithConcurrency(
       campaign.scenes,

@@ -156,7 +156,12 @@ SẢN PHẨM:
 
 PHÂN TÍCH VIDEO MẪU:
 ${JSON.stringify({ framework: breakdown?.framework, hook: breakdown?.hook, winningFormula: breakdown?.winningFormula, pacing: xray.pacing, shots: ref }, null, 1)}
-
+${xray?.speech?.perShot?.some((s) => s.text)
+    ? `
+LỜI THOẠI GỐC THEO CẢNH (chỉ để học cấu trúc & nhịp nói ${xray.speech.wordsPerSec} từ/giây — KHÔNG chép nguyên văn):
+${xray.speech.perShot.filter((s) => s.text).map((s) => `- Cảnh ${s.index}: ${s.text}`).join('\n')}
+`
+    : ''}
 YÊU CẦU:
 - Lời thoại và chữ trên màn hình bằng tiếng Việt tự nhiên, đúng giới hạn số từ theo thời lượng cảnh.
 - Prompt hình ảnh bằng tiếng Anh, luôn kèm ràng buộc: "${FIDELITY_LOCK}"
