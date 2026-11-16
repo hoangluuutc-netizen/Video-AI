@@ -83,7 +83,7 @@
 
       <div class="idea-box">
         <div class="field-group">
-          <label>🧠 Bộ não Kịch bản & Chấm Hook</label>
+          <label>🧠 Bộ não Kịch bản &amp; Chấm Hook <span class="tip-badge" tabindex="0" data-tip="Rule Engine hoặc Ollama chạy miễn phí ($0) trên máy. Chọn Gemini 3 Flash/Pro khi cần phân tích sâu hơn (cần GEMINI_API_KEY).">?</span></label>
           <select id="cfg-llm-model">
             <option value="local-ecommerce-director">Rule Engine Nội Bộ — Không tốn token ($0 / video)</option>
             <option value="ollama:qwen3.5:9b">Ollama Local (qwen3.5:9b) — Không tốn token API ($0 / video, chạy trên máy)</option>
@@ -93,7 +93,7 @@
           <p class="cost-hint" data-hint-for="cfg-llm-model"></p>
         </div>
         <div class="field-group">
-          <label>🖼️ Bộ não Tạo/Ghép Cảnh Từ Ảnh Thật</label>
+          <label>🖼️ Bộ não Tạo/Ghép Cảnh Từ Ảnh Thật <span class="tip-badge" tabindex="0" data-tip="FFmpeg Studio ($0) giữ nguyên 100% ảnh thật, không tốn tiền. Chỉ chọn FLUX/Gemini khi muốn AI đổi bối cảnh mới.">?</span></label>
           <select id="cfg-image-model">
             <option value="ffmpeg-real-composite">FFmpeg Studio Composite — Không tốn token ($0 / ảnh, giữ 100% pixel gốc)</option>
             <option value="photoroom-bg-remove">Photoroom API Tách nền — 1.000 ảnh free, sau đó (~$0.02 / ảnh)</option>
@@ -105,7 +105,7 @@
           <p class="cost-hint" data-hint-for="cfg-image-model"></p>
         </div>
         <div class="field-group">
-          <label>🎥 Bộ não Tạo Chuyển Động Video (Từ $0 đến TVC Cao Cấp)</label>
+          <label>🎥 Bộ não Tạo Chuyển Động Video <span class="tip-badge" tabindex="0" data-tip="FFmpeg Bokeh Cinema ($0) dựng nhanh bằng ảnh thật. Wan/Kling/Veo tạo chuyển động AI nhưng tính phí theo giây.">?</span></label>
           <select id="cfg-video-model">
             <option value="ffmpeg-bokeh-cinema">FFmpeg Bokeh Cinema — Không tốn token ($0 / video, 100% ảnh thật)</option>
             <option value="fal-wan-i2v">Fal.ai Wan 2.2/2.5 I2V — Giữ khối SP chắc (~$0.05 / giây ≈ $0.25/5s)</option>
@@ -118,7 +118,7 @@
           <p class="cost-hint" data-hint-for="cfg-video-model"></p>
         </div>
         <div class="field-group">
-          <label>🎙️ Bộ não Sinh Giọng Đọc & Âm Thanh</label>
+          <label>🎙️ Bộ não Sinh Giọng Đọc &amp; Âm Thanh <span class="tip-badge" tabindex="0" data-tip="Mặc định Google/Windows ($0) phát tiếng ngay. Nên chọn Vbee hoặc FPT.AI (~125đ/video) khi đã nạp key để giọng Việt 3 miền tự nhiên nhất.">?</span></label>
           <select id="cfg-tts-model">
             <option value="windows-sapi-vi">Windows Local Speech + Nhạc nền — Không tốn token ($0 / video, offline)</option>
             <option value="google-vi-natural">Giọng Nữ Tiếng Việt Tự Nhiên + Nhạc Nền — Miễn phí ($0 / video)</option>
@@ -132,7 +132,7 @@
           <p class="cost-hint" data-hint-for="cfg-tts-model"></p>
         </div>
         <div class="field-group">
-          <label for="cfg-subtitle-align">📝 Căn thời gian phụ đề</label>
+          <label for="cfg-subtitle-align">📝 Căn thời gian phụ đề <span class="tip-badge" tabindex="0" data-tip="Heuristic ($0) chạy tức thì; faster-whisper khớp từng từ (±0,1s) nhưng tốn ~1 GB RAM và chạy chậm hơn trên CPU.">?</span></label>
           <select id="cfg-subtitle-align">
             <option value="heuristic-silence">Chia theo âm tiết + khoảng lặng — Node thuần ($0, sai số ~±0,3s)</option>
             <option value="faster-whisper-local" data-requires="speechPython">faster-whisper local + ghép đúng chữ gốc — cần Python ($0, ±0,1–0,2s)</option>
@@ -141,7 +141,7 @@
           <p class="cost-hint" data-hint-for="cfg-subtitle-align"></p>
         </div>
         <div class="field-group">
-          <label for="cfg-subtitle-style">💬 Kiểu phụ đề trên video</label>
+          <label for="cfg-subtitle-style">💬 Kiểu phụ đề trên video <span class="tip-badge" tabindex="0" data-tip="Highlight từng từ tô vàng chữ đang đọc kiểu TikTok; Khung cả câu dễ đọc khi lời thoại dài.">?</span></label>
           <select id="cfg-subtitle-style">
             <option value="box">Khung phụ đề cả câu — như hiện tại ($0)</option>
             <option value="word-highlight" data-requires="libass">Highlight từng từ kiểu TikTok — từ đang đọc tô vàng ($0)</option>
@@ -149,7 +149,7 @@
           <p class="cost-hint" data-hint-for="cfg-subtitle-style"></p>
         </div>
         <div class="field-group">
-          <label for="cfg-xray-audio">🔬 Tách nhạc & bóc băng video mẫu</label>
+          <label for="cfg-xray-audio">🔬 Tách nhạc &amp; bóc băng video mẫu <span class="tip-badge" tabindex="0" data-tip="Chỉ bật Demucs khi video mẫu có nhạc nền to át lời thoại (chạy CPU mất vài phút và ~1–2 GB RAM).">?</span></label>
           <select id="cfg-xray-audio">
             <option value="none">Không tách — đo BPM trên âm thanh trộn, như hiện tại ($0)</option>
             <option value="voicestudio-asr" data-requires="voicestudio">VoiceStudio · WhisperX bóc băng, không tách nhạc ($0)</option>
@@ -326,7 +326,7 @@
       <div class="idea-box">
         <div class="field-group">
           <label style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-            <span>🎬 Video mẫu dùng để phân tích (`assets/footage/`)</span>
+            <span>🎬 Video mẫu (`assets/footage/`) <span class="tip-badge" tabindex="0" data-tip="Chọn hoặc kéo thả video đối thủ/mẫu làm khung nhịp dựng. Nên chọn clip ≤ 90s, tên không dấu, có tiếng rõ.">?</span></span>
             <button type="button" class="icon-pill-btn" onclick="openSelectedAssetPath('footage')" title="Mở thẳng thư mục hoặc file video mẫu trên máy">📂 Mở đường dẫn</button>
           </label>
           <select id="inp-sample-video" onchange="onSampleVideoSelectChange()"></select>
@@ -366,7 +366,7 @@
         </div>
         <div class="field-group">
           <label style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-            <span>📦 Sản phẩm của bạn dùng để thay thế (`assets/products/`)</span>
+            <span>📦 Sản phẩm của bạn (`assets/products/`) <span class="tip-badge" tabindex="0" data-tip="Ảnh sản phẩm thật giữ nguyên 100% logo & bao bì. Nên dùng ảnh PNG đã tách nền trắng để không bị viền trắng.">?</span></span>
             <button type="button" class="icon-pill-btn" onclick="openSelectedAssetPath('product')" title="Mở thẳng thư mục hoặc ảnh sản phẩm trên máy">📂 Mở đường dẫn</button>
           </label>
           <select id="inp-product" onchange="onProductChange()"></select>
@@ -378,7 +378,7 @@
         </div>
         <div class="field-group">
           <label style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-            <span>🧑 Nhân vật của bạn dùng để thay thế (`assets/characters/`)</span>
+            <span>🧑 Nhân vật của bạn (`assets/characters/`) <span class="tip-badge" tabindex="0" data-tip="Ảnh người mẫu/KOL thật để thay thế nhân vật trong video mẫu. Chọn ảnh chính diện, đủ sáng, rõ mặt ≥ 720px.">?</span></span>
             <button type="button" class="icon-pill-btn" onclick="openSelectedAssetPath('character')" title="Mở thẳng thư mục hoặc ảnh nhân vật trên máy">📂 Mở đường dẫn</button>
           </label>
           <select id="inp-character" onchange="onProductChange()"></select>
@@ -389,7 +389,7 @@
           </div>
         </div>
         <div class="field-group">
-          <label>Chế độ thay thế & Mã chiến dịch (Slug)</label>
+          <label>Chế độ thay thế &amp; Mã chiến dịch (Slug) <span class="tip-badge" tabindex="0" data-tip="Mã chiến dịch chỉ dùng chữ thường không dấu và dấu gạch ngang (-), ví dụ: binh-giu-nhiet-t11. Không dùng khoảng trắng.">?</span></label>
           <div style="display:flex;gap:8px;">
             <input type="text" id="inp-campaign-id" value="sample-campaign" style="flex:1;" title="Mã chiến dịch" />
             <select id="inp-mode" onchange="onModeChange()" style="flex:1.4;">

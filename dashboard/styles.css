@@ -1192,3 +1192,78 @@ table.clean-table th {
     scroll-behavior: auto !important;
   }
 }
+
+/* Bong bóng hướng dẫn nhanh khi di chuột qua icon (?) */
+.tip-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  margin-left: 5px;
+  border-radius: 50%;
+  background: #E2E8F0;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: help;
+  vertical-align: middle;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.tip-badge:hover,
+.tip-badge:focus {
+  background: var(--orange);
+  color: #FFFFFF;
+  outline: none;
+}
+
+.tip-badge::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%) translateY(4px);
+  width: max-content;
+  max-width: 270px;
+  padding: 8px 11px;
+  border-radius: 9px;
+  background: #0F172A;
+  color: #F8FAFC;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: normal;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.28);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 999;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.tip-badge::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 2px);
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #0F172A;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 999;
+}
+
+.tip-badge:hover::after,
+.tip-badge:focus::after,
+.tip-badge:hover::before,
+.tip-badge:focus::before {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
