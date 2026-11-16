@@ -3,6 +3,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { ROOT } from './lib/footage.mjs';
 import { readJson } from './lib/prompt-builder.mjs';
+import { runOptimalPipeline } from './run-optimal-pipeline.mjs';
 
 function parseCsvLine(line) {
   const out = [];
@@ -28,8 +29,11 @@ function parseCsvLine(line) {
   return out;
 }
 
-function parseCsv(text) {
-  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l.trim().length > 0);
+export function parseCsv(text) {
+  const lines = String(text || '')
+    .replace(/^\uFEFF/, '')
+    .split(/\r?\n/)
+    .filter((l) => l.trim().length > 0);
   if (lines.length < 2) return [];
   const headers = parseCsvLine(lines[0]);
   return lines.slice(1).map((line) => {
@@ -42,9 +46,106 @@ function parseCsv(text) {
   });
 }
 
-function main() {
+export function buildProductFromRow(row) {
+  const id = String(row?.id || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/^-|-$/g, '');
+  if (!id || !row?.name) return null;
+
+  return {
+    id,
+    name: row.name,
+    sku: row.sku || id.toUpperCase(),
+    category: row.category || 'home',
+    price: row.price || '299.000đ',
+    salePrice: row.salePrice || row.price || '199.000đ',
+    discountBadge: row.discountBadge || 'ƯU ĐÃI HÔM NAY',
+    highlights: String(row.highlights || '').split('|').map((s) => s.trim()).filter(Boolean),
+    immutableFeatures: String(row.immutableFeatures || row.name).split('|').map((s) => s.trim()).filter(Boolean),
+    forbiddenChanges: ['Do not alter product shape, colors, or brand logo'],
+    referenceImages: {
+      front: row.imagePath || `assets/products/${id}/front.png`
+    }
+  };
+}
+
+export function writeProductIfMissing(prodDir, productObj) {
+  fs.mkdirSync(prodDir, { recursive: true });
+  const prodPath = path.join(prodDir, 'product.json');
+  if (fs.existsSync(prodPath)) {
+    return 'kept';
+  }
+  const tmpPath = `${prodPath}.tmp-${process.pid}`;
+  fs.writeFileSync(tmpPath, JSON.stringify(productObj, null, 2) + '\n', 'utf8');
+  fs.renameSync(tmpPath, prodPath);
+  return 'created';
+}
+
+export async function runBatch(rows, { runner, resume = false, root = ROOT } = {}) {
+  const ok = [];
+  const failed = [];
+  const skipped = [];
+
+  const sampleCampPath = path.join(root, 'campaigns', 'sample-campaign', 'campaign.json');
+  const sampleCamp = fs.existsSync(sampleCampPath)
+    ? readJson(sampleCampPath)
+    : { id: 'sample-campaign', scenes: [] };
+
+  for (const row of rows) {
+    const productObj = buildProductFromRow(row);
+    if (!productObj) continue;
+    const { id } = productObj;
+
+    try {
+      const prodDir = path.join(root, 'assets', 'products', id);
+      const status = writeProductIfMissing(prodDir, productObj);
+      if (status === 'kept') {
+        console.log(`[Giữ nguyên] Đã có product.json cho "${id}", không ghi đè.`);
+      }
+
+      const campId = `batch-${id}`;
+      const campDir = path.join(root, 'campaigns', campId);
+      fs.mkdirSync(campDir, { recursive: true });
+      const campPath = path.join(campDir, 'campaign.json');
+      const outMp4 = path.join(campDir, 'out', 'ffmpeg-9x16.mp4');
+
+      if (resume && fs.existsSync(campPath) && fs.existsSync(outMp4)) {
+        const campMtime = fs.statSync(campPath).mtimeMs;
+        const mp4Mtime = fs.statSync(outMp4).mtimeMs;
+        if (mp4Mtime > campMtime) {
+          skipped.push(id);
+          continue;
+        }
+      }
+
+      const campObj = JSON.parse(JSON.stringify(sampleCamp));
+      campObj.id = campId;
+      campObj.title = `Chiến dịch ${productObj.name}`;
+      campObj.productId = id;
+      campObj.hookText = `Đừng mua ${productObj.name} nếu bạn chưa xem 3 chi tiết này!`;
+      campObj.ctaText = `Chỉ ${productObj.salePrice} hôm nay — Đặt ngay!`;
+      const tmpCamp = `${campPath}.tmp-${process.pid}`;
+      fs.writeFileSync(tmpCamp, JSON.stringify(campObj, null, 2) + '\n', 'utf8');
+      fs.renameSync(tmpCamp, campPath);
+
+      if (runner) {
+        await runner(campPath, productObj);
+      }
+      ok.push(id);
+    } catch (err) {
+      failed.push({ id, error: err?.message || String(err) });
+      console.error(`[Lỗi SKU "${id}"]: ${err?.message || err}`);
+    }
+  }
+
+  return { ok, failed, skipped };
+}
+
+async function main() {
   const args = process.argv.slice(2);
   const autoRun = args.includes('--run');
+  const resume = args.includes('--resume');
   const csvArg = args.find((a) => !a.startsWith('--')) || 'assets/products/batch-template.csv';
   const csvAbs = path.isAbsolute(csvArg) ? csvArg : path.join(ROOT, csvArg);
 
@@ -54,52 +155,35 @@ function main() {
   }
 
   const rows = parseCsv(fs.readFileSync(csvAbs, 'utf8'));
-  const sampleCamp = readJson(path.join(ROOT, 'campaigns', 'sample-campaign', 'campaign.json'));
-  const created = [];
 
-  for (const row of rows) {
-    const id = (row.id || '').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-|-$/g, '');
-    if (!id || !row.name) continue;
-
-    const prodDir = path.join(ROOT, 'assets', 'products', id);
-    fs.mkdirSync(prodDir, { recursive: true });
-    const productObj = {
-      id,
-      name: row.name,
-      sku: row.sku || id.toUpperCase(),
-      category: row.category || 'home',
-      price: row.price || '299.000đ',
-      salePrice: row.salePrice || row.price || '199.000đ',
-      discountBadge: row.discountBadge || 'ƯU ĐÃI HÔM NAY',
-      highlights: (row.highlights || '').split('|').map((s) => s.trim()).filter(Boolean),
-      immutableFeatures: (row.immutableFeatures || row.name).split('|').map((s) => s.trim()).filter(Boolean),
-      forbiddenChanges: ['Do not alter product shape, colors, or brand logo'],
-      referenceImages: {
-        front: row.imagePath || `assets/products/${id}/front.png`
-      }
-    };
-    fs.writeFileSync(path.join(prodDir, 'product.json'), JSON.stringify(productObj, null, 2) + '\n', 'utf8');
-
-    const campId = `batch-${id}`;
-    const campDir = path.join(ROOT, 'campaigns', campId);
-    fs.mkdirSync(campDir, { recursive: true });
-    const campObj = JSON.parse(JSON.stringify(sampleCamp));
-    campObj.id = campId;
-    campObj.title = `Chiến dịch ${row.name}`;
-    campObj.productId = id;
-    campObj.hookText = `Đừng mua ${row.name} nếu bạn chưa xem 3 chi tiết này!`;
-    campObj.ctaText = `Chỉ ${productObj.salePrice} hôm nay — Đặt ngay!`;
-    const campPath = path.join(campDir, 'campaign.json');
-    fs.writeFileSync(campPath, JSON.stringify(campObj, null, 2) + '\n', 'utf8');
-
-    execFileSync('node', [path.join(ROOT, 'scripts', 'generate-prompts.mjs'), campPath], { stdio: 'inherit' });
-    if (autoRun) {
-      execFileSync('node', [path.join(ROOT, 'scripts', 'run-optimal-pipeline.mjs'), campPath], { stdio: 'inherit' });
-    }
-    created.push({ id, campId });
+  if (autoRun) {
+    execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'ingest-footage.mjs')], { stdio: 'inherit' });
+    execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'analyze-sample-video.mjs')], { stdio: 'inherit' });
   }
 
-  console.log(`OK: Đã xử lý ${created.length} SKU từ CSV (${created.map((c) => c.campId).join(', ')}).`);
+  const runner = autoRun
+    ? async (campPath) => {
+        await runOptimalPipeline(campPath, { skipSampleAnalysis: true });
+      }
+    : async (campPath) => {
+        execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'generate-prompts.mjs'), campPath], { stdio: 'inherit' });
+      };
+
+  const summary = await runBatch(rows, { runner, resume, root: ROOT });
+  console.log(`\n=== TỔNG KẾT BATCH CSV ===`);
+  console.log(`- Thành công (${summary.ok.length}): ${summary.ok.join(', ') || 'Không có'}`);
+  console.log(`- Bỏ qua (--resume, ${summary.skipped.length}): ${summary.skipped.join(', ') || 'Không có'}`);
+  console.log(`- Lỗi (${summary.failed.length}): ${summary.failed.map((f) => `${f.id} (${f.error})`).join('; ') || 'Không có'}`);
+
+  if (summary.failed.length > 0) {
+    process.exitCode = 1;
+  }
 }
 
-main();
+const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'));
+if (isDirectRun) {
+  main().catch((err) => {
+    console.error('LỖI batch-from-csv:', err.message);
+    process.exit(1);
+  });
+}

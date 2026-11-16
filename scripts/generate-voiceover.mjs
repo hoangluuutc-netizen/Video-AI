@@ -3,6 +3,8 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { readJson } from './lib/prompt-builder.mjs';
 import { generateAssSubtitles } from './lib/ass-subtitles.mjs';
+import { normalizeViForTts } from './lib/vi-text-normalize.mjs';
+import { voiceCacheKey, getCachedVoice, putCachedVoice } from './lib/voice-cache.mjs';
 
 const ROOT = process.cwd();
 const INTERACTIONS_URL = 'https://generativelanguage.googleapis.com/v1beta/interactions';
@@ -212,19 +214,68 @@ function generateWindowsSapiOrToneWav(text, outWav, durationSec) {
   ]);
 }
 
-function normalizeAndFitAudio(rawMediaPath, finalWavPath, targetDurationSec) {
-  // Chuẩn hóa sang 48kHz stereo WAV, trộn thêm âm nền ấm rất nhẹ để giọng đọc tự nhiên và khớp đúng thời lượng cảnh
+export function computeFitTempo(rawSec, targetSec) {
+  const raw = Math.max(0, Number(rawSec || 0));
+  const target = Math.max(0.1, Number(targetSec || 1));
+  const tempo = Math.round(Math.min(1.15, Math.max(1, raw / target)) * 1000) / 1000;
+  const overflowSec = Math.round(Math.max(0, raw / tempo - target) * 1000) / 1000;
+  return { tempo, overflowSec };
+}
+
+function probeDurationSec(mediaPath) {
+  try {
+    const out = execFileSync(
+      'ffprobe',
+      ['-v', 'quiet', '-show_entries', 'format=duration', '-of', 'csv=p=0', mediaPath],
+      { encoding: 'utf8' }
+    ).trim();
+    return parseFloat(out) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+function hasCampaignBgm(campaign) {
+  if (campaign?.bgmSrc) {
+    const abs = path.isAbsolute(campaign.bgmSrc) ? campaign.bgmSrc : path.join(ROOT, campaign.bgmSrc);
+    if (fs.existsSync(abs)) return true;
+  }
+  const musicDir = path.join(ROOT, 'assets', 'music');
+  if (!fs.existsSync(musicDir)) return false;
+  return fs.readdirSync(musicDir).some((f) => /\.(mp3|wav|m4a|aac)$/i.test(f));
+}
+
+function normalizeAndFitAudio(rawMediaPath, finalWavPath, targetDurationSec, { hasBgm = false, sceneId = '' } = {}) {
   const dur = Math.max(1, Number(targetDurationSec || 4));
-  execFileSync('ffmpeg', [
-    '-y', '-v', 'error',
-    '-i', rawMediaPath,
-    '-f', 'lavfi', '-i', `sine=frequency=196:duration=${dur}`,
-    '-filter_complex',
-    `[0:a]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,apad=whole_dur=${dur}[v];` +
-    `[1:a]volume=0.025,afade=t=in:st=0:d=0.3,afade=t=out:st=${Math.max(0.1, dur - 0.4)}:d=0.4[bg];` +
-    `[v][bg]amix=inputs=2:duration=first:dropout_transition=0,atrim=0:${dur}`,
-    '-ar', '48000', '-ac', '2', finalWavPath
-  ]);
+  const rawSec = probeDurationSec(rawMediaPath) || dur;
+  const { tempo, overflowSec } = computeFitTempo(rawSec, dur);
+  if (overflowSec > 0) {
+    console.warn(`[Cảnh báo thời lượng] Cảnh "${sceneId || path.basename(finalWavPath)}" bị tràn ~${overflowSec}s sau khi tăng tốc ${tempo}x — nên rút gọn lời thoại.`);
+  }
+
+  const tempoFilter = tempo > 1 ? `atempo=${tempo},` : '';
+  const fadeFilter = overflowSec > 0 ? `,afade=t=out:st=${Math.max(0.05, dur - 0.12).toFixed(2)}:d=0.12` : '';
+
+  if (hasBgm) {
+    execFileSync('ffmpeg', [
+      '-y', '-v', 'error',
+      '-i', rawMediaPath,
+      '-af', `${tempoFilter}aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,apad=whole_dur=${dur},atrim=0:${dur}${fadeFilter}`,
+      '-ar', '48000', '-ac', '2', finalWavPath
+    ]);
+  } else {
+    execFileSync('ffmpeg', [
+      '-y', '-v', 'error',
+      '-i', rawMediaPath,
+      '-f', 'lavfi', '-i', `sine=frequency=196:duration=${dur}`,
+      '-filter_complex',
+      `[0:a]${tempoFilter}aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,apad=whole_dur=${dur}[v];` +
+      `[1:a]volume=0.025,afade=t=in:st=0:d=0.3,afade=t=out:st=${Math.max(0.1, dur - 0.4)}:d=0.4[bg];` +
+      `[v][bg]amix=inputs=2:duration=first:dropout_transition=0:normalize=0,atrim=0:${dur}${fadeFilter}`,
+      '-ar', '48000', '-ac', '2', finalWavPath
+    ]);
+  }
+  return Math.min(dur, Math.round((rawSec / tempo) * 1000) / 1000);
 }
 
 function formatSrtTime(sec) {
@@ -250,12 +301,15 @@ export async function generateCampaignVoiceover(campaignPath) {
   const vbeeAppId = aiCfg.vbeeAppId || process.env.VBEE_APP_ID || '';
   const fptKey = aiCfg.fptApiKey || process.env.FPT_API_KEY || '';
   const sceneWavs = [];
+  const manifest = [];
   const srtLines = [];
   let srtOffset = 0;
+  const bgmPresent = hasCampaignBgm(campaign);
 
   for (let i = 0; i < campaign.scenes.length; i++) {
     const scene = campaign.scenes[i];
     const text = cleanSpeechText(scene.subtitle || campaign.hookText || 'Sản phẩm chính hãng chất lượng cao');
+    const { spoken, tokens } = normalizeViForTts(text);
     const dur = Math.max(1, Number(scene.durationSec || 4));
     const wordCount = text.split(/\s+/).filter(Boolean).length;
     const maxWords = Math.round(dur * 2.8);
@@ -266,33 +320,49 @@ export async function generateCampaignVoiceover(campaignPath) {
     srtOffset += dur;
     const rawTmp = path.join(audioDir, `_raw-${scene.id}.mp3`);
     const finalWav = path.join(audioDir, `${scene.id}.wav`);
+    const voiceId = aiCfg.vbeeVoice || aiCfg.fptVoice || aiCfg.ttsVoice || 'default';
+    const cacheKey = voiceCacheKey({ engine: ttsEngine, model: ttsEngine, voiceId, text: spoken, refAudioHash: '' });
     let synthesized = false;
+    let usedEngine = ttsEngine;
+    let speechSec = dur;
 
-    if (ttsEngine === 'vbee-vi' && vbeeKey) {
+    const cachedPath = getCachedVoice(cacheKey);
+    if (cachedPath) {
+      fs.copyFileSync(cachedPath, finalWav);
+      speechSec = probeDurationSec(finalWav) || dur;
+      synthesized = true;
+      usedEngine = `${ttsEngine} (cache)`;
+      console.log(`[Cache] Cảnh "${scene.id}" (${dur}s)`);
+    }
+
+    if (!synthesized && ttsEngine === 'vbee-vi' && vbeeKey) {
       try {
-        const buf = await fetchVbeeTts(text, { apiKey: vbeeKey, appId: vbeeAppId, voiceCode: aiCfg.vbeeVoice || undefined });
+        const buf = await fetchVbeeTts(spoken, { apiKey: vbeeKey, appId: vbeeAppId, voiceCode: aiCfg.vbeeVoice || undefined });
         fs.writeFileSync(rawTmp, buf);
-        normalizeAndFitAudio(rawTmp, finalWav, dur);
+        speechSec = normalizeAndFitAudio(rawTmp, finalWav, dur, { hasBgm: bgmPresent, sceneId: scene.id });
+        putCachedVoice(cacheKey, fs.readFileSync(finalWav), { characterId: campaign.characterId });
         synthesized = true;
         console.log(`OK [Vbee TTS] Cảnh "${scene.id}" (${dur}s)`);
       } catch (e) {
         console.warn(`[Vbee TTS fallback] Cảnh "${scene.id}": ${e.message}`);
       }
-    } else if (ttsEngine === 'fpt-vi' && fptKey) {
+    } else if (!synthesized && ttsEngine === 'fpt-vi' && fptKey) {
       try {
-        const buf = await fetchFptTts(text, { apiKey: fptKey, voice: aiCfg.fptVoice || 'banmai' });
+        const buf = await fetchFptTts(spoken, { apiKey: fptKey, voice: aiCfg.fptVoice || 'banmai' });
         fs.writeFileSync(rawTmp, buf);
-        normalizeAndFitAudio(rawTmp, finalWav, dur);
+        speechSec = normalizeAndFitAudio(rawTmp, finalWav, dur, { hasBgm: bgmPresent, sceneId: scene.id });
+        putCachedVoice(cacheKey, fs.readFileSync(finalWav), { characterId: campaign.characterId });
         synthesized = true;
         console.log(`OK [FPT.AI TTS] Cảnh "${scene.id}" (${dur}s)`);
       } catch (e) {
         console.warn(`[FPT.AI TTS fallback] Cảnh "${scene.id}": ${e.message}`);
       }
-    } else if (ttsEngine.startsWith('gemini') && geminiKey) {
+    } else if (!synthesized && ttsEngine.startsWith('gemini') && geminiKey) {
       try {
-        const buf = await fetchGeminiTts(text, geminiKey, aiCfg.ttsVoice || 'Kore');
+        const buf = await fetchGeminiTts(spoken, geminiKey, aiCfg.ttsVoice || 'Kore');
         fs.writeFileSync(rawTmp, buf);
-        normalizeAndFitAudio(rawTmp, finalWav, dur);
+        speechSec = normalizeAndFitAudio(rawTmp, finalWav, dur, { hasBgm: bgmPresent, sceneId: scene.id });
+        putCachedVoice(cacheKey, fs.readFileSync(finalWav), { characterId: campaign.characterId });
         synthesized = true;
         console.log(`OK [Gemini TTS] Cảnh "${scene.id}" (${dur}s)`);
       } catch (e) {
@@ -302,10 +372,12 @@ export async function generateCampaignVoiceover(campaignPath) {
 
     if (!synthesized) {
       try {
-        const buf = await fetchGoogleTranslateViTts(text);
+        const buf = await fetchGoogleTranslateViTts(spoken);
         fs.writeFileSync(rawTmp, buf);
-        normalizeAndFitAudio(rawTmp, finalWav, dur);
+        speechSec = normalizeAndFitAudio(rawTmp, finalWav, dur, { hasBgm: bgmPresent, sceneId: scene.id });
+        putCachedVoice(cacheKey, fs.readFileSync(finalWav), { characterId: campaign.characterId });
         synthesized = true;
+        usedEngine = 'google-vi-natural';
         console.log(`OK [Giọng Việt Tự Nhiên] Cảnh "${scene.id}" (${dur}s)`);
       } catch (e) {
         console.warn(`[Offline TTS fallback] Cảnh "${scene.id}": ${e.message}`);
@@ -314,13 +386,18 @@ export async function generateCampaignVoiceover(campaignPath) {
 
     if (!synthesized) {
       if (fs.existsSync(finalWav) && fs.statSync(finalWav).size > 15000) {
+        putCachedVoice(cacheKey, fs.readFileSync(finalWav), { characterId: campaign.characterId });
+        speechSec = probeDurationSec(finalWav) || dur;
+        usedEngine = 'existing-wav';
         console.log(`OK [Giữ Giọng Việt Tự Nhiên đã tạo] Cảnh "${scene.id}" (${dur}s)`);
         synthesized = true;
       } else {
         const fallbackRaw = path.join(audioDir, `_sapi-${scene.id}.wav`);
-        generateWindowsSapiOrToneWav(text, fallbackRaw, dur);
-        normalizeAndFitAudio(fallbackRaw, finalWav, dur);
+        generateWindowsSapiOrToneWav(spoken, fallbackRaw, dur);
+        speechSec = normalizeAndFitAudio(fallbackRaw, finalWav, dur, { hasBgm: bgmPresent, sceneId: scene.id });
         if (fs.existsSync(fallbackRaw)) fs.rmSync(fallbackRaw, { force: true });
+        putCachedVoice(cacheKey, fs.readFileSync(finalWav), { characterId: campaign.characterId });
+        usedEngine = 'local-sapi';
         console.log(`OK [Local Voice/Audio] Cảnh "${scene.id}" (${dur}s)`);
       }
     }
@@ -328,6 +405,16 @@ export async function generateCampaignVoiceover(campaignPath) {
     if (fs.existsSync(rawTmp)) fs.rmSync(rawTmp, { force: true });
     scene.audioSrc = path.posix.join('media', 'audio', `${scene.id}.wav`);
     sceneWavs.push(finalWav);
+    manifest.push({
+      sceneId: scene.id,
+      wav: scene.audioSrc,
+      text,
+      spoken,
+      tokens,
+      engine: usedEngine,
+      cacheKey,
+      speechSec
+    });
   }
 
   // Nối toàn bộ thành voiceover-full.mp3 để nghe thử trên trình duyệt
@@ -350,12 +437,19 @@ export async function generateCampaignVoiceover(campaignPath) {
   const assPath = path.join(audioDir, 'subtitles.ass');
   generateAssSubtitles(campaign.scenes, assPath, { width: 1080, height: 1920 });
 
+  const manifestPath = path.join(audioDir, 'voice-manifest.json');
+  const manifestTmp = `${manifestPath}.tmp-${process.pid}`;
+  fs.writeFileSync(manifestTmp, JSON.stringify(manifest, null, 2) + '\n', 'utf8');
+  fs.renameSync(manifestTmp, manifestPath);
+
   campaign.voiceoverSrc = 'media/audio/voiceover-full.mp3';
   campaign.subtitlesSrtSrc = 'media/audio/subtitles.srt';
   campaign.subtitlesAssSrc = 'media/audio/subtitles.ass';
-  fs.writeFileSync(campaignPath, JSON.stringify(campaign, null, 2) + '\n', 'utf8');
+  const campTmp = `${campaignPath}.tmp-${process.pid}`;
+  fs.writeFileSync(campTmp, JSON.stringify(campaign, null, 2) + '\n', 'utf8');
+  fs.renameSync(campTmp, campaignPath);
   console.log(`Đã tạo xong giọng đọc tại: ${path.relative(ROOT, fullMp3)} & phụ đề: .srt / .ass`);
-  return { fullMp3, srtPath, assPath, sceneWavs };
+  return { fullMp3, srtPath, assPath, manifestPath, sceneWavs };
 }
 
 if (import.meta.url === `file:///${process.argv[1].replace(/\\/g, '/')}` || process.argv[1]?.endsWith('generate-voiceover.mjs')) {

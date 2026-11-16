@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { analyzeSampleVideo } from './analyze-sample-video.mjs';
 import { generateCampaignVoiceover } from './generate-voiceover.mjs';
 import { readJson } from './lib/prompt-builder.mjs';
+import { prepareForHeavyPhase } from './lib/resource-gate.mjs';
 
 const ROOT = process.cwd();
 
@@ -19,7 +20,10 @@ function runStep(title, scriptRelPath, args = []) {
   if (out) process.stdout.write(out);
 }
 
-export async function runOptimalPipeline(campaignRelPath = 'campaigns/sample-campaign/campaign.json') {
+export async function runOptimalPipeline(
+  campaignRelPath = 'campaigns/sample-campaign/campaign.json',
+  { skipSampleAnalysis = false, skipPrompts = false } = {}
+) {
   const t0 = Date.now();
   const campaignPath = path.isAbsolute(campaignRelPath)
     ? campaignRelPath
@@ -32,15 +36,21 @@ export async function runOptimalPipeline(campaignRelPath = 'campaigns/sample-cam
   const campaign = readJson(campaignPath);
 
   // Bước 1: Quét kho footage & Phân tích Video Mẫu để lấy nhịp + ý tưởng gốc
-  runStep('BƯỚC 1/6: Quét kho video & Phân tích Video Mẫu (ffprobe + 4 khung hình)', 'scripts/ingest-footage.mjs');
-  runStep('Phân tích nhịp & khung hình Video Mẫu (analyze-sample-video.mjs)', 'scripts/analyze-sample-video.mjs');
+  if (!skipSampleAnalysis) {
+    runStep('BƯỚC 1/6: Quét kho video & Phân tích Video Mẫu (ffprobe + 4 khung hình)', 'scripts/ingest-footage.mjs');
+    runStep('Phân tích nhịp & khung hình Video Mẫu (analyze-sample-video.mjs)', 'scripts/analyze-sample-video.mjs');
+  } else {
+    console.log('⚡ [AUTO-PILOT] BƯỚC 1/6: Dùng lại kết quả phân tích Video Mẫu (skipSampleAnalysis=true).');
+  }
 
   // Bước 2: Sinh bộ Prompt Veo 3.1 / Omni 1.2 (chuẩn ToolKichBan 7 trụ cột) & Cắt Clip Mẫu 3 giây
-  runStep(
-    'BƯỚC 2/6: Sinh Bộ Prompt Veo 3.1 / Omni 1.2 & Cắt Clip Mẫu 3s',
-    'scripts/generate-prompts.mjs',
-    [campaignRelPath]
-  );
+  if (!skipPrompts) {
+    runStep(
+      'BƯỚC 2/6: Sinh Bộ Prompt Veo 3.1 / Omni 1.2 & Cắt Clip Mẫu 3s',
+      'scripts/generate-prompts.mjs',
+      [campaignRelPath]
+    );
+  }
 
   // Bước 3: Kiểm tra/Chuẩn bị nguyên liệu Veo 3.1 (Ingredients-to-Video)
   if (campaign.mode !== 'real-footage') {
@@ -59,6 +69,14 @@ export async function runOptimalPipeline(campaignRelPath = 'campaigns/sample-cam
   console.log(`\n==========================================================`);
   console.log(`⚡ [AUTO-PILOT] BƯỚC 4/6: Sinh Giọng Đọc Tiếng Việt & Dựng Video 1080×1920 Bokeh Cinema`);
   console.log(`==========================================================`);
+  const aiCfgPath = path.join(ROOT, 'assets', 'brand-kit', 'ai-config.json');
+  const aiCfg = fs.existsSync(aiCfgPath) ? readJson(aiCfgPath) : {};
+  const ttsModel = aiCfg.ttsModel || process.env.TTS_MODEL || 'google-vi-natural';
+  const isLocalHeavyTts = /^(voicestudio|sidecar)-/i.test(ttsModel);
+  await prepareForHeavyPhase({
+    label: 'TTS',
+    minFreeGb: isLocalHeavyTts ? (aiCfg.ttsMinFreeGb ?? 10) : 2
+  });
   await generateCampaignVoiceover(campaignPath);
   runStep(
     'Dựng MP4 1080×1920 (Phông Bokeh Video Mẫu + 100% Người & SP Thật + Lồng Tiếng Việt)',

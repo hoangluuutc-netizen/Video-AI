@@ -1,7 +1,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { buildScenePrompt, readJson } from './lib/prompt-builder.mjs';
 import { FAL_IMAGE_ENDPOINTS, FAL_VIDEO_ENDPOINTS, generateFalImage, generateFalVideo } from './lib/fal-client.mjs';
+import { PRICE_TABLE_USD, estimateAiCost, assertWithinBudget, recordCost } from './lib/cost-ledger.mjs';
+import { aiCacheKey, getCachedAi, putCachedAi } from './lib/ai-cache.mjs';
+
+function hashFiles(paths) {
+  return (paths || [])
+    .filter((p) => p && fs.existsSync(p))
+    .map((p) => crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex'));
+}
 
 const ROOT = process.cwd();
 const INTERACTIONS_URL = 'https://generativelanguage.googleapis.com/v1beta/interactions';
@@ -144,7 +153,18 @@ async function processSceneKeyframe(scene, ctx) {
     return { sceneId: scene.id, updated: false };
   }
 
+  const cacheKey = aiCacheKey({ endpoint: `keyframe:${model}`, payload: { keyframePrompt }, imageHashes: hashFiles(refAbs) });
+  const cachedFile = getCachedAi(cacheKey, 'png');
   fs.mkdirSync(path.dirname(absOut), { recursive: true });
+  if (cachedFile) {
+    fs.copyFileSync(cachedFile, absOut);
+    recordCost(campaignDir, { step: 'keyframe', model, usd: 0, cacheHit: true, sceneId: scene.id });
+    console.log(`[AI Cache][keyframe] Cảnh "${scene.id}" -> $0`);
+    scene.keyframeSrc = relOut;
+    scene.qcStatus = 'pending';
+    return { sceneId: scene.id, updated: true, out: relOut };
+  }
+
   if (FAL_IMAGE_ENDPOINTS[model]) {
     if (!falKey) throw new Error(`Thiếu FAL_KEY để gọi ${model}.`);
     const buf = await generateFalImage({ apiKey: falKey, modelKey: model, prompt: keyframePrompt, referenceImagePaths: refAbs });
@@ -157,6 +177,8 @@ async function processSceneKeyframe(scene, ctx) {
     }
     fs.writeFileSync(absOut, Buffer.from(b64, 'base64'));
   }
+  putCachedAi(cacheKey, absOut, 'png');
+  recordCost(campaignDir, { step: 'keyframe', model, usd: PRICE_TABLE_USD[model] ?? 0, cacheHit: false, sceneId: scene.id });
   scene.keyframeSrc = relOut;
   scene.qcStatus = 'pending';
   return { sceneId: scene.id, updated: true, out: relOut };
@@ -189,7 +211,22 @@ async function processSceneVideo(scene, ctx) {
   const endKeyframeAbs = scene.endKeyframeSrc
     ? (path.isAbsolute(scene.endKeyframeSrc) ? scene.endKeyframeSrc : path.join(campaignDir, scene.endKeyframeSrc))
     : '';
+  const dur = Number(scene.durationSec || 5);
+  const cacheKey = aiCacheKey({
+    endpoint: `video:${model}`,
+    payload: { prompt: veo3Prompt || videoPrompt, dur },
+    imageHashes: hashFiles([keyframeAbs, endKeyframeAbs])
+  });
+  const cachedFile = getCachedAi(cacheKey, 'mp4');
   fs.mkdirSync(path.dirname(absOut), { recursive: true });
+
+  if (cachedFile) {
+    fs.copyFileSync(cachedFile, absOut);
+    recordCost(campaignDir, { step: 'video', model, usd: 0, cacheHit: true, sceneId: scene.id });
+    console.log(`[AI Cache][video] Cảnh "${scene.id}" -> $0`);
+    scene.videoSrc = relOut;
+    return { sceneId: scene.id, updated: true, out: relOut };
+  }
 
   if (FAL_VIDEO_ENDPOINTS[model]) {
     if (!falKey) throw new Error(`Thiếu FAL_KEY để gọi ${model}.`);
@@ -199,7 +236,7 @@ async function processSceneVideo(scene, ctx) {
       prompt: veo3Prompt || videoPrompt,
       startImagePath: keyframeAbs,
       endImagePath: endKeyframeAbs,
-      durationSec: Number(scene.durationSec || 5)
+      durationSec: dur
     });
     fs.writeFileSync(absOut, buf);
   } else {
@@ -215,6 +252,8 @@ async function processSceneVideo(scene, ctx) {
     }
     fs.writeFileSync(absOut, Buffer.from(b64, 'base64'));
   }
+  putCachedAi(cacheKey, absOut, 'mp4');
+  recordCost(campaignDir, { step: 'video', model, usd: Math.round(dur * (PRICE_TABLE_USD[model] ?? 0) * 100) / 100, cacheHit: false, sceneId: scene.id });
   scene.videoSrc = relOut;
   return { sceneId: scene.id, updated: true, out: relOut };
 }
@@ -268,9 +307,23 @@ async function main() {
     return sceneFilter ? s.id === sceneFilter : true;
   });
 
-  if ((selective || aiCfg.selectiveAiOnly) && !sceneFilter && targets.length > 2) {
-    console.log(`[Selective AI <$1] Giới hạn chỉ sinh AI cho 2 cảnh đầu (${targets.slice(0, 2).map((t) => t.id).join(', ')}), các cảnh sau giữ nguyên ảnh thật.`);
-    targets = targets.slice(0, 2);
+  const selectiveAiCount = Math.min(2, Math.max(1, Number(aiCfg.selectiveAiCount ?? 1)));
+  if ((selective || aiCfg.selectiveAiOnly) && !sceneFilter && targets.length > selectiveAiCount) {
+    console.log(`[Selective AI] Giới hạn chỉ sinh AI cho ${selectiveAiCount} cảnh đầu (${targets.slice(0, selectiveAiCount).map((t) => t.id).join(', ')}), các cảnh sau giữ nguyên ảnh thật.`);
+    targets = targets.slice(0, selectiveAiCount);
+  }
+
+  const est = estimateAiCost({
+    imageModel: process.env.GEMINI_IMAGE_MODEL || aiCfg.imageModel || 'ffmpeg-real-composite',
+    videoModel: process.env.GEMINI_VIDEO_MODEL || aiCfg.videoModel || 'ffmpeg-bokeh-cinema',
+    ttsModel: aiCfg.ttsModel || 'google-vi-natural',
+    aiScenes: mode === 'video' ? targets : [],
+    keyframes: mode === 'keyframe' ? targets.length : 0
+  });
+  const maxUsd = Number(aiCfg.maxCostUsdPerVideo ?? 0.5);
+  console.log(`[Ước tính chi phí] Tổng=$${est.totalUsd} / ngưỡng $${maxUsd} (${est.items.map((it) => `${it.step}:${it.model}=$${it.usd}`).join(', ')})`);
+  if (!dryRun) {
+    assertWithinBudget(est, maxUsd);
   }
 
   if (targets.length === 0) {

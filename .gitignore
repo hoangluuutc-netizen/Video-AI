@@ -13,6 +13,9 @@ assets/brand-kit/ai-config.json
 
 # Rendered & Heavy Media Outputs
 outputs/
+assets/ai-cache/
+assets/voice-cache/
+assets/private/*
 campaigns/*/media/
 campaigns/*/out/
 campaigns/*/cutlist.md
