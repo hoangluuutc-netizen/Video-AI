@@ -80,3 +80,7 @@
 - Chuẩn hóa danh sách model theo lộ trình **Gói 6** (`docs/KE_HOACH_NANG_CAP_GIAI_PHAU.md`):
   - Sắp xếp toàn bộ 4 danh sách model (`#cfg-llm-model`, `#cfg-image-model`, `#cfg-video-model`, `#cfg-tts-model`) trong `dashboard/index.html` theo hướng tối ưu dần từ thấp đến cao, lựa chọn mặc định đầu tiên là model không tốn token (`$0`), và ghi rõ giá ước tính sau từng lựa chọn.
   - Đồng bộ mặc định `$0` trong `scripts/dashboard-server.mjs` và `assets/brand-kit/ai-config.json`.
+- Xây dựng **KOL AI Studio** & bộ **Agent Skills phục vụ tạo KOL AI**:
+  - Bổ sung 3 skills chuyên biệt trong `.agents/skills/`: `kol-persona-architect` (thiết kế hồ sơ & khóa `immutableTraits`), `kol-visual-consistency` (khóa ngoại hình đa góc & Character Sheet 4 góc), và `kol-voice-lipsync` (giọng đọc tiếng Việt & prompt khớp khẩu hình Veo 3.1/Omni 1.2).
+  - Bổ sung module `scripts/lib/kol-studio.mjs` và 5 API mới trong `scripts/dashboard-server.mjs` (`/api/kol/skills`, `/api/kol/save`, `/api/kol/generate-persona`, `/api/kol/generate-script`, `/api/kol/render-video`).
+  - Xây dựng giao diện web app `dashboard/kol-studio.html`, `dashboard/kol-studio.css`, `dashboard/kol-studio.js` (4 tab: Hồ sơ & Danh tính, Ảnh & 4 Góc KOL, Kịch bản/Giọng/Video 9:16, Trung tâm Skills) và gắn nút mở nhanh **🌟 KOL AI Studio** trên thanh điều hướng `dashboard/index.html`.

@@ -7,6 +7,13 @@ import { generateCharacterSheet } from './generate-character-sheet.mjs';
 import { uploadVideo, DEFAULT_MODEL } from './lib/gemini-client.mjs';
 import { aiBreakdown } from './lib/video-forensics.mjs';
 import { aiRemake, ollamaRemake, templateRemake } from './lib/video-remake.mjs';
+import {
+  listInstalledSkills,
+  saveKolCharacter,
+  generateKolPersona,
+  generateKolScript,
+  renderKolTalkingVideo
+} from './lib/kol-studio.mjs';
 
 const ROOT = process.cwd();
 const PORT = Number(process.env.PORT || 4173);
@@ -593,6 +600,82 @@ const server = http.createServer(async (req, res) => {
       });
     } catch (e) {
       return sendJson(res, 500, { ok: false, output: `Lỗi tạo Bộ Ảnh Nhân Vật: ${e.message}` });
+    }
+  }
+
+  // ===== KOL AI STUDIO ENDPOINTS =====
+  if (req.method === 'GET' && url.pathname === '/api/kol/skills') {
+    return sendJson(res, 200, { ok: true, skills: listInstalledSkills() });
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/kol/save') {
+    try {
+      const body = await readBody(req);
+      const saved = saveKolCharacter(body);
+      return sendJson(res, 200, {
+        ...saved,
+        output: `Đã lưu hồ sơ KOL AI tại ${saved.relPath}`,
+        state: loadWorkspaceState()
+      });
+    } catch (e) {
+      return sendJson(res, 400, { ok: false, output: e.message });
+    }
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/kol/generate-persona') {
+    try {
+      const body = await readBody(req);
+      const aiConfig = loadAiConfig();
+      const apiKey = process.env.GEMINI_API_KEY || '';
+      const persona = await generateKolPersona({ ...body, aiConfig, apiKey });
+      return sendJson(res, 200, { ok: true, persona, output: `Đã sinh hồ sơ KOL AI (${persona.engine}).` });
+    } catch (e) {
+      return sendJson(res, 500, { ok: false, output: e.message });
+    }
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/kol/generate-script') {
+    try {
+      const body = await readBody(req);
+      const state = loadWorkspaceState();
+      const character = state.characters.find((c) => c.id === body.characterId) || body.character || state.characters[0];
+      const product = body.productId ? state.products.find((p) => p.id === body.productId) : null;
+      const aiConfig = loadAiConfig();
+      const apiKey = process.env.GEMINI_API_KEY || '';
+      const script = await generateKolScript({
+        character,
+        product,
+        topic: body.topic,
+        platform: body.platform,
+        durationSec: body.durationSec,
+        aiConfig,
+        apiKey
+      });
+      return sendJson(res, 200, { ok: true, script, output: `Đã sinh kịch bản KOL (${script.engine}) — ${script.wordCount} từ (~${script.estimatedSec}s).` });
+    } catch (e) {
+      return sendJson(res, 500, { ok: false, output: e.message });
+    }
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/kol/render-video') {
+    try {
+      const body = await readBody(req);
+      const state = loadWorkspaceState();
+      const character = state.characters.find((c) => c.id === body.characterId);
+      const product = body.productId ? state.products.find((p) => p.id === body.productId) : null;
+      const rendered = await renderKolTalkingVideo({
+        character,
+        product,
+        voiceText: body.voiceText,
+        hookTitle: body.hookTitle,
+        durationSec: body.durationSec
+      });
+      return sendJson(res, 200, {
+        ...rendered,
+        output: `Đã dựng xong Video KOL AI 9:16 (${rendered.durationSec}s)!`
+      });
+    } catch (e) {
+      return sendJson(res, 500, { ok: false, output: `Lỗi dựng Video KOL AI: ${e.message}` });
     }
   }
 

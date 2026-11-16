@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KOL AI Studio — Tạo & Vận Hành Đại Sứ Thương Hiệu Ảo</title>
+  <link rel="stylesheet" href="kol-studio.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-badge">KOL AI STUDIO</span>
+      <span>Xưởng Tạo &amp; Vận Hành KOL AI</span>
+    </div>
+    <nav class="nav-pills">
+      <button class="tab-btn active" data-tab="tab-persona" onclick="switchTab('tab-persona')">1. Hồ sơ &amp; Danh tính</button>
+      <button class="tab-btn" data-tab="tab-visual" onclick="switchTab('tab-visual')">2. Ảnh &amp; 4 Góc KOL</button>
+      <button class="tab-btn" data-tab="tab-video" onclick="switchTab('tab-video')">3. Kịch bản, Giọng &amp; Video 9:16</button>
+      <button class="tab-btn" data-tab="tab-skills" onclick="switchTab('tab-skills')">4. Trung tâm Skills</button>
+    </nav>
+    <a class="back-link" href="index.html">⬅️ Về Video Ad Studio</a>
+  </header>
+
+  <main class="container">
+    <div class="status-banner">
+      <div>
+        <strong>⚡ Trạng thái:</strong>
+        <span id="kol-status">Đang tải dữ liệu workspace...</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span class="badge" id="kol-brain-badge">LLM: local ($0)</span>
+        <span class="badge" id="kol-count-badge">0 KOL</span>
+      </div>
+    </div>
+
+    <!-- TAB 1: HỒ SƠ & DANH TÍNH KOL AI -->
+    <section id="tab-persona" class="tab-panel active">
+      <div class="grid-2">
+        <div class="card">
+          <h2>🎭 Thiết kế Hồ sơ KOL AI (Identity Lock)</h2>
+          <p class="sub">Mỗi KOL AI được lưu thành file chuẩn <code>assets/characters/&lt;id&gt;/character.json</code> để dùng chung cho mọi chiến dịch.</p>
+
+          <div class="form-row">
+            <div class="field">
+              <label>Chọn KOL hiện có</label>
+              <select id="kol-select" onchange="onSelectKol()"></select>
+            </div>
+            <div class="field">
+              <label>Hoặc tạo mới</label>
+              <button class="btn btn-secondary" style="width:100%;" onclick="resetNewKolForm()">➕ Tạo Hồ Sơ KOL Mới</button>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="field">
+              <label>Mã KOL (ID slug)</label>
+              <input id="kol-id" type="text" placeholder="vd: ha-my-skincare" />
+            </div>
+            <div class="field">
+              <label>Tên hiển thị KOL</label>
+              <input id="kol-name" type="text" placeholder="vd: Hà My (Chuyên gia Skincare)" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="field">
+              <label>Vai trò / Ngách chuyên môn</label>
+              <input id="kol-role" type="text" placeholder="vd: Reviewer mỹ phẩm &amp; chăm sóc da" />
+            </div>
+            <div class="field">
+              <label>Ngành hàng chính</label>
+              <select id="kol-niche">
+                <option value="beauty">Mỹ phẩm &amp; Skincare</option>
+                <option value="tech">Công nghệ &amp; Gadget</option>
+                <option value="home">Gia dụng &amp; Đời sống</option>
+                <option value="fashion">Thời trang &amp; Phụ kiện</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Phong cách giọng nói (Voice Style)</label>
+            <input id="kol-voice" type="text" placeholder="vd: Nhẹ nhàng, chân thật, tốc độ vừa phải, giọng miền Nam" />
+          </div>
+
+          <div class="field">
+            <label>Câu cửa miệng 3 giây đầu (Catchphrase)</label>
+            <input id="kol-catchphrase" type="text" placeholder="vd: Test thật 7 ngày rồi, đây là sự thật mọi người cần biết..." />
+          </div>
+
+          <div class="field">
+            <label>Đặc điểm ngoại hình bất biến (immutableTraits — mỗi dòng 1 ý tiếng Anh)</label>
+            <textarea id="kol-traits" rows="5" placeholder="Vietnamese woman, 24 years old, warm natural skin tone..."></textarea>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="saveKolProfile()">💾 Lưu Hồ Sơ KOL</button>
+            <button class="btn btn-secondary" onclick="copyCharacterJson()">📋 Copy character.json</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>✨ Trợ lý AI Gợi ý Persona KOL</h2>
+          <p class="sub">Nhập 1 câu mô tả ý tưởng KOL, hệ thống sẽ tự động sinh trọn bộ nhân khẩu học, câu cửa miệng và <code>immutableTraits</code> theo skill <code>kol-persona-architect</code>.</p>
+
+          <div class="field">
+            <label>Ý tưởng KOL AI của bạn</label>
+            <textarea id="kol-idea-input" rows="3" placeholder="VD: Nữ GenZ 24 tuổi tên Linh Chi, review đồ gia dụng thông minh, nói chuyện hài hước và thực tế"></textarea>
+          </div>
+
+          <button class="btn btn-blue" onclick="generatePersonaAi()">✨ Sinh Hồ Sơ KOL Bằng AI</button>
+
+          <div style="margin-top:20px;">
+            <label style="font-size:12px;color:var(--muted);font-weight:700;">XEM TRƯỚC THẺ DANH TÍNH</label>
+            <div id="kol-preview-card" class="code-box" style="margin-top:8px;">Chưa có dữ liệu.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: ẢNH & CHARACTER SHEET 4 GÓC -->
+    <section id="tab-visual" class="tab-panel">
+      <div class="grid-2">
+        <div class="card">
+          <h2>📸 Ảnh Gốc &amp; Khóa Ngoại Hình 4 Góc</h2>
+          <p class="sub">Kéo thả hoặc chọn ảnh chân dung gốc của KOL, sau đó bấm tạo Bộ Ảnh 4 Góc để khóa nhất quán khuôn mặt.</p>
+
+          <div class="field">
+            <label>Tải ảnh chân dung KOL (Portrait)</label>
+            <div id="kol-dropzone" class="dropzone" onclick="document.getElementById('kol-file-input').click()">
+              <div>📤 Kéo &amp; thả ảnh chân dung KOL vào đây hoặc bấm để chọn file (.png, .jpg, .webp)</div>
+              <input id="kol-file-input" type="file" accept="image/*" style="display:none;" onchange="handlePortraitFile(this.files[0])" />
+            </div>
+          </div>
+
+          <img id="kol-portrait-preview" class="preview-img" alt="Ảnh chân dung KOL" style="display:none;" />
+
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="generate4AngleSheet()">🎭 Tạo Bộ Ảnh 4 Góc (Character Sheet)</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>🖼️ Bộ Ảnh 4 Góc &amp; Prompt Lookbook</h2>
+          <p class="sub">Ảnh 4 góc giúp AI giữ nguyên 100% khuôn mặt khi chuyển qua nhiều bối cảnh khác nhau.</p>
+          <img id="kol-sheet-preview" class="preview-img" alt="Bộ ảnh 4 góc" style="display:none;" />
+
+          <div class="field" style="margin-top:16px;">
+            <label>Chọn bối cảnh Lookbook (tự động chèn immutableTraits)</label>
+            <select id="lookbook-scene" onchange="updateLookbookPrompt()">
+              <option value="cozy sunlit cafe holding an iced latte, candid lifestyle portrait">Quán Cafe Sáng Tự Nhiên</option>
+              <option value="modern minimalist studio with softbox rim light, holding product cleanly">Studio Review Chuyên Nghiệp</option>
+              <option value="bright modern apartment living room, natural daylight, authentic home vlog">Phòng Khách Đời Thường (Vlog)</option>
+              <option value="sunny urban street style, shallow depth of field, natural candid smile">Ngoài Trời Street Style</option>
+            </select>
+          </div>
+          <div id="lookbook-prompt-box" class="code-box">Chọn KOL để xem prompt Lookbook chuẩn...</div>
+          <div class="btn-row">
+            <button class="btn btn-secondary" onclick="copyTextById('lookbook-prompt-box')">📋 Copy Prompt Lookbook</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: KỊCH BẢN, GIỌNG NÓI & VIDEO KOL 9:16 -->
+    <section id="tab-video" class="tab-panel">
+      <div class="grid-2">
+        <div class="card">
+          <h2>🎙️ Kịch bản, Giọng nói &amp; Dựng Video KOL 9:16</h2>
+          <p class="sub">Tự động sinh lời thoại chuẩn tốc độ <code>&lt;= 2.8 từ/giây</code>, ghép giọng đọc tiếng Việt + phụ đề Highlight TikTok.</p>
+
+          <div class="form-row">
+            <div class="field">
+              <label>Sản phẩm quảng bá (tuỳ chọn)</label>
+              <select id="kol-product-select"></select>
+            </div>
+            <div class="field">
+              <label>Nền tảng &amp; Thời lượng</label>
+              <div style="display:flex;gap:8px;">
+                <select id="kol-platform">
+                  <option value="TikTok">TikTok / Reels</option>
+                  <option value="Shopee">Shopee Video</option>
+                  <option value="Facebook">Facebook Fanpage</option>
+                </select>
+                <select id="kol-duration">
+                  <option value="15">15 giây</option>
+                  <option value="25" selected>25 giây</option>
+                  <option value="35">35 giây</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Hoặc chủ đề tự do (nếu không chọn sản phẩm)</label>
+            <input id="kol-topic" type="text" placeholder="vd: Mẹo chăm da buổi sáng chỉ 3 phút cho dân văn phòng" />
+          </div>
+
+          <div class="btn-row" style="margin-bottom:14px;">
+            <button class="btn btn-blue" onclick="generateKolScriptAi()">✍️ Sinh Kịch Bản &amp; Caption</button>
+          </div>
+
+          <div class="field">
+            <label>Tiêu đề Hook hiển thị trên video</label>
+            <input id="kol-hook-title" type="text" placeholder="Hook 3 giây đầu..." />
+          </div>
+
+          <div class="field">
+            <label>Lời thoại KOL đọc (<span id="kol-word-meter">0 từ • ~0s</span>)</label>
+            <textarea id="kol-voice-text" rows="5" oninput="updateWordMeter()" placeholder="Nhập hoặc sinh lời thoại tiếng Việt..."></textarea>
+          </div>
+
+          <div class="field">
+            <label>Prompt Veo 3.1 / Omni 1.2 Khớp Khẩu Hình (Lip-Sync)</label>
+            <div id="kol-veo-prompt" class="code-box">Bấm "Sinh Kịch Bản" để tạo prompt Veo 3.1 khớp khẩu hình...</div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn btn-green" onclick="renderTalkingKol()">🎬 Dựng Video KOL AI (9:16 MP4)</button>
+            <button class="btn btn-secondary" onclick="copyTextById('kol-veo-prompt')">📋 Copy Prompt Veo 3.1</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>📱 Xem Trước Video KOL AI (9:16)</h2>
+          <p class="sub">Video xuất ra tại <code>campaigns/kol-&lt;id&gt;/out/kol-talking-9x16.mp4</code> kèm giọng đọc + phụ đề <code>.ass</code>.</p>
+
+          <div class="phone-frame">
+            <video id="kol-video-player" controls playsinline style="display:none;"></video>
+            <span id="kol-video-placeholder" style="color:var(--muted);font-size:13px;padding:20px;text-align:center;">Chưa có video. Bấm "Dựng Video KOL AI" để tạo và xem trực tiếp tại đây.</span>
+          </div>
+
+          <div style="margin-top:14px;">
+            <audio id="kol-audio-player" controls style="width:100%;display:none;"></audio>
+          </div>
+          <div id="kol-download-links" class="btn-row" style="justify-content:center;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: TRUNG TÂM SKILLS KOL AI -->
+    <section id="tab-skills" class="tab-panel">
+      <div class="card">
+        <h2>🧩 Trung tâm Skills &amp; Plugins Phục Vụ Tạo KOL AI</h2>
+        <p class="sub">Danh sách các Agent Skills trong <code>.agents/skills/</code> và Plugins đã cài đặt trên hệ thống.</p>
+        <div id="skills-grid" class="skills-grid"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="kol-studio.js"></script>
+</body>
+</html>

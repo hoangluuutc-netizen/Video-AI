@@ -1,0 +1,22 @@
+{
+  "id": "kol-linh-dan",
+  "title": "KOL AI Talking: Linh Đan (KOL AI Thời Trang & Làm Đẹp)",
+  "productId": "sample-product",
+  "characterId": "linh-dan",
+  "hook": "Nhìn form dáng và chất vải thực tế nè mọi người ơi, lên đồ cực kỳ tôn dáng luôn á!",
+  "voiceover": "Nhìn form dáng và chất vải thực tế nè mọi người ơi, lên đồ cực kỳ tôn dáng luôn á! Điểm mình thích nhất ở sản phẩm nổi bật hôm nay là chất lượng vượt mong đợi, dễ dùng hằng ngày. Dùng hằng ngày cực kỳ gọn nhẹ, đúng gu của mình luôn á. Ai đang cần tìm giải pháp chuẩn chỉnh thì bấm vào giỏ hàng bên dưới để xem ưu đãi hôm nay nha!",
+  "scenes": [
+    {
+      "id": "scene-1",
+      "type": "real-footage",
+      "durationSec": 32,
+      "caption": "Nhìn form dáng và chất vải thực tế nè mọi người ơi, lên đồ cực kỳ tôn dáng luôn á!",
+      "voiceover": "Nhìn form dáng và chất vải thực tế nè mọi người ơi, lên đồ cực kỳ tôn dáng luôn á! Điểm mình thích nhất ở sản phẩm nổi bật hôm nay là chất lượng vượt mong đợi, dễ dùng hằng ngày. Dùng hằng ngày cực kỳ gọn nhẹ, đúng gu của mình luôn á. Ai đang cần tìm giải pháp chuẩn chỉnh thì bấm vào giỏ hàng bên dưới để xem ưu đãi hôm nay nha!",
+      "qcStatus": "approved",
+      "audioSrc": "media/audio/scene-1.wav"
+    }
+  ],
+  "voiceoverSrc": "media/audio/voiceover-full.mp3",
+  "subtitlesSrtSrc": "media/audio/subtitles.srt",
+  "subtitlesAssSrc": "media/audio/subtitles.ass"
+}

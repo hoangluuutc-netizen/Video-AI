@@ -1,0 +1,47 @@
+{
+  "id": "linh-dan",
+  "name": "Linh Đan (KOL AI Thời Trang & Làm Đẹp)",
+  "role": "KOL AI Review Thời Trang, Mỹ Phẩm & Lifestyle Hiện Đại",
+  "niche": "fashion",
+  "immutableTraits": [
+    "East Asian / Vietnamese young woman, 23 years old, oval-V-line face, delicate jawline, warm light-medium natural skin with subtle rosy cheeks",
+    "Expressive dark brown almond eyes with soft natural lower eyelid fullness, straight soft brown eyebrows, refined high-bridge nose, natural soft rose lips",
+    "Warm chestnut brown hair styled in a messy low updo bun with wispy see-through curtain bangs and soft face-framing side strands",
+    "Wearing a sleeveless charcoal-gray high-neck ribbed knit top, black mini skirt, black quilted crossbody chain bag, clear-strap heeled sandals; slender long-legged proportions",
+    "Crisp studio daylight, natural skin pores, zero plastic smoothing, ultra-sharp facial detail"
+  ],
+  "voiceStyle": "Trẻ trung, tự nhiên, hơi nhẹ nhàng nhưng dứt khoát khi chốt ưu điểm, tốc độ vừa phải <= 2.6 từ/giây, giọng chuẩn Việt Nam hiện đại",
+  "catchphrase": "Nhìn form dáng và chất vải thực tế nè mọi người ơi, lên đồ cực kỳ tôn dáng luôn á!",
+  "platforms": [
+    "TikTok",
+    "Shopee",
+    "Facebook"
+  ],
+  "referenceImages": {
+    "portrait": "assets/characters/linh-dan/portrait.png",
+    "fullBody": "assets/characters/linh-dan/full-body.png",
+    "sheet4Angles": "assets/characters/linh-dan/character-sheet-4angles.png",
+    "referenceChart": "assets/characters/linh-dan/reference-chart.jpg"
+  },
+  "videoSpecs": {
+    "fps": 60,
+    "sharpness": "high",
+    "smoothMotion": true,
+    "lipSyncPriority": "tight-audio-video-cfr"
+  },
+  "identityPrompt": {
+    "positive": "Create a 'Character Identity Fixed Reference Chart' based on the attached original character image, in a horizontal 16:10 aspect ratio, with a light gray-white background, and a professional visual reference board layout. The primary goal is to ensure that all panels clearly show the exact same character at a glance, not multiple similar individuals. Treat the character identity from the reference image as an unchangeable hard constraint. Strictly lock in: Facial width-to-height ratio, cheekbones, cheeks, jawline, and chin; Eye contours, eye spacing, eyelid structure, and gaze temperament; Eyebrow curvature, thickness, color, and distance from eyes; Nasal bridge, nose tip, nostrils, and side-profile nose shape; Upper and lower lip thickness, lip peaks, mouth corners, and natural lip color; Skin tone, pores, flush, and natural skin texture variations; Hairline, parting, bangs, side hair, back hair length, and hair strand flow direction; Age impression, bone structure, shoulder width, limb lengths, and overall body type; Original image clothing, original art style, lighting texture, and overall atmosphere. In the center of the image, use larger panels to display: Full body front view, Full body side view, Full body back view, Face front view, Left profile, Right profile, Three-quarter left, Three-quarter right, Back of head. Maintain completely consistent skull structure, facial feature relative positions, hair volume, and body proportions across every angle. Side profiles must accurately extend the front view's nasal bridge, lips, chin, and forehead structure; prohibit generating side profiles that depict different individuals. On the right side, configure a small expression matrix: Neutral, Smile, Serious, Surprised, Shy, Thinking, Troubled expression, Slightly sad, Calm. Maintain identical pupils, base eye size, nose shape, lip shape, and face shape. Smiles should be natural and restrained, without altering the character's age or temperament. At the bottom, configure detailed identity anchors: Left eye, Right eye, Eyebrows, Nose front view, Nose side view, Lips, Ears, Jawline contour, Skin texture, Bangs structure, Side hair structure, Back hair structure, Hair tip flow, Hands. On the left side, add 5-7 accurate color swatches. Include minimalist 'Fixed Points'. The background should be clean, with soft even lighting, no cinematic lighting, strong depth of field, or decorative elements. Photorealistic characters should retain natural pores; non-photorealistic characters must strictly maintain the original image's lines and styles. ALL TEXT AND LABELS GENERATED ON THE IMAGE MUST BE STRICTLY IN VIETNAMESE ONLY (e.g., 'Nhìn thẳng', 'Cười', 'Mắt trái', 'Màu tóc'), with moderate font size, not covering the character. If layout space is insufficient, prioritize identity anchors and main angles.",
+    "negative": "different individuals, similar faces but not the same person, identity drift, face swaps between panels, face shape drift, eye spacing changes, pupil changes, eyebrow shape changes, nasal bridge changes, nose tip changes, lip shape changes, chin changes, hairline changes, bangs changes, parting changes, hair color changes, hair length changes, body type changes, age changes, clothing variations, excessive beautification, skin smoothing, plastic skin, baby-faced, sexualization, underwear, swimsuits, magazine photoshoots, movie lighting, exaggerated poses, props, complex backgrounds, English text, Chinese text, garbled text, watermarks, logos, signatures, extra fingers, missing fingers, hand fusion, misaligned features, collapsed side profiles, overlapping faces, body distortions, style shifts, layout chaos, deformed hands, bad anatomy, inconsistent face, changing clothes, cluttered background",
+    "facial_extraction_details": {
+      "instructions": "Extract strictly from the uploaded image: Face shape, facial features, eye color, hairstyle, etc. Extracted strictly from the uploaded input source image. Do not change the underlying face structure. Preserve exact facial features, identity, proportions, skin texture, age, and facial structure. Do not redesign, beautify, or stylize. The generated subject must be the exact same person as the reference across all panels.",
+      "features": {
+        "face_shape": "Exact match to reference image",
+        "eyes": "Exact match to reference image, including exact eye color",
+        "nose": "Exact match to reference image",
+        "lips": "Exact match to reference image",
+        "skin": "Exact match to reference image",
+        "hair": "Exact match to reference image's base hair color and style"
+      }
+    }
+  }
+}
