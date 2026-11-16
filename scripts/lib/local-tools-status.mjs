@@ -22,8 +22,8 @@ export async function getLocalToolsStatus(aiCfg = {}, { root = process.cwd() } =
   }
   if (!ffmpegCaps) ffmpegCaps = { libass: hasFfmpegFilter('ass'), qsv: detectVideoEncoder().name === 'h264_qsv' };
   return {
-    voicestudio: { ok: vs.ok && commercialSafe, reachable: vs.ok, engine: vs.engine, detail: vs.ok ? engineNote || vs.detail : `Chưa chạy (${vsCfg.baseUrl}) — cần Task 0` },
-    sidecar: { ok: sc.ok, detail: sc.ok ? 'sẵn sàng' : 'Chưa chạy (chỉ dùng khi Task 0 chọn phương án dự phòng)' },
+    voicestudio: { ok: vs.ok && commercialSafe, reachable: vs.ok, engine: vs.engine, detail: vs.ok ? engineNote || vs.detail : `Không dùng (${vsCfg.baseUrl}) — đã chốt Hướng 1 (Vbee/FPT)` },
+    sidecar: { ok: sc.ok, detail: sc.ok ? 'sẵn sàng' : 'Chưa chạy (dự phòng cho TTS local nhẹ sau này)' },
     speechPython: Boolean(findSpeechPython({ root })),
     ...ffmpegCaps
   };

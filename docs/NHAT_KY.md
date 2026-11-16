@@ -156,3 +156,24 @@
 - **Việc đang chờ (bổ sung hướng phát triển sau này):**
   - Thử **Hướng 2 (`Supertonic-3`, $0 CPU trong VoiceStudio)** sau khi duyệt điều khoản OpenRAIL-M.
   - Đánh giá công cụ nhẹ thay thế VoxCPM2 trên CPU: **`VieNeu-TTS` (v3 Turbo / 0.3B ONNX CPU, có clone tiếng Việt — kiểm tra giấy phép thương mại)** và **`Kokoro-82M` (`Kokoro-Vietnamese-Lite` ONNX, Apache-2.0, siêu nhẹ ~9 MB, không clone)**.
+
+## 2026-11-17 — Antigravity: Hoàn tất Giai đoạn 1 sau khi chốt Hướng 1
+- Cập nhật thông báo trạng thái trong `scripts/lib/local-tools-status.mjs` cho sát thực tế đã gỡ VoiceStudio (`voicestudio: false`, `speechPython: true`, `libass: true`, `qsv: true`).
+- Khắc phục cảnh báo `footageId` của `campaigns/kol-linh-dan` trong `scripts/lib/kol-studio.mjs` và `campaigns/kol-linh-dan/campaign.json` (`validate-assets.mjs` đạt **0 lỗi, 0 cảnh báo**).
+- Kiểm thử thực tế phụ đề **Highlight từng từ (`word-highlight` burn-in ASS)** với dữ liệu căn từ `faster-whisper-local` qua `h264_qsv` trên `campaigns/sample-campaign`: trích frame tại `1.0s` xác nhận chữ tiếng Việt sắc nét, từ đang đọc tô vàng, nằm ở vùng an toàn không đè sản phẩm/nhân vật.
+- Toàn bộ kiểm tra: `100/100` unit tests pass, `validate-assets.mjs` 100% sạch, `smoke-test.mjs` đạt 100%.
+
+## 2026-11-17 — Antigravity: Tối ưu giao diện điền API Key / Bộ não 1-chạm & Giai đoạn 2 (Lip-Sync AI trong KOL Studio)
+- Bổ sung `scripts/lib/env-keys.mjs` (kèm TDD `scripts/tests/env-keys.test.mjs`, 2 test pass) và API `POST /api/save-env-keys` trong `scripts/dashboard-server.mjs`: lưu trực tiếp `GEMINI_API_KEY`, `FAL_KEY`, `VBEE_API_KEY`, `VBEE_APP_ID`, `FPT_API_KEY` vào `.env` + nạp nóng `process.env`, chỉ trả trạng thái boolean `envStatus` về UI (không lộ key).
+- Nâng cấp `#brain-settings-card` (`dashboard/index.html`, `dashboard/app.js`): thêm 3 nút **Preset 1-chạm** (`$0 Hoàn Toàn`, `Hướng 1: Giọng Việt + Highlight Từng Từ`, `Studio Cloud AI`), badge trạng thái `✅ Đã có trong .env` / `⚪ Chưa có`, nút hiện/ẩn `👁️` và nút **🔑 Lưu API Key vào .env**.
+- Nâng cấp KOL AI Studio (`dashboard/kol-studio.html`, `dashboard/kol-studio.js`, `scripts/dashboard-server.mjs`): thêm nút **✨ Tạo Clip Lip-Sync AI (Veo 3.1 / Omni 1.2)** (`POST /api/kol/lipsync-ai`) và nút mở nhanh **🔑 API Key & Bộ não**; tổng cộng `102/102` unit tests pass.
+
+## 2026-11-17 — Antigravity: Hoàn tất Giai đoạn 2 (Sidecar Kokoro-82M) & Giai đoạn 3 (Batch Multi-SKU & Sổ Chi Phí trên Web)
+- Bổ sung `tools/speech/tts_sidecar_kokoro.py` (chuẩn OpenAI Audio API cổng `3911`, dùng `kokoro-onnx` Apache-2.0 siêu nhẹ thay thế VoxCPM2 khi cần TTS local `$0`) và thêm lựa chọn `sidecar-kokoro` (`data-requires="sidecar"`) vào `#cfg-tts-model` + `PRICE_TABLE_USD`.
+- Bổ sung `scripts/lib/batch-dashboard.mjs` (kèm TDD `scripts/tests/batch-dashboard.test.mjs`, 2 test pass), API `GET /api/batch/status`, `POST /api/batch/run` và khu vực **08 / 08 • Sản Xuất Hàng Loạt (Batch CSV) & Sổ Chi Phí** ngay trên `dashboard/index.html` + `dashboard/app.js`.
+- Toàn bộ kiểm tra: `104/104` unit tests pass, `validate-assets.mjs` 100% sạch, `smoke-test.mjs` đạt 100%.
+
+## 2026-11-17 — Antigravity: Hoàn tất Giai đoạn 4 (Remotion Word-Highlight & Quy trình duyệt KOL Studio)
+- Đồng bộ `media/audio/words.json` và `subtitleStyle` vào `studio/src/activeCampaign.json` qua `scripts/sync-studio.mjs`; cập nhật `studio/src/types.ts` (`WordTiming`) và `studio/src/ProductAdVideo.tsx` hỗ trợ hiển thị phụ đề `word-highlight` tô vàng từng từ trong Remotion (giữ tương thích ngược `box`).
+- Bổ sung lựa chọn kiểu phụ đề (`word-highlight` / `box`), nút **✅ Duyệt kịch bản KOL (`POST /api/kol/approve`)**, và nút **📤 Mở ở Video Ad Studio** trên `dashboard/kol-studio.html`, `dashboard/kol-studio.js`, `scripts/lib/kol-studio.mjs`, `scripts/dashboard-server.mjs`.
+- Kiểm định toàn trình: `studio` `tsc --noEmit` đạt 0 lỗi, `104/104` unit tests pass, `validate-assets.mjs` 0 cảnh báo, `smoke-test.mjs` đạt 100%.

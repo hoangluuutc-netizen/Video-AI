@@ -18,7 +18,10 @@
       <button class="tab-btn" data-tab="tab-video" onclick="switchTab('tab-video')">3. Kịch bản, Giọng &amp; Video 9:16</button>
       <button class="tab-btn" data-tab="tab-skills" onclick="switchTab('tab-skills')">4. Trung tâm Skills</button>
     </nav>
-    <a class="back-link" href="index.html">⬅️ Về Video Ad Studio</a>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <a class="back-link" href="index.html#brain-settings-card">🔑 API Key &amp; Bộ não</a>
+      <a class="back-link" href="index.html">⬅️ Về Video Ad Studio</a>
+    </div>
   </header>
 
   <main class="container">
@@ -215,8 +218,19 @@
             <div id="kol-veo-prompt" class="code-box">Bấm "Sinh Kịch Bản" để tạo prompt Veo 3.1 khớp khẩu hình...</div>
           </div>
 
+          <div class="field">
+            <label>Kiểu phụ đề trên video</label>
+            <select id="kol-subtitle-style">
+              <option value="word-highlight">Highlight từng từ kiểu TikTok (ASS tô vàng)</option>
+              <option value="box">Không đốt chữ (video sạch để ghép CapCut)</option>
+            </select>
+          </div>
+
           <div class="btn-row">
-            <button class="btn btn-green" onclick="renderTalkingKol()">🎬 Dựng Video KOL AI (9:16 MP4)</button>
+            <button class="btn btn-green" onclick="renderTalkingKol()">🎬 Dựng Video KOL AI (60fps $0)</button>
+            <button class="btn btn-blue" onclick="generateLipSyncAi()">✨ Tạo Clip Lip-Sync AI (Veo 3.1 / Omni 1.2)</button>
+            <button class="btn btn-secondary" onclick="approveKolScript()">✅ Duyệt kịch bản KOL</button>
+            <button class="btn btn-secondary" onclick="openInAdStudio()">📤 Mở ở Video Ad Studio</button>
             <button class="btn btn-secondary" onclick="copyTextById('kol-veo-prompt')">📋 Copy Prompt Veo 3.1</button>
           </div>
         </div>

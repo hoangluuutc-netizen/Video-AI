@@ -7,6 +7,12 @@ export type SceneType =
 
 export type QcStatus = 'pending' | 'approved' | 'rejected';
 
+export interface WordTiming {
+  display: string;
+  start: number;
+  end: number;
+}
+
 export interface SceneItem {
   id: string;
   type: SceneType;
@@ -20,6 +26,7 @@ export interface SceneItem {
   trimEndSec?: number;
   qcStatus?: QcStatus;
   videoSrc?: string;
+  words?: WordTiming[];
 }
 
 export type ProductAdProps = {
@@ -36,5 +43,6 @@ export type ProductAdProps = {
   hookText: string;
   ctaText: string;
   productImageSrc?: string;
+  subtitleStyle?: 'box' | 'word-highlight';
   scenes: SceneItem[];
 };

@@ -258,7 +258,8 @@ async function renderTalkingKol() {
       productId: document.getElementById('kol-product-select').value,
       voiceText: document.getElementById('kol-voice-text').value.trim(),
       hookTitle: document.getElementById('kol-hook-title').value.trim(),
-      durationSec: Number(document.getElementById('kol-duration').value)
+      durationSec: Number(document.getElementById('kol-duration').value),
+      subtitleStyle: document.getElementById('kol-subtitle-style')?.value || 'word-highlight'
     });
     const videoEl = document.getElementById('kol-video-player');
     videoEl.src = res.videoUrl;
@@ -280,6 +281,64 @@ async function renderTalkingKol() {
     clearInterval(timer);
     if (btn) btn.disabled = false;
   }
+}
+
+async function generateLipSyncAi() {
+  const kolId = document.getElementById('kol-id').value.trim();
+  if (!kolId) {
+    setStatus('Vui lòng chọn hoặc lưu hồ sơ KOL trước.');
+    return;
+  }
+  try {
+    setStatus('✨ Đang gửi yêu cầu tạo Clip Lip-Sync AI (Veo 3.1 / Omni 1.2)...');
+    const res = await fetch('/api/kol/lipsync-ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        characterId: kolId,
+        productId: document.getElementById('kol-product-select').value,
+        voiceText: document.getElementById('kol-voice-text').value.trim(),
+        hookTitle: document.getElementById('kol-hook-title').value.trim(),
+        durationSec: Number(document.getElementById('kol-duration').value),
+        veoLipSyncPrompt: document.getElementById('kol-veo-prompt').textContent.trim()
+      })
+    });
+    const data = await res.json();
+    if (data.missingKey) {
+      setStatus(`⚠️ ${data.output}`);
+      if (confirm(`${data.output}\n\nMở ngay trang Cài đặt Bộ não & API Key?`)) {
+        window.location.href = 'index.html#brain-settings-card';
+      }
+      return;
+    }
+    if (!res.ok || !data.ok) throw new Error(data.output || `HTTP ${res.status}`);
+    setStatus(data.output);
+  } catch (e) {
+    setStatus(`Lỗi Lip-Sync AI: ${e.message}`);
+  }
+}
+
+async function approveKolScript() {
+  const kolId = document.getElementById('kol-id').value.trim();
+  if (!kolId) {
+    setStatus('Vui lòng chọn hoặc lưu hồ sơ KOL trước.');
+    return;
+  }
+  const approvedBy = prompt('Nhập tên người duyệt kịch bản KOL:', currentKol?.name || kolId);
+  if (!approvedBy) return;
+  try {
+    const res = await apiJson('/api/kol/approve', 'POST', {
+      campaignId: `kol-${kolId}`,
+      approvedBy: approvedBy.trim()
+    });
+    setStatus(res.output);
+  } catch (e) {
+    setStatus(`Lỗi duyệt kịch bản: ${e.message}`);
+  }
+}
+
+function openInAdStudio() {
+  window.location.href = 'index.html#slide-05';
 }
 
 async function approveKolScript() {

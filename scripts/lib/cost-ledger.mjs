@@ -30,6 +30,7 @@ export const PRICE_TABLE_USD = {
   // TTS (USD / video)
   'windows-sapi-vi': 0,
   'google-vi-natural': 0,
+  'sidecar-kokoro': 0,
   'voicestudio-voxcpm2': 0,
   'sidecar-voxcpm2': 0,
   'fpt-vi': 0.006,

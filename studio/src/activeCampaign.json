@@ -16,6 +16,7 @@
   "hookText": "Đừng mua Bình Giữ Nhiệt Inox 304 Cao Cấp 750ml nếu bạn chưa kiểm tra 3 chi tiết sống còn này!",
   "ctaText": "Chỉ 249.000đ hôm nay — Đặt ngay!",
   "productImageSrc": "campaigns/sample-campaign/product/binh-thuy-tinh-giu-nhiet.png",
+  "subtitleStyle": "box",
   "scenes": [
     {
       "id": "scene-1-hook",
@@ -28,7 +29,114 @@
       "trimEndSec": 4,
       "audioSrc": "campaigns/sample-campaign/audio/scene-1-hook.wav",
       "keyframeSrc": "campaigns/sample-campaign/keyframes/scene-1-hook.png",
-      "videoSrc": "campaigns/sample-campaign/clips/Video-m-u.mp4"
+      "videoSrc": "campaigns/sample-campaign/clips/Video-m-u.mp4",
+      "words": [
+        {
+          "display": "Đừng",
+          "start": 0,
+          "end": 0.133
+        },
+        {
+          "display": "mua",
+          "start": 0.133,
+          "end": 0.267
+        },
+        {
+          "display": "Bình",
+          "start": 0.267,
+          "end": 0.4
+        },
+        {
+          "display": "Giữ",
+          "start": 0.4,
+          "end": 0.533
+        },
+        {
+          "display": "Nhiệt",
+          "start": 0.533,
+          "end": 0.667
+        },
+        {
+          "display": "Inox",
+          "start": 0.667,
+          "end": 0.8
+        },
+        {
+          "display": "304",
+          "start": 0.8,
+          "end": 1.333
+        },
+        {
+          "display": "Cao",
+          "start": 1.333,
+          "end": 1.467
+        },
+        {
+          "display": "Cấp",
+          "start": 1.467,
+          "end": 1.6
+        },
+        {
+          "display": "750ml",
+          "start": 1.6,
+          "end": 2.533
+        },
+        {
+          "display": "nếu",
+          "start": 2.533,
+          "end": 2.667
+        },
+        {
+          "display": "bạn",
+          "start": 2.667,
+          "end": 2.8
+        },
+        {
+          "display": "chưa",
+          "start": 2.8,
+          "end": 2.933
+        },
+        {
+          "display": "kiểm",
+          "start": 2.933,
+          "end": 3.067
+        },
+        {
+          "display": "tra",
+          "start": 3.067,
+          "end": 3.2
+        },
+        {
+          "display": "3",
+          "start": 3.2,
+          "end": 3.333
+        },
+        {
+          "display": "chi",
+          "start": 3.333,
+          "end": 3.467
+        },
+        {
+          "display": "tiết",
+          "start": 3.467,
+          "end": 3.6
+        },
+        {
+          "display": "sống",
+          "start": 3.6,
+          "end": 3.733
+        },
+        {
+          "display": "còn",
+          "start": 3.733,
+          "end": 3.867
+        },
+        {
+          "display": "này!",
+          "start": 3.867,
+          "end": 4
+        }
+      ]
     },
     {
       "id": "scene-2-problem-flip",
@@ -41,7 +149,244 @@
       "trimEndSec": 5,
       "audioSrc": "campaigns/sample-campaign/audio/scene-2-problem-flip.wav",
       "keyframeSrc": "campaigns/sample-campaign/keyframes/scene-2-problem-flip.png",
-      "videoSrc": "campaigns/sample-campaign/clips/Video-m-u.mp4"
+      "videoSrc": "campaigns/sample-campaign/clips/Video-m-u.mp4",
+      "words": [
+        {
+          "display": "Mang",
+          "start": 0,
+          "end": 0.092
+        },
+        {
+          "display": "nước",
+          "start": 0.092,
+          "end": 0.184
+        },
+        {
+          "display": "đi",
+          "start": 0.184,
+          "end": 0.276
+        },
+        {
+          "display": "làm",
+          "start": 0.276,
+          "end": 0.368
+        },
+        {
+          "display": "mà",
+          "start": 0.368,
+          "end": 0.46
+        },
+        {
+          "display": "chỉ",
+          "start": 0.46,
+          "end": 0.551
+        },
+        {
+          "display": "2",
+          "start": 0.551,
+          "end": 0.643
+        },
+        {
+          "display": "tiếng",
+          "start": 0.643,
+          "end": 0.735
+        },
+        {
+          "display": "đã",
+          "start": 0.735,
+          "end": 0.827
+        },
+        {
+          "display": "hết",
+          "start": 0.827,
+          "end": 0.919
+        },
+        {
+          "display": "lạnh,",
+          "start": 0.919,
+          "end": 1.011
+        },
+        {
+          "display": "vỏ",
+          "start": 1.043,
+          "end": 1.135
+        },
+        {
+          "display": "bình",
+          "start": 1.135,
+          "end": 1.227
+        },
+        {
+          "display": "lại",
+          "start": 1.227,
+          "end": 1.319
+        },
+        {
+          "display": "đọng",
+          "start": 1.319,
+          "end": 1.411
+        },
+        {
+          "display": "nước",
+          "start": 1.411,
+          "end": 1.503
+        },
+        {
+          "display": "ướt",
+          "start": 1.503,
+          "end": 1.595
+        },
+        {
+          "display": "hết",
+          "start": 1.595,
+          "end": 1.687
+        },
+        {
+          "display": "giấy",
+          "start": 1.687,
+          "end": 1.778
+        },
+        {
+          "display": "tờ",
+          "start": 1.778,
+          "end": 1.87
+        },
+        {
+          "display": "trong",
+          "start": 1.87,
+          "end": 1.962
+        },
+        {
+          "display": "balo.",
+          "start": 1.962,
+          "end": 2.054
+        },
+        {
+          "display": "Khác",
+          "start": 2.086,
+          "end": 2.178
+        },
+        {
+          "display": "biệt",
+          "start": 2.178,
+          "end": 2.27
+        },
+        {
+          "display": "nằm",
+          "start": 2.27,
+          "end": 2.362
+        },
+        {
+          "display": "ở",
+          "start": 2.362,
+          "end": 2.454
+        },
+        {
+          "display": "kết",
+          "start": 2.454,
+          "end": 2.546
+        },
+        {
+          "display": "cấu:",
+          "start": 2.546,
+          "end": 2.638
+        },
+        {
+          "display": "Inox",
+          "start": 2.67,
+          "end": 2.762
+        },
+        {
+          "display": "304",
+          "start": 2.762,
+          "end": 3.13
+        },
+        {
+          "display": "chuẩn",
+          "start": 3.13,
+          "end": 3.222
+        },
+        {
+          "display": "y",
+          "start": 3.222,
+          "end": 3.313
+        },
+        {
+          "display": "tế,",
+          "start": 3.313,
+          "end": 3.405
+        },
+        {
+          "display": "giữ",
+          "start": 3.437,
+          "end": 3.529
+        },
+        {
+          "display": "nhiệt",
+          "start": 3.529,
+          "end": 3.621
+        },
+        {
+          "display": "24h",
+          "start": 3.621,
+          "end": 3.989
+        },
+        {
+          "display": "kết",
+          "start": 3.989,
+          "end": 4.081
+        },
+        {
+          "display": "hợp",
+          "start": 4.081,
+          "end": 4.173
+        },
+        {
+          "display": "lớp",
+          "start": 4.173,
+          "end": 4.265
+        },
+        {
+          "display": "sơn",
+          "start": 4.265,
+          "end": 4.357
+        },
+        {
+          "display": "nhám",
+          "start": 4.357,
+          "end": 4.449
+        },
+        {
+          "display": "tĩnh",
+          "start": 4.449,
+          "end": 4.54
+        },
+        {
+          "display": "điện",
+          "start": 4.54,
+          "end": 4.632
+        },
+        {
+          "display": "chống",
+          "start": 4.632,
+          "end": 4.724
+        },
+        {
+          "display": "bám",
+          "start": 4.724,
+          "end": 4.816
+        },
+        {
+          "display": "vân",
+          "start": 4.816,
+          "end": 4.908
+        },
+        {
+          "display": "tay.",
+          "start": 4.908,
+          "end": 5
+        }
+      ]
     },
     {
       "id": "scene-3-proof",
@@ -51,7 +396,139 @@
       "visualAction": "Remotion render 100% ảnh sản phẩm gốc + 3 thông số thật (Zero-AI-Pixel).",
       "setting": "Standard clean studio/lifestyle setting",
       "audioSrc": "campaigns/sample-campaign/audio/scene-3-proof.wav",
-      "keyframeSrc": "campaigns/sample-campaign/keyframes/scene-3-proof.png"
+      "keyframeSrc": "campaigns/sample-campaign/keyframes/scene-3-proof.png",
+      "words": [
+        {
+          "display": "Nhìn",
+          "start": 0,
+          "end": 0.11
+        },
+        {
+          "display": "cận",
+          "start": 0.11,
+          "end": 0.22
+        },
+        {
+          "display": "cảnh:",
+          "start": 0.22,
+          "end": 0.33
+        },
+        {
+          "display": "Inox",
+          "start": 0.368,
+          "end": 0.478
+        },
+        {
+          "display": "304",
+          "start": 0.478,
+          "end": 0.918
+        },
+        {
+          "display": "chuẩn",
+          "start": 0.918,
+          "end": 1.027
+        },
+        {
+          "display": "y",
+          "start": 1.027,
+          "end": 1.137
+        },
+        {
+          "display": "tế,",
+          "start": 1.137,
+          "end": 1.247
+        },
+        {
+          "display": "giữ",
+          "start": 1.286,
+          "end": 1.396
+        },
+        {
+          "display": "nhiệt",
+          "start": 1.396,
+          "end": 1.505
+        },
+        {
+          "display": "24h;",
+          "start": 1.505,
+          "end": 1.945
+        },
+        {
+          "display": "Sơn",
+          "start": 1.984,
+          "end": 2.093
+        },
+        {
+          "display": "nhám",
+          "start": 2.093,
+          "end": 2.203
+        },
+        {
+          "display": "tĩnh",
+          "start": 2.203,
+          "end": 2.313
+        },
+        {
+          "display": "điện",
+          "start": 2.313,
+          "end": 2.423
+        },
+        {
+          "display": "chống",
+          "start": 2.423,
+          "end": 2.533
+        },
+        {
+          "display": "bám",
+          "start": 2.533,
+          "end": 2.643
+        },
+        {
+          "display": "vân",
+          "start": 2.643,
+          "end": 2.753
+        },
+        {
+          "display": "tay;",
+          "start": 2.753,
+          "end": 2.863
+        },
+        {
+          "display": "và",
+          "start": 2.901,
+          "end": 3.011
+        },
+        {
+          "display": "Nắp",
+          "start": 3.011,
+          "end": 3.121
+        },
+        {
+          "display": "khóa",
+          "start": 3.121,
+          "end": 3.231
+        },
+        {
+          "display": "chống",
+          "start": 3.231,
+          "end": 3.341
+        },
+        {
+          "display": "tràn",
+          "start": 3.341,
+          "end": 3.451
+        },
+        {
+          "display": "360",
+          "start": 3.451,
+          "end": 3.89
+        },
+        {
+          "display": "độ.",
+          "start": 3.89,
+          "end": 4
+        }
+      ]
     },
     {
       "id": "scene-4-cta",
@@ -61,7 +538,89 @@
       "visualAction": "Remotion render thẻ giá chính hãng + nút CTA.",
       "setting": "Standard clean studio/lifestyle setting",
       "audioSrc": "campaigns/sample-campaign/audio/scene-4-cta.wav",
-      "keyframeSrc": "campaigns/sample-campaign/keyframes/scene-4-cta.png"
+      "keyframeSrc": "campaigns/sample-campaign/keyframes/scene-4-cta.png",
+      "words": [
+        {
+          "display": "Giá",
+          "start": 0,
+          "end": 0.093
+        },
+        {
+          "display": "gốc",
+          "start": 0.093,
+          "end": 0.185
+        },
+        {
+          "display": "399.000đ",
+          "start": 0.185,
+          "end": 0.835
+        },
+        {
+          "display": "giảm",
+          "start": 0.835,
+          "end": 0.927
+        },
+        {
+          "display": "chỉ",
+          "start": 0.927,
+          "end": 1.02
+        },
+        {
+          "display": "còn",
+          "start": 1.02,
+          "end": 1.113
+        },
+        {
+          "display": "249.000đ",
+          "start": 1.113,
+          "end": 1.762
+        },
+        {
+          "display": "(-38%",
+          "start": 1.762,
+          "end": 2.226
+        },
+        {
+          "display": "FLASH",
+          "start": 2.226,
+          "end": 2.318
+        },
+        {
+          "display": "SALE)",
+          "start": 2.318,
+          "end": 2.411
+        },
+        {
+          "display": ",",
+          "start": 2.411,
+          "end": 2.504
+        },
+        {
+          "display": "bấm",
+          "start": 2.536,
+          "end": 2.629
+        },
+        {
+          "display": "giỏ",
+          "start": 2.629,
+          "end": 2.722
+        },
+        {
+          "display": "hàng",
+          "start": 2.722,
+          "end": 2.815
+        },
+        {
+          "display": "đặt",
+          "start": 2.815,
+          "end": 2.907
+        },
+        {
+          "display": "ngay!",
+          "start": 2.907,
+          "end": 3
+        }
+      ]
     }
   ]
 }

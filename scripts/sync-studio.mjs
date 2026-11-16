@@ -38,6 +38,26 @@ function main() {
   const productImageSrc = copyAssetToStudioPublic(productRef, path.posix.join(publicBase, 'product'), studioPublic);
 
   const catalog = loadCatalog();
+  const aiCfgPath = path.join(ROOT, 'assets', 'brand-kit', 'ai-config.json');
+  const aiCfg = fs.existsSync(aiCfgPath) ? readJson(aiCfgPath) : {};
+  const subtitleStyle = campaign.subtitleStyle || aiCfg.subtitleStyle || 'box';
+
+  const wordsPath = path.join(campaignDir, 'media', 'audio', 'words.json');
+  const wordsByScene = new Map();
+  if (fs.existsSync(wordsPath)) {
+    const rawWords = readJson(wordsPath);
+    if (Array.isArray(rawWords)) {
+      for (const item of rawWords) {
+        if (item?.sceneId && Array.isArray(item.words)) {
+          wordsByScene.set(item.sceneId, item.words.map((w) => ({
+            display: String(w.display || ''),
+            start: Number(w.start || 0),
+            end: Number(w.end || 0)
+          })));
+        }
+      }
+    }
+  }
 
   const scenes = campaign.scenes.map((scene) => {
     const keyframeAbs = scene.keyframeSrc ? path.join(campaignDir, scene.keyframeSrc) : '';
@@ -60,7 +80,8 @@ function main() {
       trimEndSec: scene.trimEndSec,
       audioSrc: copyAssetToStudioPublic(audioAbs, path.posix.join(publicBase, 'audio'), studioPublic),
       keyframeSrc: copyAssetToStudioPublic(keyframeAbs, path.posix.join(publicBase, 'keyframes'), studioPublic),
-      videoSrc: copyAssetToStudioPublic(videoAbs, path.posix.join(publicBase, 'clips'), studioPublic)
+      videoSrc: copyAssetToStudioPublic(videoAbs, path.posix.join(publicBase, 'clips'), studioPublic),
+      words: wordsByScene.get(scene.id)
     };
   });
 
@@ -78,6 +99,7 @@ function main() {
     hookText: campaign.hookText || '',
     ctaText: campaign.ctaText || '',
     productImageSrc,
+    subtitleStyle,
     scenes
   };
 

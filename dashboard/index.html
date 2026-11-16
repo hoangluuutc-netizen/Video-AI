@@ -70,6 +70,13 @@
         <span class="brain-pill">🎙️ Giọng đọc: <strong id="pill-tts">—</strong></span>
       </div>
 
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 14px;padding:10px 12px;background:#FFF7ED;border:1px solid #FDBA74;border-radius:10px;">
+        <strong style="font-size:12px;color:#9A3412;">⚡ Chọn nhanh chế độ (1 chạm):</strong>
+        <button type="button" class="icon-pill-btn" onclick="applyBrainPreset('free')">🆓 $0 Hoàn Toàn</button>
+        <button type="button" class="icon-pill-btn" style="background:#EA580C;color:#FFF;border-color:#EA580C;" onclick="applyBrainPreset('plan1')">⚡ Hướng 1: Giọng Việt + Highlight Từng Từ</button>
+        <button type="button" class="icon-pill-btn" onclick="applyBrainPreset('cloud')">🚀 Studio Cloud AI (Veo / Gemini)</button>
+      </div>
+
       <div class="idea-box">
         <div class="field-group">
           <label>🧠 Bộ não Kịch bản & Chấm Hook</label>
@@ -111,6 +118,7 @@
           <select id="cfg-tts-model">
             <option value="windows-sapi-vi">Windows Local Speech + Nhạc nền — Không tốn token ($0 / video, offline)</option>
             <option value="google-vi-natural">Giọng Nữ Tiếng Việt Tự Nhiên + Nhạc Nền — Miễn phí ($0 / video)</option>
+            <option value="sidecar-kokoro" data-requires="sidecar">Sidecar · Kokoro-82M (Apache-2.0) — Siêu nhẹ CPU, cần bật sidecar 3911 ($0 / video)</option>
             <option value="voicestudio-voxcpm2" data-requires="voicestudio">VoiceStudio · VoxCPM2 — Giọng KOL riêng (clone có văn bản đồng ý), xử lý trên máy ($0 / video, cần GPU — không chạy được trên máy CPU này)</option>
             <option value="fpt-vi">FPT.AI Speech v5 — 100K ký tự free, sau đó (~$0.006 / video 30s)</option>
             <option value="vbee-vi">Vbee AIVoice API — Giọng Việt 3 miền tự nhiên (~$0.005–$0.01 / video 30s)</option>
@@ -146,17 +154,37 @@
           <p class="cost-hint" data-hint-for="cfg-xray-audio"></p>
         </div>
         <div class="field-group">
-          <label>🔑 Gemini API Key (Tùy chọn)</label>
-          <input type="password" id="cfg-gemini-key" placeholder="Nhập GEMINI_API_KEY..." />
+          <label>🔑 Gemini API Key <span id="badge-gemini-key" class="badge-key-status">⚪ Chưa có</span></label>
+          <div style="display:flex;gap:6px;">
+            <input type="password" id="cfg-gemini-key" placeholder="Nhập GEMINI_API_KEY (để trống nếu giữ nguyên)..." />
+            <button type="button" class="icon-pill-btn" onclick="toggleKeyVisibility('cfg-gemini-key')" title="Hiện/ẩn key">👁️</button>
+          </div>
         </div>
         <div class="field-group">
-          <label>🔑 Fal.ai Key (`FAL_KEY` cho Wan / Kling / FLUX)</label>
-          <input type="password" id="cfg-fal-key" placeholder="Nhập FAL_KEY nếu dùng Fal.ai..." />
+          <label>🔑 Fal.ai Key (<code>FAL_KEY</code>) <span id="badge-fal-key" class="badge-key-status">⚪ Chưa có</span></label>
+          <div style="display:flex;gap:6px;">
+            <input type="password" id="cfg-fal-key" placeholder="Nhập FAL_KEY nếu dùng Wan / Kling / FLUX..." />
+            <button type="button" class="icon-pill-btn" onclick="toggleKeyVisibility('cfg-fal-key')" title="Hiện/ẩn key">👁️</button>
+          </div>
         </div>
         <div class="field-group">
-          <label>🔑 Vbee / FPT.AI Key (Tùy chọn cho TTS Việt)</label>
-          <input type="password" id="cfg-vi-tts-key" placeholder="Nhập VBEE_API_KEY hoặc FPT_API_KEY..." />
+          <label>🔑 Vbee Key &amp; App ID <span id="badge-vbee-key" class="badge-key-status">⚪ Chưa có</span></label>
+          <div style="display:flex;gap:6px;">
+            <input type="password" id="cfg-vi-tts-key" placeholder="Nhập VBEE_API_KEY..." />
+            <input type="text" id="cfg-vbee-app-id" placeholder="VBEE_APP_ID..." style="max-width:160px;" />
+            <button type="button" class="icon-pill-btn" onclick="toggleKeyVisibility('cfg-vi-tts-key')" title="Hiện/ẩn key">👁️</button>
+          </div>
         </div>
+        <div class="field-group">
+          <label>🔑 FPT.AI Speech Key <span id="badge-fpt-key" class="badge-key-status">⚪ Chưa có</span></label>
+          <div style="display:flex;gap:6px;">
+            <input type="password" id="cfg-fpt-key" placeholder="Nhập FPT_API_KEY..." />
+            <button type="button" class="icon-pill-btn" onclick="toggleKeyVisibility('cfg-fpt-key')" title="Hiện/ẩn key">👁️</button>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin:10px 0 14px;">
+        <button type="button" class="icon-pill-btn" style="background:#0F172A;color:#FFF;border-color:#0F172A;font-weight:800;" onclick="saveEnvKeysOnly()">🔑 Lưu API Key vào .env (Dùng cho cả Web &amp; CLI)</button>
       </div>
 
       <!-- KIỂM SOÁT CHI PHÍ (Gói 7.1: selectiveAiCount + maxCostUsdPerVideo) -->
@@ -788,6 +816,36 @@
           </thead>
           <tbody id="sheet-tbody"></tbody>
         </table>
+      </div>
+    </section>
+
+    <!-- GIAI ĐOẠN 3: SẢN XUẤT HÀNG LOẠT (BATCH CSV) & SỔ CHI PHÍ -->
+    <section id="slide-08-batch" class="slide-card">
+      <div class="slide-meta">
+        <span>08 / 08 • SẢN XUẤT HÀNG LOẠT NHIỀU SKU (CSV) &amp; SỔ CHI PHÍ</span>
+        <div class="section-tools">
+          <button class="icon-pill-btn" onclick="openProjectFile('assets/products/batch-template.csv')">📂 Mở `batch-template.csv`</button>
+          <button class="icon-pill-btn" onclick="loadBatchStatus()">🔄 Làm mới Sổ chi phí</button>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.2fr 0.8fr;gap:16px;margin-top:12px;">
+        <div>
+          <label style="font-size:12px;font-weight:800;display:block;margin-bottom:6px;">📋 Danh sách sản phẩm CSV (<code>assets/products/batch-template.csv</code>)</label>
+          <textarea id="batch-csv-input" rows="6" style="width:100%;font-family:monospace;font-size:12px;padding:10px;border:1px solid #CBD5E1;border-radius:10px;"></textarea>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">
+            <button type="button" class="btn btn-outline" onclick="runBatchFromUi(false)">📥 Nhập SKU từ CSV (Chỉ tạo product.json)</button>
+            <button type="button" class="btn btn-primary" onclick="runBatchFromUi(true)">🚀 Chạy Lô Hàng Loạt (--run --resume)</button>
+          </div>
+          <p id="batch-summary-text" style="font-size:13px;color:#334155;margin-top:8px;">Đang tải danh sách lô...</p>
+        </div>
+
+        <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;padding:14px;">
+          <strong style="font-size:13px;text-transform:uppercase;color:#0F172A;">💰 Sổ Chi Phí Thực Tế (<code>cost-ledger.jsonl</code>)</strong>
+          <div style="font-size:24px;font-weight:900;color:#EA580C;margin:8px 0;" id="ledger-total-usd">$0.00</div>
+          <div style="font-size:12px;color:#475569;margin-bottom:8px;" id="ledger-entries-count">0 lượt ghi nhận chi phí</div>
+          <ul id="ledger-recent-list" style="margin:0;padding-left:18px;font-size:12px;color:#334155;max-height:130px;overflow:auto;"></ul>
+        </div>
       </div>
     </section>
   </div>

@@ -1724,7 +1724,86 @@ function syncAiConfigToUi() {
   if (selEl) selEl.checked = Boolean(cfg.selectiveAiOnly);
 
   refreshBrainSummary();
+  updateKeyBadges(cfg);
   scheduleCostEstimate();
+}
+
+function updateKeyBadges(cfg = {}) {
+  const es = cfg.envStatus || {};
+  const setBadge = (id, ok) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = ok ? '✅ Đã có trong .env' : '⚪ Chưa có';
+    el.style.color = ok ? '#15803D' : '#64748B';
+    el.style.fontWeight = ok ? '800' : '600';
+  };
+  setBadge('badge-gemini-key', Boolean(cfg.hasGeminiKey || es.GEMINI_API_KEY));
+  setBadge('badge-fal-key', Boolean(cfg.hasFalKey || es.FAL_KEY));
+  setBadge('badge-vbee-key', Boolean(cfg.hasVbeeKey || es.VBEE_API_KEY));
+  setBadge('badge-fpt-key', Boolean(cfg.hasFptKey || es.FPT_API_KEY));
+}
+
+function toggleKeyVisibility(inputId) {
+  const el = document.getElementById(inputId);
+  if (el) el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+function applyBrainPreset(mode) {
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+  if (mode === 'free') {
+    setVal('cfg-llm-model', 'local-ecommerce-director');
+    setVal('cfg-image-model', 'ffmpeg-real-composite');
+    setVal('cfg-video-model', 'ffmpeg-bokeh-cinema');
+    setVal('cfg-tts-model', 'google-vi-natural');
+    setVal('cfg-subtitle-align', 'heuristic-silence');
+    setVal('cfg-subtitle-style', 'box');
+  } else if (mode === 'plan1') {
+    setVal('cfg-llm-model', 'ollama:qwen3.5:9b');
+    setVal('cfg-image-model', 'ffmpeg-real-composite');
+    setVal('cfg-video-model', 'ffmpeg-bokeh-cinema');
+    setVal('cfg-tts-model', 'vbee-vi');
+    setVal('cfg-subtitle-align', 'faster-whisper-local');
+    setVal('cfg-subtitle-style', 'word-highlight');
+  } else if (mode === 'cloud') {
+    setVal('cfg-llm-model', 'gemini-3.1-pro-preview');
+    setVal('cfg-image-model', 'fal-flux-kontext');
+    setVal('cfg-video-model', 'fal-wan-i2v');
+    setVal('cfg-tts-model', 'vbee-vi');
+    setVal('cfg-subtitle-align', 'faster-whisper-local');
+    setVal('cfg-subtitle-style', 'word-highlight');
+  }
+  refreshBrainSummary();
+  saveAiConfigFromUi();
+}
+
+async function saveEnvKeysOnly() {
+  const payload = {
+    GEMINI_API_KEY: document.getElementById('cfg-gemini-key')?.value.trim() || '',
+    FAL_KEY: document.getElementById('cfg-fal-key')?.value.trim() || '',
+    VBEE_API_KEY: document.getElementById('cfg-vi-tts-key')?.value.trim() || '',
+    VBEE_APP_ID: document.getElementById('cfg-vbee-app-id')?.value.trim() || '',
+    FPT_API_KEY: document.getElementById('cfg-fpt-key')?.value.trim() || ''
+  };
+  try {
+    const res = await fetch('/api/save-env-keys', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.output || 'Lỗi lưu key');
+    if (data.state) {
+      appState = data.state;
+      updateKeyBadges(appState.aiConfig);
+    }
+    ['cfg-gemini-key', 'cfg-fal-key', 'cfg-vi-tts-key', 'cfg-vbee-app-id', 'cfg-fpt-key'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    alert(data.output);
+  } catch (e) {
+    alert(`Lỗi lưu API Key: ${e.message}`);
+  }
 }
 
 // Tên ngắn của lựa chọn đang chọn (phần trước dấu " — ") để hiện trên chip "Đang dùng".
@@ -1888,7 +1967,86 @@ function setupCostControls() {
     if (el.type === 'number') el.addEventListener('input', scheduleCostEstimate);
   }
   refreshBrainSummary();
+  updateKeyBadges(cfg);
   scheduleCostEstimate();
+}
+
+function updateKeyBadges(cfg = {}) {
+  const es = cfg.envStatus || {};
+  const setBadge = (id, ok) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = ok ? '✅ Đã có trong .env' : '⚪ Chưa có';
+    el.style.color = ok ? '#15803D' : '#64748B';
+    el.style.fontWeight = ok ? '800' : '600';
+  };
+  setBadge('badge-gemini-key', Boolean(cfg.hasGeminiKey || es.GEMINI_API_KEY));
+  setBadge('badge-fal-key', Boolean(cfg.hasFalKey || es.FAL_KEY));
+  setBadge('badge-vbee-key', Boolean(cfg.hasVbeeKey || es.VBEE_API_KEY));
+  setBadge('badge-fpt-key', Boolean(cfg.hasFptKey || es.FPT_API_KEY));
+}
+
+function toggleKeyVisibility(inputId) {
+  const el = document.getElementById(inputId);
+  if (el) el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+function applyBrainPreset(mode) {
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+  if (mode === 'free') {
+    setVal('cfg-llm-model', 'local-ecommerce-director');
+    setVal('cfg-image-model', 'ffmpeg-real-composite');
+    setVal('cfg-video-model', 'ffmpeg-bokeh-cinema');
+    setVal('cfg-tts-model', 'google-vi-natural');
+    setVal('cfg-subtitle-align', 'heuristic-silence');
+    setVal('cfg-subtitle-style', 'box');
+  } else if (mode === 'plan1') {
+    setVal('cfg-llm-model', 'ollama:qwen3.5:9b');
+    setVal('cfg-image-model', 'ffmpeg-real-composite');
+    setVal('cfg-video-model', 'ffmpeg-bokeh-cinema');
+    setVal('cfg-tts-model', 'vbee-vi');
+    setVal('cfg-subtitle-align', 'faster-whisper-local');
+    setVal('cfg-subtitle-style', 'word-highlight');
+  } else if (mode === 'cloud') {
+    setVal('cfg-llm-model', 'gemini-3.1-pro-preview');
+    setVal('cfg-image-model', 'fal-flux-kontext');
+    setVal('cfg-video-model', 'fal-wan-i2v');
+    setVal('cfg-tts-model', 'vbee-vi');
+    setVal('cfg-subtitle-align', 'faster-whisper-local');
+    setVal('cfg-subtitle-style', 'word-highlight');
+  }
+  refreshBrainSummary();
+  saveAiConfigFromUi();
+}
+
+async function saveEnvKeysOnly() {
+  const payload = {
+    GEMINI_API_KEY: document.getElementById('cfg-gemini-key')?.value.trim() || '',
+    FAL_KEY: document.getElementById('cfg-fal-key')?.value.trim() || '',
+    VBEE_API_KEY: document.getElementById('cfg-vi-tts-key')?.value.trim() || '',
+    VBEE_APP_ID: document.getElementById('cfg-vbee-app-id')?.value.trim() || '',
+    FPT_API_KEY: document.getElementById('cfg-fpt-key')?.value.trim() || ''
+  };
+  try {
+    const res = await fetch('/api/save-env-keys', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.output || 'Lỗi lưu key');
+    if (data.state) {
+      appState = data.state;
+      updateKeyBadges(appState.aiConfig);
+    }
+    ['cfg-gemini-key', 'cfg-fal-key', 'cfg-vi-tts-key', 'cfg-vbee-app-id', 'cfg-fpt-key'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    alert(data.output);
+  } catch (e) {
+    alert(`Lỗi lưu API Key: ${e.message}`);
+  }
 }
 
 // Preset tiết kiệm: Ollama local + 1 cảnh AI (FLUX Kontext + Wan 5s) + Vbee ≈ $0.30, ngân sách $0.50.
@@ -1927,8 +2085,9 @@ async function saveAiConfigFromUi() {
     xrayAudioModel: document.getElementById('cfg-xray-audio')?.value,
     geminiApiKey: document.getElementById('cfg-gemini-key')?.value || '',
     falApiKey: document.getElementById('cfg-fal-key')?.value || '',
-    vbeeApiKey: ttsModel === 'vbee-vi' ? viTtsKey : '',
-    fptApiKey: ttsModel === 'fpt-vi' ? viTtsKey : ''
+    vbeeApiKey: document.getElementById('cfg-vi-tts-key')?.value || '',
+    vbeeAppId: document.getElementById('cfg-vbee-app-id')?.value || '',
+    fptApiKey: document.getElementById('cfg-fpt-key')?.value || ''
   };
   appState.aiConfig = { ...(appState.aiConfig || {}), ...payload };
   syncAiConfigToUi();
@@ -2345,8 +2504,63 @@ function assignFootageToScenes(clipId, targetSceneIdx = null) {
   updatePhonePreview();
 }
 
+function renderBatchPanel(data = {}) {
+  const csvEl = document.getElementById('batch-csv-input');
+  if (csvEl && typeof data.csvText === 'string') csvEl.value = data.csvText;
+  const p = data.preview || {};
+  const sumEl = document.getElementById('batch-summary-text');
+  if (sumEl) {
+    sumEl.textContent = `📦 ${p.count || 0} SKU trong CSV • Ước tính ~$${Number(p.perVideoUsd || 0).toFixed(2)}/video • Tổng lô: ~$${Number(p.totalEstimatedUsd || 0).toFixed(2)}`;
+  }
+  const l = data.ledger || {};
+  const totalEl = document.getElementById('ledger-total-usd');
+  if (totalEl) totalEl.textContent = `$${Number(l.totalUsd || 0).toFixed(2)}`;
+  const cntEl = document.getElementById('ledger-entries-count');
+  if (cntEl) cntEl.textContent = `${l.entriesCount || 0} lượt ghi nhận chi phí`;
+  const listEl = document.getElementById('ledger-recent-list');
+  if (listEl) {
+    const recent = l.recent || [];
+    listEl.innerHTML = recent.length
+      ? recent.map((r) => `<li><strong>${r.campaignId}</strong> • ${r.step || 'ai'} (${r.model || ''}): $${Number(r.usd || 0).toFixed(2)}</li>`).join('')
+      : '<li>Chưa có giao dịch chi phí AI nào được ghi nhận.</li>';
+  }
+}
+
+async function loadBatchStatus() {
+  try {
+    const res = await fetch('/api/batch/status');
+    const data = await res.json();
+    if (res.ok && data.ok) renderBatchPanel(data);
+  } catch {
+    // Bỏ qua nếu server chưa chạy
+  }
+}
+
+async function runBatchFromUi(runPipeline = false) {
+  const csvText = document.getElementById('batch-csv-input')?.value || '';
+  const sumEl = document.getElementById('batch-summary-text');
+  if (sumEl) sumEl.textContent = runPipeline ? '⏳ Đang chạy dây chuyền sản xuất hàng loạt (--run --resume)...' : '⏳ Đang nhập SKU từ CSV...';
+  try {
+    const res = await fetch('/api/batch/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ csvText, runPipeline, resume: true })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.output || 'Lỗi chạy lô CSV');
+    renderBatchPanel(data);
+    if (data.state) appState = data.state;
+    logConsole(data.output);
+    alert(runPipeline ? 'Đã chạy xong lô hàng loạt!' : 'Đã nhập SKU từ CSV thành công!');
+  } catch (e) {
+    if (sumEl) sumEl.textContent = `❌ Lỗi: ${e.message}`;
+    alert(`Lỗi chạy lô CSV: ${e.message}`);
+  }
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   setupCommandBar();
   setupCostControls();
   initDashboard();
+  loadBatchStatus();
 });

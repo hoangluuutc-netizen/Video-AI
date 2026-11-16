@@ -279,20 +279,61 @@ const SceneView: React.FC<{
           justifyContent: 'center',
         }}
       >
-        <div
-          style={{
-            backgroundColor: 'rgba(0, 0, 0, 0.78)',
-            padding: '16px 28px',
-            borderRadius: 16,
-            fontSize: isVertical ? 32 : 26,
-            fontWeight: 700,
-            textAlign: 'center',
-            lineHeight: 1.35,
-            maxWidth: '92%',
-          }}
-        >
-          {scene.subtitle}
-        </div>
+        {props.subtitleStyle === 'word-highlight' && scene.words && scene.words.length > 0 ? (() => {
+          const currentSec = frame / fps;
+          const activeIdx = Math.max(
+            0,
+            scene.words.findIndex((w, i) => currentSec >= w.start && (currentSec < w.end || i === scene.words!.length - 1))
+          );
+          const chunkIdx = Math.floor(activeIdx / 3);
+          const chunk = scene.words.slice(chunkIdx * 3, chunkIdx * 3 + 3);
+          return (
+            <div
+              style={{
+                padding: '12px 24px',
+                fontSize: isVertical ? 40 : 32,
+                fontWeight: 900,
+                textAlign: 'center',
+                lineHeight: 1.3,
+                maxWidth: '92%',
+                textShadow: '0 3px 8px rgba(0,0,0,0.95), 0 0 2px #000',
+              }}
+            >
+              {chunk.map((w, idx) => {
+                const globalIdx = chunkIdx * 3 + idx;
+                const isActive = globalIdx === activeIdx && currentSec >= w.start;
+                return (
+                  <span
+                    key={`${globalIdx}-${w.display}`}
+                    style={{
+                      display: 'inline-block',
+                      margin: '0 6px',
+                      color: isActive ? '#FACC15' : '#FFFFFF',
+                      transform: isActive ? 'scale(1.12)' : 'scale(1)',
+                    }}
+                  >
+                    {w.display}
+                  </span>
+                );
+              })}
+            </div>
+          );
+        })() : (
+          <div
+            style={{
+              backgroundColor: 'rgba(0, 0, 0, 0.78)',
+              padding: '16px 28px',
+              borderRadius: 16,
+              fontSize: isVertical ? 32 : 26,
+              fontWeight: 700,
+              textAlign: 'center',
+              lineHeight: 1.35,
+              maxWidth: '92%',
+            }}
+          >
+            {scene.subtitle}
+          </div>
+        )}
       </div>
     </AbsoluteFill>
   );

@@ -14,6 +14,8 @@ import {
   generateKolScript,
   renderKolTalkingVideo
 } from './lib/kol-studio.mjs';
+import { maskEnvStatus, upsertEnvFile } from './lib/env-keys.mjs';
+import { summarizeCostLedgers, previewBatchCsv } from './lib/batch-dashboard.mjs';
 import { estimateVideoCost, normalizeCostSettings } from './lib/cost-ledger.mjs';
 import { approveCampaignFile } from './kol-approve.mjs';
 import { normalizeToolChoices } from './lib/tool-choices.mjs';
@@ -87,13 +89,15 @@ function loadAiConfig() {
     envRaw = fs.readFileSync(envPath, 'utf8');
   }
   const hasEnv = (k) => Boolean(process.env[k]) || new RegExp(`${k}=\\S+`).test(envRaw);
+  const envStatus = maskEnvStatus(envRaw, process.env);
   return {
     ...DEFAULT_AI_CONFIG,
     ...saved,
-    hasGeminiKey: Boolean(saved.geminiApiKey || hasEnv('GEMINI_API_KEY')),
-    hasFalKey: Boolean(saved.falApiKey || hasEnv('FAL_KEY')),
-    hasVbeeKey: Boolean(saved.vbeeApiKey || hasEnv('VBEE_API_KEY')),
-    hasFptKey: Boolean(saved.fptApiKey || hasEnv('FPT_API_KEY'))
+    envStatus,
+    hasGeminiKey: Boolean(saved.geminiApiKey || envStatus.GEMINI_API_KEY),
+    hasFalKey: Boolean(saved.falApiKey || envStatus.FAL_KEY),
+    hasVbeeKey: Boolean(saved.vbeeApiKey || envStatus.VBEE_API_KEY),
+    hasFptKey: Boolean(saved.fptApiKey || envStatus.FPT_API_KEY)
   };
 }
 
@@ -289,11 +293,44 @@ const server = http.createServer(async (req, res) => {
         updated.fptApiKey = body.fptApiKey.trim();
         process.env.FPT_API_KEY = updated.fptApiKey;
       }
+      upsertEnvFile(
+        path.join(ROOT, '.env'),
+        {
+          GEMINI_API_KEY: body.geminiApiKey,
+          FAL_KEY: body.falApiKey,
+          VBEE_API_KEY: body.vbeeApiKey,
+          VBEE_APP_ID: body.vbeeAppId,
+          FPT_API_KEY: body.fptApiKey,
+          ELEVENLABS_API_KEY: body.elevenlabsApiKey,
+          PHOTOROOM_API_KEY: body.photoroomApiKey
+        },
+        { examplePath: path.join(ROOT, '.env.example') }
+      );
       fs.mkdirSync(path.dirname(AI_CONFIG_PATH), { recursive: true });
       fs.writeFileSync(AI_CONFIG_PATH, JSON.stringify(updated, null, 2) + '\n', 'utf8');
       return sendJson(res, 200, {
         ok: true,
         output: `Đã lưu cấu hình Bộ não AI & Công cụ (${updated.llmModel} | ${updated.imageModel} | ${updated.videoModel} | ${updated.ttsModel}).`,
+        state: loadWorkspaceState()
+      });
+    } catch (e) {
+      return sendJson(res, 500, { ok: false, output: e.message });
+    }
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/save-env-keys') {
+    try {
+      const body = await readBody(req);
+      const resEnv = upsertEnvFile(path.join(ROOT, '.env'), body, { examplePath: path.join(ROOT, '.env.example') });
+      for (const k of resEnv.applied) {
+        if (body[k]) process.env[k] = String(body[k]).trim();
+      }
+      return sendJson(res, 200, {
+        ok: true,
+        applied: resEnv.applied,
+        output: resEnv.applied.length
+          ? `Đã lưu ${resEnv.applied.length} API Key vào .env (${resEnv.applied.join(', ')}).`
+          : 'Không có API Key mới nào được nhập — giữ nguyên các key hiện có trong .env.',
         state: loadWorkspaceState()
       });
     } catch (e) {
@@ -756,7 +793,8 @@ const server = http.createServer(async (req, res) => {
         product,
         voiceText: body.voiceText,
         hookTitle: body.hookTitle,
-        durationSec: body.durationSec
+        durationSec: body.durationSec,
+        subtitleStyle: body.subtitleStyle || 'word-highlight'
       });
       return sendJson(res, 200, {
         ...rendered,
@@ -764,6 +802,56 @@ const server = http.createServer(async (req, res) => {
       });
     } catch (e) {
       return sendJson(res, 500, { ok: false, output: `Lỗi dựng Video KOL AI: ${e.message}` });
+    }
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/kol/lipsync-ai') {
+    try {
+      const body = await readBody(req);
+      const aiConfig = loadAiConfig();
+      if (!aiConfig.hasGeminiKey && !aiConfig.hasFalKey) {
+        return sendJson(res, 400, {
+          ok: false,
+          missingKey: true,
+          output: 'Chưa có GEMINI_API_KEY hoặc FAL_KEY. Vui lòng nhập API Key tại "⚙️ Cài đặt Bộ não" trước khi gọi Veo 3.1 / Omni 1.2 / Kling.'
+        });
+      }
+      const state = loadWorkspaceState();
+      const character = state.characters.find((c) => c.id === body.characterId);
+      if (!character) throw new Error('Không tìm thấy hồ sơ KOL.');
+      const campId = `kol-${character.id}`;
+      const campDir = path.join(CAMPAIGNS_DIR, campId);
+      const campPath = path.join(campDir, 'campaign.json');
+      fs.mkdirSync(campDir, { recursive: true });
+      const camp = readJsonSafe(campPath, {
+        id: campId,
+        title: `KOL AI Lip-Sync: ${character.name}`,
+        productId: body.productId || 'sample-product',
+        characterId: character.id,
+        hook: body.hookTitle || character.name,
+        scenes: []
+      });
+      camp.scenes = [
+        {
+          id: 'scene-1',
+          type: 'ai-experience',
+          durationSec: Math.min(8, Math.max(4, Number(body.durationSec || 5))),
+          caption: body.hookTitle || character.name,
+          voiceover: body.voiceText || character.catchphrase || '',
+          customPrompt: body.veoLipSyncPrompt || '',
+          qcStatus: 'pending'
+        }
+      ];
+      fs.writeFileSync(campPath, JSON.stringify(camp, null, 2) + '\n', 'utf8');
+      const campRel = path.posix.join('campaigns', campId, 'campaign.json');
+      const result = runNodeScript('scripts/generate-media.mjs', [campRel, '--selective']);
+      return sendJson(res, 200, {
+        ok: true,
+        campaignId: campId,
+        output: result.output || `Đã gửi yêu cầu tạo clip Lip-Sync AI cho ${character.name}.`
+      });
+    } catch (e) {
+      return sendJson(res, 500, { ok: false, output: `Lỗi Lip-Sync AI: ${e.message}` });
     }
   }
 
@@ -885,6 +973,44 @@ const server = http.createServer(async (req, res) => {
       fs.mkdirSync(path.dirname(SHEET_PATH), { recursive: true });
       fs.writeFileSync(SHEET_PATH, JSON.stringify({ reels }, null, 2) + '\n', 'utf8');
       return sendJson(res, 200, { ok: true, output: `Đã lưu Sổ vận hành (${reels.length} reel).` });
+    } catch (e) {
+      return sendJson(res, 500, { ok: false, output: e.message });
+    }
+  }
+
+  // ===== GIAI ĐOẠN 3: BATCH CSV & SỔ CHI PHÍ =====
+  if (req.method === 'GET' && url.pathname === '/api/batch/status') {
+    try {
+      const csvPath = path.join(ASSETS_DIR, 'products', 'batch-template.csv');
+      const csvText = fs.existsSync(csvPath) ? fs.readFileSync(csvPath, 'utf8') : '';
+      const aiCfg = loadAiConfig();
+      const preview = previewBatchCsv(csvText, aiCfg);
+      const ledger = summarizeCostLedgers(CAMPAIGNS_DIR);
+      return sendJson(res, 200, { ok: true, csvText, preview, ledger });
+    } catch (e) {
+      return sendJson(res, 500, { ok: false, output: e.message });
+    }
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/batch/run') {
+    try {
+      const body = await readBody(req);
+      const csvPath = path.join(ASSETS_DIR, 'products', 'batch-template.csv');
+      if (typeof body.csvText === 'string' && body.csvText.trim()) {
+        fs.writeFileSync(csvPath, body.csvText.trimEnd() + '\n', 'utf8');
+      }
+      const args = [path.posix.join('assets', 'products', 'batch-template.csv')];
+      if (body.runPipeline) args.push('--run');
+      if (body.resume !== false) args.push('--resume');
+      const result = runNodeScript('scripts/batch-from-csv.mjs', args);
+      const aiCfg = loadAiConfig();
+      const csvText = fs.existsSync(csvPath) ? fs.readFileSync(csvPath, 'utf8') : '';
+      return sendJson(res, 200, {
+        ...result,
+        preview: previewBatchCsv(csvText, aiCfg),
+        ledger: summarizeCostLedgers(CAMPAIGNS_DIR),
+        state: loadWorkspaceState()
+      });
     } catch (e) {
       return sendJson(res, 500, { ok: false, output: e.message });
     }

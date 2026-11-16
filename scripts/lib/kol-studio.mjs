@@ -251,7 +251,7 @@ Trả về JSON: { "hook": "...", "body": "...", "cta": "...", "caption": "...",
   };
 }
 
-export async function renderKolTalkingVideo({ character, product = null, voiceText = '', hookTitle = '', durationSec = 15 } = {}) {
+export async function renderKolTalkingVideo({ character, product = null, voiceText = '', hookTitle = '', durationSec = 15, subtitleStyle = 'word-highlight' } = {}) {
   if (!character || !character.id) {
     throw new Error('Chưa chọn hồ sơ KOL AI.');
   }
@@ -282,7 +282,7 @@ export async function renderKolTalkingVideo({ character, product = null, voiceTe
     hook: hookTitle || text.slice(0, 60),
     voiceover: text,
     scenes: [
-      { id: 'scene-1', type: 'real-footage', durationSec: dur, caption: hookTitle || character.name, voiceover: text, qcStatus: 'approved' }
+      { id: 'scene-1', type: 'real-product-closeup', durationSec: dur, caption: hookTitle || character.name, voiceover: text, qcStatus: 'approved' }
     ]
   };
   fs.writeFileSync(tempCampPath, JSON.stringify(tempCampaign, null, 2) + '\n', 'utf8');
@@ -339,7 +339,7 @@ export async function renderKolTalkingVideo({ character, product = null, voiceTe
     lastLabel = 'withprod';
   }
 
-  if (fs.existsSync(assPath)) {
+  if (subtitleStyle === 'word-highlight' && fs.existsSync(assPath)) {
     const escapedAss = assPath.replace(/\\/g, '/').replace(/:/g, '\\:');
     filter += `;[${lastLabel}]ass='${escapedAss}'[vout]`;
     lastLabel = 'vout';
