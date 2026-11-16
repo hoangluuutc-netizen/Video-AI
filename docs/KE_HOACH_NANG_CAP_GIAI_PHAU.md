@@ -36,7 +36,7 @@
 - **Thứ tự sắp xếp:** Từ thấp đến cao theo hướng tối ưu dần (miễn phí `0đ` → giá rẻ → cân bằng → cao cấp nhất).
 - **Hiển thị chi phí:** Sau mỗi lựa chọn đều ghi rõ **giá ước tính** để người dùng chủ động kiểm soát ngân sách trước khi chạy.
 
-### Gói 7 — Giọng KOL local $0, Phụ đề từng từ, X-Ray lời thoại & < $0.50/video (ĐÃ CHỐT bản 2 — Mốc 7.1 đã giao Antigravity)
+### Gói 7 — Giọng KOL local $0, Phụ đề từng từ, X-Ray lời thoại & < $0.50/video (bản 3 — 7.1 XONG; đang làm 7.2a không cần cài + Task 0 đã duyệt)
 - Chi tiết phân tích + kế hoạch 13 task (bản 2): [`docs/KE_HOACH_GOI_7_GIONG_KOL_LOCAL.md`](KE_HOACH_GOI_7_GIONG_KOL_LOCAL.md).
 - **7.0 Spike:** cài VoiceStudio ngoài repo, chuyển engine sang VoxCPM2, dò API thật, đo tốc độ CPU (máy không có GPU rời), kiểm FFmpeg `h264_qsv`/`libass`.
 - **7.1 Nền tảng (không cài thêm):** unload Ollama trước TTS, cổng RAM, cache giọng + bỏ TTS chạy 2 lần, batch không ghi đè `product.json`, chặn ngân sách `$0.50` + 1 cảnh AI, dựng QSV nhanh hơn.

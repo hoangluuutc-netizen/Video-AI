@@ -113,3 +113,8 @@
 - **Khả dụng:** viền focus bàn phím, tôn trọng `prefers-reduced-motion`, không cuộn ngang ở 375px.
 - **Kiểm tra:** `node --test` 33/33, `validate-assets` 100%, `smoke-test` 100%, kiểm trên trình duyệt (desktop 1024px + mobile 375px): ước tính 1 cảnh Wan = $0.30 trong ngân sách, 2 cảnh Kling = $0.79 báo vượt $0.50; nút Lưu ghi đúng 2 trường mới vào `ai-config.json`; không lỗi console.
 - **Ghi chú cho mốc sau:** `generate-media.mjs` ước tính theo `durationSec` của cảnh, trong khi Fal tính tròn 5s/10s → cảnh 4s bị ước tính thấp hơn thực tế; nên làm tròn theo bậc Fal ở Gói 7.2.
+
+## 2026-11-16 — Claude: Sắp lại kế hoạch Gói 7 (bản 3) — người dùng duyệt Task 0 + Mốc 7.2a
+- Người dùng **duyệt cả hai**: Task 0 được cài VoiceStudio (app desktop qua script chính thức, đọc script trước khi chạy) + `uv`/Python 3.11; đồng thời làm ngay **Mốc 7.2a** gồm các việc không cần cài: T0-Bước 1 (kiểm FFmpeg) → T5b (mới: `falBilledSeconds` 5s/10s) → T8 (trừ xóa giọng bên trong VoiceStudio) → T10 tầng 1 (heuristic + `mapAsrToScript`, 2 lựa chọn ASR xám "cần Task 0") → T11.
+- Phát hiện khi rà: âm nền sine `volume=0.025` ≈ −32 dBFS che ngưỡng `silencedetect -35dB` → T10 phải đo khoảng lặng trên file TTS thô trước khi trộn (quy đổi theo `tempo`) và ghi `speechStart`/`speechEnd` vào `voice-manifest.json`.
+- Mốc 7.2b (sau cổng T0): T7 (+T7B) → T9 → T10 tầng 2–3 → T12 → xóa giọng qua API của T8.

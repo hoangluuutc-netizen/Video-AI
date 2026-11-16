@@ -1,6 +1,9 @@
 # Gói 7 — Giọng KOL người thật qua VoiceStudio, Phụ đề theo từng từ, X-Ray lời thoại & Hạ chi phí < $0.50/video
 
-> **Trạng thái:** **ĐÃ CHỐT bản 2** (người dùng duyệt 2026-11-16). **Mốc 7.1 (Task 1–6) đã giao Antigravity.** Task 0 chờ người dùng duyệt cài VoiceStudio/Python; Mốc 7.2–7.3 làm sau khi Task 0 qua cổng quyết định.
+> **Trạng thái (bản 3, 2026-11-16):**
+> - **Mốc 7.1 XONG** (commit `300e4da`, Claude kiểm định + vá giao diện ở `e0e2ed2`).
+> - Người dùng **duyệt cả hai**: (1) Task 0 được phép cài VoiceStudio (app desktop qua script chính thức, đọc script trước khi chạy) + `uv`/Python 3.11; (2) làm ngay **Mốc 7.2a** gồm các việc không cần cài đặt.
+> - Thứ tự mới xem mục **"Thứ tự & mốc bàn giao"**.
 >
 > **Bản 2 chỉnh theo yêu cầu người dùng:**
 > - **(1)** Mỗi công cụ VoiceStudio (VoxCPM2, WhisperX) trở thành **một lựa chọn trong danh sách công cụ của từng hạng mục** trên Dashboard, theo chuẩn Gói 6. VoiceStudio là đường tích hợp chính.
@@ -311,14 +314,31 @@ Kịch bản LLM / Ảnh / Video: VoiceStudio không có công cụ cho các h�
 
 ### Thứ tự & mốc bàn giao
 
-| Mốc | Task | Cần cài thêm? | Lợi ích |
-|---|---|---|---|
-| **7.0 Spike** | T0 | VoiceStudio + Python/uv — **người dùng duyệt cài** | Cổng quyết định; dò API thật |
-| **7.1 Nền tảng** | T1 → T6 | Không | Hết TTS chạy trùng, chặn ngân sách, chi phí ≈ $0.30, dựng nhanh, batch an toàn |
-| **7.2 Giọng KOL thật** | T7 (+T7B nếu cần) → T8 → T9 | Cần T0 PASS | Giọng KOL thật qua VoiceStudio, có đồng ý/duyệt/thu hồi, lựa chọn TTS trên Dashboard |
-| **7.3 Phụ đề & X-Ray** | T10 → T12 | VoiceStudio và/hoặc venv `tools/speech` | 3 lựa chọn căn từ, kiểu phụ đề, 3 lựa chọn X-Ray |
+**Bản 3 — sắp lại để không phải chờ Task 0:**
 
-T0 chạy song song được với Mốc 7.1.
+| Mốc | Task | Cần cài thêm? | Trạng thái / Lợi ích |
+|---|---|---|---|
+| **7.1 Nền tảng** | T1 → T6 | Không | ✅ **XONG** (`300e4da` + vá UI `e0e2ed2`) |
+| **7.0 Spike** | T0 | VoiceStudio + Python/uv — **người dùng ĐÃ DUYỆT** | Cổng quyết định; dò API thật. Cần giọng mẫu của chính người dùng |
+| **7.2a Không cần cài** | T0-Bước 1 → T5b → T8* → T10* → T11 | Không | Đồng ý/duyệt/thu hồi KOL, căn từ heuristic, phụ đề highlight từng từ, ước tính Fal đúng bậc 5s/10s |
+| **7.2b Sau T0** | T7 (+T7B nếu cần) → T9 → T10 (tầng 2–3) → T12 → phần còn lại của T8 | Cần T0 PASS | Giọng KOL thật qua VoiceStudio, lựa chọn TTS, căn từ bằng ASR, X-Ray lời thoại |
+
+**Phạm vi Mốc 7.2a** (đánh dấu * = làm một phần):
+
+- **T0-Bước 1:** chỉ kiểm FFmpeg (`-version`, `h264_qsv`, `libass`). T11 cần kết quả `libass`.
+- **T5b (mới, nhỏ) — Fal tính tròn 5s/10s:**
+  - Thêm `falBilledSeconds(durationSec) → 5 | 10` vào `scripts/lib/cost-ledger.mjs`, cùng quy tắc với `fal-client.mjs:109` (`durationSec >= 8 ? 10 : 5`).
+  - `generate-media.mjs` dùng hàm này khi dựng `aiScenes` để ước tính.
+  - Test: `falBilledSeconds(4) === 5`, `(7.9) === 5`, `(8) === 10`, `(12) === 10`; 1 cảnh 4s Wan ước tính `$0.25` chứ không phải `$0.20`.
+- **T8\*:** làm toàn bộ, **trừ** việc xóa giọng đã lưu **bên trong VoiceStudio**. Trong 7.2a, `revoke-voice.mjs` in hướng dẫn xóa thủ công; xóa qua API làm ở 7.2b nếu T0 tìm thấy endpoint.
+- **T10\* — chỉ tầng 1:**
+  - Làm `heuristicWordTimes`, `mapAsrToScript` (hàm thuần, test bằng dữ liệu ASR giả), `detectSpeechBounds`, `alignCampaignWords` với `heuristic-silence`.
+  - Danh sách `#cfg-subtitle-align` hiện đủ 3 lựa chọn theo bảng A5-2, nhưng `faster-whisper-local` và `voicestudio-whisperx` **xám kèm chú thích "(cần Task 0)"**. Chưa có `getLocalToolsStatus` (T9) thì để xám cứng.
+  - **Bẫy cần tránh:** âm nền sine trộn vào giọng (khi không có nhạc nền) ở mức `volume=0.025` ≈ **−32 dBFS**, to hơn ngưỡng `silencedetect=noise=-35dB` → đo trên file đã trộn sẽ **không bao giờ thấy khoảng lặng**. Phải đo trên **file TTS thô trước khi trộn** ngay trong `generate-voiceover.mjs`, quy đổi theo `tempo` (`speechStart = rawStart / tempo`, `speechEnd = min(dur, rawEnd / tempo)`), rồi ghi `speechStart` / `speechEnd` vào `voice-manifest.json`. `detectSpeechBounds` chỉ là fallback khi manifest thiếu 2 trường này.
+- **T11:** làm toàn bộ (dùng `words.json` từ heuristic). Thiếu `libass` → lựa chọn `word-highlight` xám + giữ `drawtext`.
+- **Khóa Mốc 7.2a** (theo Global Constraints), commit gợi ý: `git commit -m "Gói 7.2a: đồng ý/duyệt/thu hồi giọng KOL, căn từ heuristic + phụ đề highlight từng từ, ước tính Fal bậc 5s/10s"`.
+
+**Mốc 7.2b** bắt đầu khi T0 có kết quả ở Bước 7 (cổng quyết định). Thứ tự: T7 (+T7B) → T9 → T10 tầng 2–3 (bỏ xám 2 lựa chọn ASR theo `getLocalToolsStatus`) → T12 → xóa giọng qua API của T8.
 
 ---
 
