@@ -2558,9 +2558,48 @@ async function runBatchFromUi(runPipeline = false) {
   }
 }
 
+async function loadSystemReadiness() {
+  const bar = document.getElementById('system-readiness-bar');
+  if (!bar) return;
+  try {
+    const res = await fetch('/api/system-readiness');
+    const data = await res.json();
+    if (!res.ok || !data.ok) return;
+    const chips = (data.items || []).map((it) => {
+      const bg = it.level === 'ok' ? '#DCFCE7' : (it.level === 'warn' ? '#FEE2E2' : '#F1F5F9');
+      const fg = it.level === 'ok' ? '#166534' : (it.level === 'warn' ? '#991B1B' : '#475569');
+      const icon = it.level === 'ok' ? '✅' : (it.level === 'warn' ? '⚠️' : '⚪');
+      return `<span title="${it.detail}" style="background:${bg};color:${fg};padding:2px 8px;border-radius:999px;font-weight:700;">${icon} ${it.label}</span>`;
+    }).join('');
+    bar.innerHTML = `<strong style="color:#0F172A;">🟢 Lõi sẵn sàng: ${data.corePercent}%</strong> ${chips}`;
+  } catch {
+    // Bỏ qua nếu server chưa chạy
+  }
+}
+
+async function renderRemotionFromUi(ratio = '9x16') {
+  const campaignId = getSelectedCampaignId();
+  logConsole(`⏳ Đang đồng bộ & render Remotion (${ratio}) cho ${campaignId}...`);
+  try {
+    const res = await fetch('/api/studio/render', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ campaignId, ratio })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.output || 'Lỗi render Remotion');
+    logConsole(data.output);
+    alert(data.output);
+  } catch (e) {
+    logConsole(`❌ ${e.message}`);
+    alert(e.message);
+  }
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   setupCommandBar();
   setupCostControls();
   initDashboard();
   loadBatchStatus();
+  loadSystemReadiness();
 });

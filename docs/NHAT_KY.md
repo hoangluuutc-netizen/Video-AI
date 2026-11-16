@@ -183,3 +183,9 @@
 - Nâng cấp `scripts/lib/kol-studio.mjs`: tự động kiểm định `ffprobe` sau khi dựng (`1080×1920`, `60fps`, `hasAudio`, `durationSec`) và lưu `subtitleStyle` vào chiến dịch `kol-<id>`.
 - Bổ sung `POST /api/kol/sync-studio` và nút **📐 Đồng bộ sang Remotion** + badge QC ngay trên `dashboard/kol-studio.html` / `kol-studio.js`.
 - Thêm bộ test `scripts/tests/kol-studio.test.mjs` (4 test pass); tổng cộng **`108/108` unit tests pass**, `studio` `tsc --noEmit` 0 lỗi, `validate-assets.mjs` 0 cảnh báo, `smoke-test.mjs` đạt 100%.
+
+## 2026-11-17 — Antigravity: Hoàn tất Giai đoạn 6 (100% Dự án — Sẵn sàng Hệ thống, Render Remotion Web & Đẩy Git)
+- Bổ sung `scripts/lib/system-readiness.mjs` (kèm TDD `scripts/tests/system-readiness.test.mjs`), API `GET /api/system-readiness` và thanh trạng thái **🟢 Hệ thống sẵn sàng** ngay trên Dashboard.
+- Bổ sung API `POST /api/studio/render` và nút **🎬 Render Remotion MP4 (9:16)** tại Mục `06 / 08` trên `dashboard/index.html` / `app.js`.
+- Cập nhật `README.md` hoàn chỉnh toàn hệ thống (Video Ad Studio + KOL AI Studio + 6 Agent Skills + Batch CSV + Remotion Word-Highlight).
+- Kiểm định cuối cùng đạt 100%: `110/110` unit tests pass, `studio` `tsc --noEmit` 0 lỗi, `validate-assets.mjs` 0 cảnh báo, `smoke-test.mjs` đạt 100%. Đẩy hoàn tất lên `origin main`.

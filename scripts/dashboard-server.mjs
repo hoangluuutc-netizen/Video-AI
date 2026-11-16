@@ -16,6 +16,7 @@ import {
 } from './lib/kol-studio.mjs';
 import { maskEnvStatus, upsertEnvFile } from './lib/env-keys.mjs';
 import { summarizeCostLedgers, previewBatchCsv } from './lib/batch-dashboard.mjs';
+import { buildSystemReadiness } from './lib/system-readiness.mjs';
 import { estimateVideoCost, normalizeCostSettings } from './lib/cost-ledger.mjs';
 import { approveCampaignFile } from './kol-approve.mjs';
 import { normalizeToolChoices } from './lib/tool-choices.mjs';
@@ -343,6 +344,61 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { ok: true, ...(await getLocalToolsStatus(loadAiConfig(), { root: ROOT })) });
     } catch (e) {
       return sendJson(res, 500, { ok: false, output: e.message });
+    }
+  }
+
+  if (req.method === 'GET' && url.pathname === '/api/system-readiness') {
+    try {
+      const aiConfig = loadAiConfig();
+      const toolsStatus = await getLocalToolsStatus(aiConfig, { root: ROOT });
+      const musicDir = path.join(ASSETS_DIR, 'music');
+      const musicCount = fs.existsSync(musicDir)
+        ? fs.readdirSync(musicDir).filter((f) => /\.(mp3|wav|m4a|ogg)$/i.test(f)).length
+        : 0;
+      const readiness = buildSystemReadiness({
+        toolsStatus,
+        aiConfig,
+        counts: {
+          products: listSubdirs(path.join(ASSETS_DIR, 'products')).length,
+          characters: listSubdirs(path.join(ASSETS_DIR, 'characters')).length,
+          campaigns: listSubdirs(CAMPAIGNS_DIR).length
+        },
+        studioInstalled: fs.existsSync(path.join(ROOT, 'studio', 'node_modules')),
+        musicCount
+      });
+      return sendJson(res, 200, { ok: true, ...readiness });
+    } catch (e) {
+      return sendJson(res, 500, { ok: false, output: e.message });
+    }
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/studio/render') {
+    try {
+      const body = await readBody(req);
+      const cid = String(body.campaignId || 'sample-campaign').replace(/[^a-z0-9-]/gi, '');
+      const ratio = ['9x16', '1x1', '16x9'].includes(body.ratio) ? body.ratio : '9x16';
+      const campRel = path.posix.join('campaigns', cid, 'campaign.json');
+      if (!fs.existsSync(path.join(ROOT, campRel))) {
+        return sendJson(res, 404, { ok: false, output: `Không tìm thấy chiến dịch ${cid}.` });
+      }
+      runNodeScript('scripts/sync-studio.mjs', [campRel]);
+      const compId = `ProductAdVideo-${ratio}`;
+      const outDir = path.join(CAMPAIGNS_DIR, cid, 'out');
+      fs.mkdirSync(outDir, { recursive: true });
+      const outMp4 = path.join(outDir, `remotion-${ratio}.mp4`);
+      const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+      execFileSync(npxCmd, ['remotion', 'render', compId, outMp4], {
+        cwd: path.join(ROOT, 'studio'),
+        stdio: 'pipe',
+        timeout: 1000 * 60 * 5
+      });
+      return sendJson(res, 200, {
+        ok: true,
+        mediaUrl: `/campaigns/${cid}/out/remotion-${ratio}.mp4?t=${Date.now()}`,
+        output: `Đã render xong Remotion ${compId}: campaigns/${cid}/out/remotion-${ratio}.mp4`
+      });
+    } catch (e) {
+      return sendJson(res, 500, { ok: false, output: `Lỗi render Remotion: ${e.message}` });
     }
   }
 

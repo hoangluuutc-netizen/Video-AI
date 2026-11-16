@@ -15,27 +15,27 @@ Các mô hình Video AI thuần túy thường làm biến dạng logo, chữ tr
 - `assets/products/`: Dữ liệu & ảnh gốc từng sản phẩm (`product.json`).
 - `assets/characters/`: Hồ sơ & ảnh tham chiếu nhân vật đại diện cố định (`character.json`).
 - `campaigns/`: Kịch bản, prompt và cấu hình render cho từng chiến dịch quảng cáo.
-- `dashboard/`: Giao diện điều khiển trực quan **Đội Làm Video A.I. (7 Trợ Lý, 1 Cỗ Máy Ra Reel)** hỗ trợ cả luồng Quay thật (Zero-AI-Pixel) và Hybrid AI.
-- `studio/`: Ứng dụng **Remotion (React + TypeScript)** để xem trước và render video đa tỷ lệ.
-- `scripts/`: Bộ công cụ CLI kiểm tra dữ liệu, tạo chiến dịch mới và sinh prompt khóa chi tiết.
-- `docs/`: Tài liệu tổng hợp công cụ/repo AI video, quy trình chống sai lệch và nhật ký dự án.
-- `.agents/skills/`: Bộ kỹ năng (Agent Skills) để trợ lý AI tự động viết kịch bản và kiểm duyệt prompt.
+- `dashboard/`: Giao diện điều khiển trực quan **Đội Làm Video A.I. (7 Trợ Lý, 1 Cỗ Máy Ra Reel)** hỗ trợ cả luồng Quay thật (Zero-AI-Pixel), Hybrid AI, Batch CSV & Sổ chi phí, Quản lý API Key `.env` 1-chạm, và **KOL AI Studio** (`dashboard/kol-studio.html`).
+- `studio/`: Ứng dụng **Remotion (React + TypeScript)** hỗ trợ xem trước, phụ đề `word-highlight` từng từ kiểu TikTok, và render video đa tỷ lệ (`9:16 | 1:1 | 16:9`).
+- `scripts/`: Bộ công cụ CLI & Server (`dashboard-server.mjs`, `run-optimal-pipeline.mjs`, `batch-from-csv.mjs`, `verify-integrity.mjs`).
+- `docs/`: Tài liệu tổng hợp công cụ/repo AI video, quy trình chống sai lệch và nhật ký dự án (`docs/NHAT_KY.md`).
+- `.agents/skills/`: Bộ **6 Agent Skills** chuyên biệt (`ecommerce-video-director`, `product-consistency-qc`, `rea-video`, `kol-persona-architect`, `kol-visual-consistency`, `kol-voice-lipsync`).
 
 ## 3. Khởi chạy nhanh
 ```powershell
-# 0. Mở Giao diện Trực quan "Đội Làm Video A.I. — 7 Trợ Lý" (http://localhost:4173)
-node scripts/dashboard-server.mjs
+# 0. Mở Giao diện Trực quan (Video Ad Studio: http://localhost:4173 | KOL AI Studio: http://localhost:4173/kol-studio.html)
+start-dashboard.bat
+# hoặc: node scripts/dashboard-server.mjs
 
-# 1. Kiểm tra dữ liệu mẫu
+# 1. Kiểm tra dữ liệu, unit tests & smoke test toàn hệ thống
 node scripts/validate-assets.mjs
+node --test scripts/tests/*.test.mjs
+node scripts/smoke-test.mjs
 
-# 2. Sinh bộ prompt chuẩn khóa sản phẩm & nhân vật cho chiến dịch mẫu
-node scripts/generate-prompts.mjs campaigns/sample-campaign/campaign.json
+# 2. Chạy dây chuyền tự động 6 bước (Hướng 1 — $0 mặc định hoặc Vbee/FPT)
+node scripts/run-optimal-pipeline.mjs campaigns/sample-campaign/campaign.json
 
-# 3. Tạo chiến dịch mới
-node scripts/new-campaign.mjs ten-chien-dich
-
-# 4. Mở Remotion Studio để xem trước & xuất video
+# 3. Mở Remotion Studio để xem trước & xuất video đa tỷ lệ
 cd studio
 npm.cmd install
 npm.cmd run dev
