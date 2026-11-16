@@ -8,7 +8,7 @@ let ffmpegCaps = null;
 export async function getLocalToolsStatus(aiCfg = {}, { root = process.cwd() } = {}) {
   const lt = aiCfg.localTts || {};
   const vsCfg = resolveLocalTtsConfig({ ...aiCfg, localTts: { ...lt, provider: 'voicestudio' } });
-  const scCfg = resolveLocalTtsConfig({ ...aiCfg, localTts: { ...lt, provider: 'sidecar', baseUrl: lt.sidecarUrl || 'http://127.0.0.1:3901' } });
+  const scCfg = resolveLocalTtsConfig({ ...aiCfg, localTts: { ...lt, provider: 'sidecar', baseUrl: lt.sidecarUrl || 'http://127.0.0.1:3911' } });
   const [vs, sc] = await Promise.all([checkLocalTts(vsCfg), checkLocalTts(scCfg)]);
   let commercialSafe = false;
   let engineNote = '';

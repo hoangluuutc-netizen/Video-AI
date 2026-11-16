@@ -52,7 +52,7 @@ generate-voiceover.mjs / word-aligner.mjs / video-analyzer.mjs
 local-tts-client.mjs  ──HTTP loopback, chuẩn OpenAI──┬─► VoiceStudio 127.0.0.1:3900 (ĐƯỜNG CHÍNH, cài ngoài repo, engine = VoxCPM2)
    (+ chặn engine NC)                                 │      /v1/audio/speech        → giọng KOL
                                                       │      /v1/audio/transcriptions → WhisperX bóc băng / căn từ
-                                                      └─► Sidecar VoxCPM2 127.0.0.1:3901 (DỰ PHÒNG — chỉ làm nếu T0 thấy VoiceStudio
+                                                      └─► Sidecar VoxCPM2 127.0.0.1:3911 (DỰ PHÒNG — chỉ làm nếu T0 thấy VoiceStudio
                                                              thiếu field clone, không chạy headless, hoặc quá nặng RAM)
 ```
 
@@ -295,7 +295,7 @@ Kịch bản LLM / Ảnh / Video: VoiceStudio không có công cụ cho các h�
 - Mọi danh sách công cụ trên Dashboard: `$0` đứng đầu, thấp → cao, ghi giá ước tính, **giữ nguyên mặc định hiện có**.
 - Không thêm npm dependency vào gốc repo. Test dùng `node:test`.
 - `maxCostUsdPerVideo` mặc định `0.50`. `selectiveAiCount` mặc định `1`.
-- Cổng VoiceStudio `3900`, sidecar `3901`. Timeout TTS local mặc định `600000` ms.
+- Cổng VoiceStudio `3900`, sidecar `3911` (đổi từ 3901 vì 3901 là giao diện web của VoiceStudio). Timeout TTS local mặc định `600000` ms.
 - Ghi file theo kiểu tạm rồi `rename`. Thông báo lỗi bằng tiếng Việt.
 - **Khóa mốc** (theo `CLAUDE.md`): `node --check` các file sửa → `node --test` → `node scripts/validate-assets.mjs` 100% → `cd studio && npm.cmd run typecheck` nếu đụng `studio/` → cập nhật `docs/NHAT_KY.md` → đề xuất 1 dòng commit. **Chỉ commit khi xong trọn 1 mốc.**
 
@@ -612,7 +612,7 @@ test('ffmpeg không tồn tại → fallback libx264', () => assert.equal(detect
 
 **Interfaces — Produces:**
 - `resolveLocalTtsConfig(aiCfg, env) → { provider: 'voicestudio' | 'sidecar', baseUrl, apiKey, model, timeoutMs, allowedEngines: ['voxcpm2'], startCmd, startCwd }` — mặc định `provider: 'voicestudio'`, `baseUrl: 'http://127.0.0.1:3900'`. Ném lỗi khi host không phải loopback.
-- `checkLocalTts(cfg) → Promise<{ ok: boolean, engine: string | null, detail: string }>` — VoiceStudio: `GET /.well-known/voicestudio-speech`, field engine theo `SPEECH_API_NOTES.md`; sidecar: `GET /health`.
+- `checkLocalTts(cfg) → Promise<{ ok: boolean, engine: string | null, detail: string }>` — VoiceStudio: `GET /v1/models` + `findEngineInModelList` (đính chính sau khi đọc backend v0.5.8: `/.well-known` không chứa engine); sidecar: `GET /health`.
 - `assertCommercialSafeEngine(engine, allowedEngines)` — ném lỗi với tên chứa `omnivoice`, hoặc engine `null` / không trong allowlist.
 - `synthesizeLocalTts(text, { cfg, voiceProfile }) → Promise<Buffer>` — gọi `checkLocalTts` + `assertCommercialSafeEngine` (cache trong tiến trình), rồi `POST {baseUrl}/v1/audio/speech` với `{ model, input, voice: voiceProfile.voiceId, response_format: 'wav' }` + field clone theo notes T0. Có `Authorization: Bearer` khi có key. Timeout bằng `AbortController`.
 - `transcribeLocalAsr(wavPath, { cfg, language = 'vi' }) → Promise<{ text: string, words: Array<{ w, start, end }> | null }>` — `POST /v1/audio/transcriptions` (multipart, `FormData` + `Blob` có sẵn trong Node). Trả `words: null` nếu server không trả `words[]`.
@@ -648,7 +648,7 @@ test('timeout ném lỗi rõ ràng', async () =>
 - Create: `tools/speech/tts_server.py`
 - Modify: `tools/speech/requirements.txt` (thêm `voxcpm>=2.0.3`), `.gitignore` (thêm `tools/speech/.venv/`)
 
-**Interfaces:** cùng giao thức với T7 — thư viện chuẩn `http.server` + `voxcpm`, bind **127.0.0.1:3901**, xử lý từng request một, nạp model lười:
+**Interfaces:** cùng giao thức với T7 — thư viện chuẩn `http.server` + `voxcpm`, bind **127.0.0.1:3911**, xử lý từng request một, nạp model lười:
 - `GET /health → { ok, engine: 'voxcpm2', license: 'apache-2.0', loaded }`
 - `POST /v1/audio/speech { model, input, voice, response_format: 'wav', ref_audio_path, ref_text, seed? }`
 - `POST /admin/unload`
