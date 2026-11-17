@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { ROOT } from './lib/footage.mjs';
 import { readJson } from './lib/prompt-builder.mjs';
 import { runOptimalPipeline, recordReelSheet } from './run-optimal-pipeline.mjs';
@@ -224,7 +225,8 @@ async function main() {
   }
 }
 
-const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'));
+// fileURLToPath giải mã % (thư mục "tạo video AI" có dấu & khoảng trắng); .pathname thì không → main() không bao giờ chạy
+const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
 if (isDirectRun) {
   main().catch((err) => {
     console.error('LỖI batch-from-csv:', err.message);

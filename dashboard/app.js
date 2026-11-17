@@ -363,28 +363,33 @@ function getSelectedCampaignId() {
   return (document.getElementById('inp-campaign-id')?.value || 'sample-campaign').trim();
 }
 
+// Dựng lại <option> mà GIỮ lựa chọn hiện tại. Gán innerHTML trần sẽ reset về mục đầu tiên —
+// hàm này chạy sau mỗi thao tác gọi server, nên trước đây nhân vật/sản phẩm bị đổi ngầm sang mục đầu
+// rồi bị lưu vào campaign.json → video ra sai người / sai sản phẩm.
+function setSelectOptions(sel, html) {
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = html;
+  if (prev && [...sel.options].some((o) => o.value === prev)) sel.value = prev;
+}
+
 function populateSampleVideoSelect() {
   const sampleSel = document.getElementById('inp-sample-video');
   if (!sampleSel) return;
   const clips = appState.catalog?.clips || [];
-  if (clips.length > 0) {
-    sampleSel.innerHTML = clips
-      .map((c) => `<option value="${c.id}">${c.id} — ${c.filePath} (${c.durationSec}s, ${c.width}×${c.height})</option>`)
-      .join('');
-  } else {
-    sampleSel.innerHTML = `<option value="video-mau-tham-chieu">Video mẫu mặc định (Kéo thả video mẫu mới ở Mục 05)</option>`;
-  }
+  setSelectOptions(
+    sampleSel,
+    clips.length > 0
+      ? clips.map((c) => `<option value="${c.id}">${c.id} — ${c.filePath} (${c.durationSec}s, ${c.width}×${c.height})</option>`).join('')
+      : `<option value="video-mau-tham-chieu">Video mẫu mặc định (Kéo thả video mẫu mới ở Mục 05)</option>`
+  );
 }
 
 function populateSelectors() {
   const prodSel = document.getElementById('inp-product');
   const charSel = document.getElementById('inp-character');
-  prodSel.innerHTML = appState.products
-    .map((p) => `<option value="${p.id}">${p.name} (${p.salePrice || p.price})</option>`)
-    .join('');
-  charSel.innerHTML = appState.characters
-    .map((c) => `<option value="${c.id}">${c.name}</option>`)
-    .join('');
+  setSelectOptions(prodSel, appState.products.map((p) => `<option value="${p.id}">${p.name} (${p.salePrice || p.price})</option>`).join(''));
+  setSelectOptions(charSel, appState.characters.map((c) => `<option value="${c.id}">${c.name}</option>`).join(''));
 
   const brandBadge = document.getElementById('phone-brand-badge');
   if (brandBadge && appState.brand?.brandName) {
@@ -2194,6 +2199,10 @@ async function triggerBackendAction(action, estSec = 5) {
   if (data.state) {
     appState = data.state;
     populateSelectors();
+    if (action === 'generate-voiceover' || action === 'run-optimal-pipeline') {
+      const changed = syncSceneTimingFromState(campaignId);
+      if (changed) logConsole('⏱️ Đã cập nhật thời lượng cảnh theo lời thoại (Mục 05) — lần dựng tới sẽ đọc trọn câu.');
+    }
   }
 
   if (data.mediaUrl) {
@@ -2225,6 +2234,26 @@ async function triggerBackendAction(action, estSec = 5) {
     t0
   );
   logConsole(`${data.ok ? '✅ THÀNH CÔNG' : '❌ LỖI'} (${data.elapsedSec || 0}s):\n${data.output}`);
+}
+
+// Bước giọng đọc có thể kéo dài cảnh để đọc trọn câu → nạp lại thời lượng từ server.
+// Không nạp thì lần "Lưu campaign.json" kế tiếp ghi đè về thời lượng cũ và bước dựng lại cắt tiếng.
+function syncSceneTimingFromState(campaignId) {
+  const camp = (appState.campaigns || []).find((c) => c.id === campaignId);
+  if (!camp) return 0;
+  let changed = 0;
+  for (const s of scenesList) {
+    const srv = (camp.scenes || []).find((x) => x.id === s.id);
+    if (!srv) continue;
+    for (const k of ['durationSec', 'trimStartSec', 'trimEndSec', 'audioSrc']) {
+      if (srv[k] !== undefined && srv[k] !== s[k]) {
+        s[k] = srv[k];
+        changed++;
+      }
+    }
+  }
+  if (changed) renderScenesTable();
+  return changed;
 }
 
 function loadCampaignFromSelect(silent = false) {
@@ -2277,38 +2306,15 @@ async function recordReelToSheet() {
     alert('Trợ lý 07: Chỉ khi tất cả 5 mục kiểm duyệt đều ĐẠT (PASS) mới được bàn giao vào Sổ vận hành!');
     return;
   }
-  const campaign = buildCampaignPayload();
-  const p = getSelectedProduct();
-  const totalSec = campaign.scenes.reduce((s, x) => s + Number(x.durationSec || 0), 0);
-
-  const entry = {
-    id: campaign.id,
-    mode: campaign.mode || 'hybrid-ai',
-    productName: p.name,
-    hook: campaign.hookText,
-    durationSec: totalSec,
-    qcStatus: 'PASS',
-    outputPath:
-      campaign.mode === 'real-footage'
-        ? `campaigns/${campaign.id}/out/ffmpeg-9x16.mp4`
-        : `studio/out/tiktok-9x16.mp4`
-  };
-
-  const reels = appState.sheet?.reels || [];
-  const existingIdx = reels.findIndex((r) => r.id === entry.id);
-  if (existingIdx >= 0) reels[existingIdx] = entry;
-  else reels.unshift(entry);
-  appState.sheet = { reels };
-
-  renderSheetTable();
-  if (serverOnline) {
-    await fetch('/api/save-sheet', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reels })
-    });
+  if (!serverOnline) {
+    alert('Cần chạy Dashboard Server để ghi Sổ vận hành.');
+    return;
   }
-  logConsole(`Đã ghi Reel "${entry.id}" (PASS) vào Sổ vận hành.`);
+  // Ghi qua server bằng đúng hàm của Auto-Pilot/Batch: trạng thái lấy theo duyệt KOL ("CHỜ KOL DUYỆT")
+  // và nhãn "GIỌNG TẠM". Trước đây giao diện tự ghi "PASS" → bỏ qua được bước duyệt KOL người thật.
+  await saveCampaignToServer(true);
+  await triggerBackendAction('record-reel');
+  renderSheetTable();
 }
 
 function renderSheetTable() {
@@ -2319,13 +2325,13 @@ function renderSheetTable() {
     .map(
       (r) => `
       <tr>
-        <td><strong>${r.id}</strong></td>
-        <td><span class="badge-mech">${r.mode}</span></td>
-        <td>${r.productName}</td>
-        <td>"${r.hook}"</td>
-        <td>${r.durationSec}s</td>
-        <td><span class="badge-score">${r.qcStatus}</span></td>
-        <td><button class="icon-pill-btn" onclick="openProjectFile('${r.outputPath}', true)">📂 ${r.outputPath}</button></td>
+        <td><strong>${escapeHtml(r.id)}</strong></td>
+        <td><span class="badge-mech">${escapeHtml(r.mode)}</span></td>
+        <td>${escapeHtml(r.productName)}</td>
+        <td>"${escapeHtml(r.hook)}"</td>
+        <td>${Number(r.durationSec || 0)}s</td>
+        <td><span class="badge-score">${escapeHtml(r.qcStatus)}</span></td>
+        <td><button class="icon-pill-btn" data-path="${escapeHtml(r.outputPath)}" onclick="openProjectFile(this.dataset.path, true)">📂 ${escapeHtml(r.outputPath)}</button></td>
       </tr>
     `
     )
@@ -2545,7 +2551,10 @@ async function runBatchFromUi(runPipeline = false) {
     const data = await res.json();
     if (!res.ok || !data.ok) throw new Error(data.output || 'Lỗi chạy lô CSV');
     renderBatchPanel(data);
-    if (data.state) appState = data.state;
+    if (data.state) {
+      appState = data.state;
+      populateSelectors(); // SKU mới nhập phải hiện ngay trong ô chọn Sản phẩm (giữ nguyên lựa chọn hiện tại)
+    }
     logConsole(data.output);
     alert(runPipeline ? 'Đã chạy xong lô hàng loạt!' : 'Đã nhập SKU từ CSV thành công!');
   } catch (e) {

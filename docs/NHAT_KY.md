@@ -236,3 +236,54 @@
   - Dashboard nạp lên "Đã kết nối" với 1 sản phẩm, 2 chiến dịch.
   - **Render Remotion bấm từ nút trên Dashboard chạy thành công lần đầu:** `campaigns/sample-campaign/out/remotion-9x16.mp4`, `1080×1920`, 30fps, H.264 + AAC, 16s, mất khoảng 3 phút 20 giây.
   - Trong lúc render, `/api/state` vẫn trả 200 sau 42 ms, tức server không còn bị treo.
+
+## 2026-11-17 — Claude: Nghiệm thu thực tế toàn trình qua giao diện (theo `HUONG_DAN_TEST_THU.md` + KOL Studio)
+Chạy từng nút như người dùng thật ở cấu hình $0 (LLM mẫu cục bộ, dựng FFmpeg, giọng Google miễn phí).
+
+**Đạt ngay:**
+- Mục 02: phân tích video mẫu (11 cắt cảnh, 120 BPM), áp công thức.
+- Mục 03–05: phễu Hook 15→6→1, bộ đếm từ/giây, bộ prompt Veo 3.1/Muse + 8 keyframe, tải `.md`.
+- Mục 06–07: xuất 3 tỷ lệ, Cutlist CapCut, QC SSIM, `validate`.
+- KOL Studio: kịch bản → video 9:16 60fps có tiếng (32s) → đồng bộ Remotion.
+
+**Lỗi tìm được & đã sửa:**
+1. **Lời thoại bị cắt cụt im lặng** (`generate-voiceover.mjs`).
+   - Tăng tốc tối đa 1,15x, phần thừa bị `atrim` cắt mất.
+   - Kịch bản mặc định cần 54s nhưng video chỉ 16s, tức khoảng 70% lời thoại bị mất mà không báo gì.
+   - Nay không bao giờ cắt: còn tràn thì **kéo dài cảnh** cho vừa (`planSceneFit`, `applySceneDuration`, cập nhật cả `trimEndSec`) và in rõ `[Kéo dài cảnh] … rút lời thoại còn ≤ N từ`.
+   - `computeFitTempo` làm tròn lên (làm tròn xuống tạo tràn giả, cảnh dài thêm 0,3s mỗi lần chạy lại).
+2. **Cache giọng tái dùng âm thanh đã cắt.**
+   - Cache lưu file đã khớp thời lượng nhưng khóa không có thời lượng.
+   - Nay cache **bản thu thô** (`raw-pcm-v2`, phần tốn tiền là gọi TTS), còn khớp thời lượng luôn làm lại. Cache kiểu cũ tự bị bỏ qua.
+3. **Giao diện ghi đè thời lượng cũ:** sau bước giọng đọc, `syncSceneTimingFromState` nạp lại thời lượng cảnh. Nếu không nạp, bước "Dựng video" lưu lại 4s và cắt tiếng lần nữa.
+4. **Đổi ngầm nhân vật / sản phẩm (vi phạm nguyên tắc tối cao).**
+   - `populateSelectors()` dựng lại `<select>` bằng `innerHTML`, nên lựa chọn bị reset về mục đầu sau *mỗi* thao tác gọi server, rồi bị lưu vào `campaign.json`.
+   - Đã thấy thật: video ra mặt "Linh Đan" thay vì "Minh Anh". Ô sản phẩm và video mẫu dính lỗi y hệt.
+   - Sửa bằng `setSelectOptions` giữ lựa chọn. KOL Studio: ô sản phẩm không còn reset, `?kol=` chỉ áp ở lần nạp đầu.
+5. **Nút "Ghi Reel" bỏ qua duyệt KOL.**
+   - Giao diện tự ghi `PASS`, trong khi pipeline ghi `CHỜ KOL DUYỆT` / `PASS (GIỌNG TẠM)`.
+   - Sổ có 2 kiểu dòng: bảng hiện `undefined`, CSV trống cột, 1 chiến dịch có 2 dòng.
+   - Nay có `scripts/lib/reel-sheet.mjs` (`normalizeReelRow`, `upsertReel`). Nút gọi action server `record-reel`, dùng chung `recordReelSheet` với Auto-Pilot và Batch. Bảng được escape HTML.
+6. **Batch CSV chưa từng chạy trên máy này.**
+   - Kiểm "chạy trực tiếp" dùng `new URL(import.meta.url).pathname`, bị mã hóa % với thư mục "tạo video AI". Vì vậy `main()` không chạy, thoát 0 im lặng, và giao diện vẫn báo "Đã nhập SKU thành công".
+   - Sửa bằng `fileURLToPath`. Nhập SKU xong thì ô sản phẩm cập nhật ngay.
+7. **Bộ ảnh 4 góc tự gọi Gemini tốn tiền** chỉ vì có `GEMINI_API_KEY`, kể cả khi đang chọn FFmpeg $0.
+   - Nay chỉ gọi khi chọn mô hình ảnh `gemini-*` (`pickCharacterSheetMethod`).
+   - Nguồn luôn là ảnh chân dung gốc, không lấy lại ảnh 4 góc cũ.
+8. **Server treo khi chạy việc dài.**
+   - `runScript` chuyển sang `execFile` bất đồng bộ, đi qua hàng đợi tuần tự `scripts/lib/job-queue.mjs` (Remotion và `yt-dlp` cũng vào hàng đợi).
+   - Đo thật: trong lúc dựng 58s, `/api/state` vẫn trả lời sau 0,4–0,9s; việc nặng thứ hai xếp hàng chứ không chạy song song.
+   - Cảnh báo stderr nay hiện lên nhật ký Dashboard.
+
+**Test mới:** `audio-fit` (+4), `character-sheet` (2), `reel-sheet` (3), `cli-entry` (2), `job-queue` (3).
+
+**Kiểm định:**
+- `141/141` unit test pass, `validate-assets.mjs` 100%, `studio` `tsc --noEmit` 0 lỗi, `smoke-test.mjs` 100%.
+- Dữ liệu mẫu đã khôi phục nguyên trạng sau khi chạy thử.
+
+**Việc đang chờ (cần người dùng quyết):**
+- **Giọng sản xuất:** Hướng 1 chốt Vbee/FPT nhưng `VBEE_API_KEY` và `FPT_API_KEY` trong `.env` đang **trống**. Giọng thực chạy là endpoint Google Translate TTS không chính thức (miễn phí nhưng không dành cho mục đích thương mại).
+- **Độ dài kịch bản mặc định:** `buildSixScriptBlocks()` sinh khoảng 152 từ cho 24s, nên đọc trọn câu thì video khoảng 55s, vượt mục tiêu 30s. Cần rút gọn mẫu kịch bản (nội dung quảng cáo, nên cần duyệt).
+- Bước "✅ Duyệt kịch bản KOL" không chạy thử vì là quyết định của con người.
+- Nút Lip-Sync AI (Veo 3.1 tốn tiền) không bấm thử.
+- `renderKolTalkingVideo` vẫn đồng bộ (treo server khoảng 80s khi dựng video KOL).

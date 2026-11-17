@@ -33,6 +33,9 @@ import { normalizeToolChoices } from './lib/tool-choices.mjs';
 import { getLocalToolsStatus } from './lib/local-tools-status.mjs';
 import { analyzeSpeechTrack } from './lib/video-analyzer.mjs';
 import { prepareForHeavyPhase } from './lib/resource-gate.mjs';
+import { normalizeReelRow } from './lib/reel-sheet.mjs';
+import { createJobQueue } from './lib/job-queue.mjs';
+import { recordReelSheet } from './run-optimal-pipeline.mjs';
 
 const execFileAsync = promisify(execFile);
 const ROOT = process.cwd();
@@ -130,7 +133,8 @@ function loadWorkspaceState() {
   const campaigns = listSubdirs(path.join(ROOT, 'campaigns'))
     .map((d) => readJsonSafe(path.join(ROOT, 'campaigns', d, 'campaign.json'), null))
     .filter(Boolean);
-  const sheet = readJsonSafe(SHEET_PATH, { reels: [] });
+  const rawSheet = readJsonSafe(SHEET_PATH, { reels: [] });
+  const sheet = { reels: (Array.isArray(rawSheet) ? rawSheet : rawSheet.reels || []).map(normalizeReelRow) };
 
   let sampleAnalysis = null;
   const firstClipId = catalog.clips?.[0]?.id;
@@ -195,27 +199,28 @@ function sanitizeFileName(name) {
   return path.basename(String(name || 'upload.bin')).replace(/[^a-zA-Z0-9._-]/g, '-');
 }
 
+// Mọi script nặng đi qua 1 hàng đợi tuần tự, chạy bất đồng bộ: trước đây execFileSync treo cả server
+// (Auto-Pilot/dựng 3 tỷ lệ mất vài phút → KOL Studio, trạng thái lô... đều đứng chờ).
+const heavyJobs = createJobQueue();
+
 function runScript(scriptRel, args = []) {
-  const startMs = Date.now();
-  try {
-    const out = execFileSync('node', [path.join(ROOT, scriptRel), ...args], {
-      cwd: ROOT,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe']
-    });
-    return {
-      ok: true,
-      elapsedSec: ((Date.now() - startMs) / 1000).toFixed(1),
-      output: out.trim()
-    };
-  } catch (e) {
-    const msg = [e.stdout, e.stderr, e.message].filter(Boolean).join('\n').trim();
-    return {
-      ok: false,
-      elapsedSec: ((Date.now() - startMs) / 1000).toFixed(1),
-      output: msg
-    };
-  }
+  return heavyJobs.run(async () => {
+    const startMs = Date.now();
+    const elapsedSec = () => ((Date.now() - startMs) / 1000).toFixed(1);
+    try {
+      const { stdout, stderr } = await execFileAsync(process.execPath, [path.join(ROOT, scriptRel), ...args], {
+        cwd: ROOT,
+        encoding: 'utf8',
+        windowsHide: true,
+        maxBuffer: 64 * 1024 * 1024
+      });
+      // Cảnh báo (console.warn → stderr) trước đây bị nuốt khi script chạy thành công
+      return { ok: true, elapsedSec: elapsedSec(), output: [stdout.trim(), stderr.trim()].filter(Boolean).join('\n') };
+    } catch (e) {
+      const msg = [e.stdout, e.stderr, e.message].filter(Boolean).join('\n').trim();
+      return { ok: false, elapsedSec: elapsedSec(), output: msg };
+    }
+  });
 }
 
 function buildLocalKeyframesFromRealImages(campaignRel) {
@@ -416,7 +421,7 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 404, { ok: false, output: `Không tìm thấy chiến dịch ${cid}.` });
       }
       // runScript không ném lỗi → phải tự kiểm ok (trước đây gọi runNodeScript không tồn tại → endpoint luôn hỏng)
-      const synced = runScript('scripts/sync-studio.mjs', [campRel]);
+      const synced = await runScript('scripts/sync-studio.mjs', [campRel]);
       if (!synced.ok) return sendJson(res, 500, { ok: false, output: `Đồng bộ Remotion lỗi: ${synced.output}` });
       // Id phải khớp <Composition> trong studio/src/Root.tsx (TikTok-9x16 / Facebook-1x1 / Web-16x9)
       const compId = remotionCompositionId(ratio);
@@ -429,12 +434,12 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { ok: false, output: 'Chưa cài Remotion — chạy "npm install" trong thư mục studio/.' });
       }
       // Bất đồng bộ: render có thể mất vài phút, execFileSync sẽ treo cả Dashboard trong lúc đó
-      await execFileAsync(process.execPath, [remotionCli, 'render', 'src/index.ts', compId, outMp4], {
+      await heavyJobs.run(() => execFileAsync(process.execPath, [remotionCli, 'render', 'src/index.ts', compId, outMp4], {
         cwd: path.join(ROOT, 'studio'),
         timeout: 1000 * 60 * 10,
         maxBuffer: 32 * 1024 * 1024,
         windowsHide: true
-      });
+      }));
       return sendJson(res, 200, {
         ok: true,
         mediaUrl: `/campaigns/${cid}/out/remotion-${ratio}.mp4?t=${Date.now()}`,
@@ -597,7 +602,7 @@ const server = http.createServer(async (req, res) => {
         const destAbs = path.join(footageDir, cleanName);
         fs.writeFileSync(destAbs, buffer);
         const relPath = path.posix.join('assets', 'footage', cleanName);
-        const ingestRes = runScript('scripts/ingest-footage.mjs');
+        const ingestRes = await runScript('scripts/ingest-footage.mjs');
         const clipId = path.basename(cleanName, path.extname(cleanName)).toLowerCase().replace(/[^a-z0-9]+/g, '-');
         let sampleAnalysis = null;
         try {
@@ -671,10 +676,13 @@ const server = http.createServer(async (req, res) => {
       const slug = `url-${Date.now()}`;
       const outFile = path.join(ROOT, 'assets', 'footage', `${slug}.mp4`);
       try {
-        execFileSync('yt-dlp', ['-f', 'mp4/best[ext=mp4]/best', '--no-playlist', '-o', outFile, videoUrl.trim()], {
-          encoding: 'utf8',
-          timeout: 60000
-        });
+        await heavyJobs.run(() =>
+          execFileAsync('yt-dlp', ['-f', 'mp4/best[ext=mp4]/best', '--no-playlist', '-o', outFile, videoUrl.trim()], {
+            encoding: 'utf8',
+            timeout: 60000,
+            windowsHide: true
+          })
+        );
       } catch (err) {
         const msg = String(err.message || '');
         if (msg.includes('ENOENT') || msg.includes('not recognized')) {
@@ -685,7 +693,8 @@ const server = http.createServer(async (req, res) => {
         }
         return sendJson(res, 500, { ok: false, output: `Không tải được video từ URL: ${msg}` });
       }
-      execFileSync('node', [path.join(ROOT, 'scripts', 'ingest-footage.mjs'), '--force'], { encoding: 'utf8' });
+      const ingested = await runScript('scripts/ingest-footage.mjs', ['--force']);
+      if (!ingested.ok) return sendJson(res, 500, { ok: false, output: `Quét kho cảnh lỗi: ${ingested.output}` });
       const ana = analyzeSampleVideo({
         videoArg: slug,
         productId: productId || 'sample-product',
@@ -931,7 +940,7 @@ const server = http.createServer(async (req, res) => {
       if (!fs.existsSync(path.join(ROOT, campRel))) {
         throw new Error(`Chưa có chiến dịch kol-${kolId}. Hãy bấm "Dựng Video KOL AI" trước khi đồng bộ.`);
       }
-      const result = runScript('scripts/sync-studio.mjs', [campRel]);
+      const result = await runScript('scripts/sync-studio.mjs', [campRel]);
       if (!result.ok) throw new Error(`Đồng bộ Remotion lỗi: ${result.output}`);
       return sendJson(res, 200, { ok: true, output: result.output || `Đã đồng bộ kol-${kolId} sang Remotion Studio.` });
     } catch (e) {
@@ -978,7 +987,7 @@ const server = http.createServer(async (req, res) => {
       ];
       fs.writeFileSync(campPath, JSON.stringify(camp, null, 2) + '\n', 'utf8');
       const campRel = path.posix.join('campaigns', campId, 'campaign.json');
-      const result = runScript('scripts/generate-media.mjs', [campRel, '--selective']);
+      const result = await runScript('scripts/generate-media.mjs', [campRel, '--selective']);
       if (!result.ok) {
         return sendJson(res, 500, { ok: false, campaignId: campId, output: `Lỗi Lip-Sync AI: ${result.output}` });
       }
@@ -1040,9 +1049,9 @@ const server = http.createServer(async (req, res) => {
       let mediaUrl = '';
 
       if (action === 'validate') {
-        result = runScript('scripts/validate-assets.mjs');
+        result = await runScript('scripts/validate-assets.mjs');
       } else if (action === 'ingest-footage') {
-        result = runScript('scripts/ingest-footage.mjs');
+        result = await runScript('scripts/ingest-footage.mjs');
       } else if (action === 'analyze-sample') {
         const startMs = Date.now();
         try {
@@ -1068,49 +1077,54 @@ const server = http.createServer(async (req, res) => {
       } else if (action === 'generate-prompts' || action === 'generate-veo3-pack' || action === 'generate-muse-pack') {
         const styleArg = String(museStyle || '');
         if (styleArg) {
-          runScript('scripts/generate-muse-pack.mjs', [campRel, styleArg]);
+          await runScript('scripts/generate-muse-pack.mjs', [campRel, styleArg]);
         }
-        result = runScript('scripts/generate-prompts.mjs', [campRel]);
+        result = await runScript('scripts/generate-prompts.mjs', [campRel]);
         const packPath = path.join(ROOT, 'campaigns', cid, 'veo3-prompts.json');
         if (fs.existsSync(packPath)) {
           result.veo3PromptsPack = readJsonSafe(packPath, null);
         }
       } else if (action === 'run-veo3-cloud') {
         const aiCfg = loadAiConfig();
-        runScript('scripts/generate-prompts.mjs', [campRel]);
+        await runScript('scripts/generate-prompts.mjs', [campRel]);
         buildLocalKeyframesFromRealImages(campRel);
         if (aiCfg.hasGeminiKey) {
           process.env.GEMINI_VIDEO_MODEL = aiCfg.videoModel || 'veo-3.1-generate-001';
-          result = runScript('scripts/generate-media.mjs', [campRel, '--mode', 'video']);
+          result = await runScript('scripts/generate-media.mjs', [campRel, '--mode', 'video']);
         } else {
-          result = runScript('scripts/generate-media.mjs', [campRel, '--mode', 'video', '--dry-run']);
+          result = await runScript('scripts/generate-media.mjs', [campRel, '--mode', 'video', '--dry-run']);
           result.output = `[CHẾ ĐỘ CHUẨN BỊ NGUYÊN LIỆU VEO 3.1]\nĐã khóa Keyframes (Ảnh Người thật + SP thật), cắt Clip mẫu 3s và xuất veo3-prompts.json!\n(Nếu muốn gọi trực tiếp API Cloud Veo 3.1 / Omni 1.2, hãy điền GEMINI_API_KEY tại mục Cài đặt Bộ não; hoặc bấm Copy Prompt Veo 3 bên dưới để dán vào Google Veo 3 / Flow).\n${result.output}`;
         }
       } else if (action === 'generate-voiceover') {
-        result = runScript('scripts/generate-voiceover.mjs', [campRel]);
+        result = await runScript('scripts/generate-voiceover.mjs', [campRel]);
         mediaUrl = `/campaigns/${cid}/media/audio/voiceover-full.mp3?t=${Date.now()}`;
       } else if (action === 'build-keyframes') {
         const aiCfg = loadAiConfig();
         if (aiCfg.hasGeminiKey && aiCfg.renderEngine === 'gemini-cloud') {
-          result = runScript('scripts/generate-media.mjs', [campRel, '--mode', 'keyframe']);
+          result = await runScript('scripts/generate-media.mjs', [campRel, '--mode', 'keyframe']);
         } else {
           result = buildLocalKeyframesFromRealImages(campRel);
         }
       } else if (action === 'export-cutlist') {
-        result = runScript('scripts/export-cutlist.mjs', [campRel]);
+        result = await runScript('scripts/export-cutlist.mjs', [campRel]);
       } else if (action === 'render-ffmpeg') {
-        result = runScript('scripts/export-cutlist.mjs', [campRel, '--render-ffmpeg']);
+        result = await runScript('scripts/export-cutlist.mjs', [campRel, '--render-ffmpeg']);
         mediaUrl = `/campaigns/${cid}/out/ffmpeg-9x16.mp4?t=${Date.now()}`;
       } else if (action === 'render-all-ratios') {
-        result = runScript('scripts/export-cutlist.mjs', [campRel, '--render-ffmpeg', '--ratio=all']);
+        result = await runScript('scripts/export-cutlist.mjs', [campRel, '--render-ffmpeg', '--ratio=all']);
         mediaUrl = `/campaigns/${cid}/out/ffmpeg-9x16.mp4?t=${Date.now()}`;
+      } else if (action === 'record-reel') {
+        // Cùng 1 hàm với Auto-Pilot/Batch: tôn trọng duyệt KOL ("CHỜ KOL DUYỆT") và nhãn "GIỌNG TẠM"
+        const rec = recordReelSheet(path.join(ROOT, campRel));
+        const row = loadWorkspaceState().sheet.reels.find((r) => r.id === rec.id);
+        result = { ok: true, elapsedSec: '0.0', output: `Đã ghi Reel "${rec.id}" vào Sổ vận hành: ${row?.qcStatus || ''}` };
       } else if (action === 'sync-studio') {
-        result = runScript('scripts/sync-studio.mjs', [campRel]);
+        result = await runScript('scripts/sync-studio.mjs', [campRel]);
       } else if (action === 'verify-integrity') {
-        result = runScript('scripts/verify-integrity.mjs', [campRel]);
+        result = await runScript('scripts/verify-integrity.mjs', [campRel]);
       } else if (action === 'run-optimal-pipeline') {
         buildLocalKeyframesFromRealImages(campRel);
-        result = runScript('scripts/run-optimal-pipeline.mjs', [campRel]);
+        result = await runScript('scripts/run-optimal-pipeline.mjs', [campRel]);
         mediaUrl = `/campaigns/${cid}/out/ffmpeg-9x16.mp4?t=${Date.now()}`;
       } else {
         return sendJson(res, 400, { ok: false, output: `Hành động không hỗ trợ: ${action}` });
@@ -1124,7 +1138,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && url.pathname === '/api/save-sheet') {
     try {
       const body = await readBody(req);
-      const reels = Array.isArray(body.reels) ? body.reels : [];
+      const reels = (Array.isArray(body.reels) ? body.reels : []).map(normalizeReelRow);
       fs.mkdirSync(path.dirname(SHEET_PATH), { recursive: true });
       fs.writeFileSync(SHEET_PATH, JSON.stringify({ reels }, null, 2) + '\n', 'utf8');
       return sendJson(res, 200, { ok: true, output: `Đã lưu Sổ vận hành (${reels.length} reel).` });
@@ -1157,7 +1171,7 @@ const server = http.createServer(async (req, res) => {
       const args = [path.posix.join('assets', 'products', 'batch-template.csv')];
       if (body.runPipeline) args.push('--run');
       if (body.resume !== false) args.push('--resume');
-      const result = runScript('scripts/batch-from-csv.mjs', args);
+      const result = await runScript('scripts/batch-from-csv.mjs', args);
       const aiCfg = loadAiConfig();
       const csvText = fs.existsSync(csvPath) ? fs.readFileSync(csvPath, 'utf8') : '';
       return sendJson(res, 200, {

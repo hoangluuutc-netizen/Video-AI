@@ -1,5 +1,6 @@
 let appState = null;
 let currentKol = null;
+let kolUrlApplied = false;
 
 function setStatus(msg) {
   const el = document.getElementById('kol-status');
@@ -40,7 +41,9 @@ function hydrateState(state) {
   }
 
   const kolSel = document.getElementById('kol-select');
-  const urlKol = new URLSearchParams(window.location.search).get('kol');
+  // ?kol= chỉ áp ở lần nạp đầu; sau đó giữ lựa chọn của người dùng (trước đây mỗi lần lưu lại kéo về KOL trên URL)
+  const urlKol = kolUrlApplied ? null : new URLSearchParams(window.location.search).get('kol');
+  kolUrlApplied = true;
   const prevKol = kolSel.value;
   kolSel.innerHTML = chars.map((c) => `<option value="${c.id}">${c.name} (${c.id})</option>`).join('');
   if (urlKol && chars.some((c) => c.id === urlKol)) {
@@ -52,8 +55,10 @@ function hydrateState(state) {
   }
 
   const prodSel = document.getElementById('kol-product-select');
+  const prevProd = prodSel.value;
   prodSel.innerHTML = `<option value="">-- Không gắn sản phẩm (Nói tự do) --</option>` +
     prods.map((p) => `<option value="${p.id}">${p.name} (${p.price})</option>`).join('');
+  if (prevProd && prods.some((p) => p.id === prevProd)) prodSel.value = prevProd;
 
   onSelectKol();
 }

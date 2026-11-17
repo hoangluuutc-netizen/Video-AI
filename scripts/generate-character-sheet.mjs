@@ -4,13 +4,15 @@ import { execFileSync } from 'node:child_process';
 import { ROOT } from './lib/footage.mjs';
 import { readJson } from './lib/prompt-builder.mjs';
 
-function loadAiKey() {
+function loadAiConfig() {
   const cfgPath = path.join(ROOT, 'assets', 'brand-kit', 'ai-config.json');
-  if (fs.existsSync(cfgPath)) {
-    const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
-    if (cfg.geminiApiKey) return cfg.geminiApiKey;
-  }
-  return process.env.GEMINI_API_KEY || '';
+  return fs.existsSync(cfgPath) ? JSON.parse(fs.readFileSync(cfgPath, 'utf8')) : {};
+}
+
+// Chỉ gọi Gemini (tốn tiền) khi người dùng đã chọn mô hình ảnh gemini-* ở "Bộ não & chi phí".
+// Trước đây cứ có GEMINI_API_KEY là gọi gemini-2.5-flash-image, kể cả khi đang chọn FFmpeg $0.
+export function pickCharacterSheetMethod({ imageModel = 'ffmpeg-real-composite', hasKey = false } = {}) {
+  return hasKey && String(imageModel).startsWith('gemini-') ? 'gemini-image' : 'ffmpeg-4panel';
 }
 
 async function tryGeminiCharacterSheet(apiKey, portraitAbs, character, outPng) {
@@ -59,22 +61,27 @@ export async function generateCharacterSheet(characterId = 'sample-kol') {
   if (!fs.existsSync(charPath)) throw new Error(`Không tìm thấy character.json cho "${characterId}"`);
 
   const character = readJson(charPath);
-  const refs = Object.values(character.referenceImages || {})
+  // Bỏ chính ảnh 4 góc đã tạo trước đó — nguồn phải luôn là ảnh chân dung gốc
+  const refs = Object.entries(character.referenceImages || {})
+    .filter(([key]) => key !== 'sheet4Angles')
+    .map(([, p]) => p)
     .map((p) => (path.isAbsolute(p) ? p : path.join(ROOT, p)))
     .filter((p) => fs.existsSync(p));
   if (refs.length === 0) throw new Error(`Nhân vật "${characterId}" chưa có ảnh chân dung gốc.`);
 
   const outPng = path.join(charDir, 'character-sheet-4angles.png');
-  const apiKey = loadAiKey();
-  let method = 'ffmpeg-4panel';
+  const aiCfg = loadAiConfig();
+  const apiKey = aiCfg.geminiApiKey || process.env.GEMINI_API_KEY || '';
+  let method = pickCharacterSheetMethod({ imageModel: aiCfg.imageModel, hasKey: Boolean(apiKey) });
 
-  if (apiKey) {
+  if (method === 'gemini-image') {
     try {
       await tryGeminiCharacterSheet(apiKey, refs[0], character, outPng);
       method = 'gemini-image';
     } catch (e) {
       console.warn(`[Character Sheet fallback] ${e.message}`);
       buildLocalFfmpegSheet(refs[0], outPng);
+      method = 'ffmpeg-4panel';
     }
   } else {
     buildLocalFfmpegSheet(refs[0], outPng);

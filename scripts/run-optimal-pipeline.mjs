@@ -6,6 +6,7 @@ import { generateCampaignVoiceover } from './generate-voiceover.mjs';
 import { readJson } from './lib/prompt-builder.mjs';
 import { prepareForHeavyPhase } from './lib/resource-gate.mjs';
 import { getApprovalState } from './lib/kol-consent.mjs';
+import { upsertReel } from './lib/reel-sheet.mjs';
 
 const ROOT = process.cwd();
 
@@ -122,24 +123,26 @@ export function recordReelSheet(campaignPath) {
   const character = fs.existsSync(charPath) ? readJson(charPath) : {};
   const approvalState = getApprovalState(latestCampaign, character);
   const needsKolApproval = approvalState === 'pending' || approvalState === 'stale';
+  const prodPath = path.join(ROOT, 'assets', 'products', latestCampaign.productId || '', 'product.json');
+  const product = fs.existsSync(prodPath) ? readJson(prodPath) : {};
   const record = {
     code: `REEL-${String(existing.length + 1).padStart(2, '0')}`,
-    campaignId: latestCampaign.id,
+    id: latestCampaign.id,
+    productName: product.name || '',
     type: `Veo3.1 + Bokeh Cinema (${totalSec}s)`,
     hook: latestCampaign.hookText,
     durationSec: totalSec,
     mode: latestCampaign.mode || 'real-footage',
-    status: needsKolApproval
+    qcStatus: needsKolApproval
       ? 'CHỜ KOL DUYỆT'
       : latestCampaign.voiceIsGeneric
         ? 'PASS (GIỌNG TẠM)'
         : 'PASS (100% Gốc + Có Tiếng)',
-    videoLink: `campaigns/${latestCampaign.id}/out/ffmpeg-9x16.mp4`,
+    outputPath: `campaigns/${latestCampaign.id}/out/ffmpeg-9x16.mp4`,
     updatedAt: new Date().toISOString().slice(0, 16).replace('T', ' ')
   };
-  const filtered = existing.filter((r) => r.campaignId !== latestCampaign.id);
-  filtered.unshift(record);
-  fs.writeFileSync(sheetPath, JSON.stringify({ reels: filtered }, null, 2) + '\n', 'utf8');
+  // Một kiểu dòng duy nhất; thay mọi dòng cũ cùng chiến dịch (cả dòng "PASS" do giao diện ghi trước đây)
+  fs.writeFileSync(sheetPath, JSON.stringify({ reels: upsertReel(existing, record) }, null, 2) + '\n', 'utf8');
   return latestCampaign;
 }
 

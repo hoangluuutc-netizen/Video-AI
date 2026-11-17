@@ -221,9 +221,37 @@ function generateWindowsSapiOrToneWav(text, outWav, durationSec) {
 export function computeFitTempo(rawSec, targetSec) {
   const raw = Math.max(0, Number(rawSec || 0));
   const target = Math.max(0.1, Number(targetSec || 1));
-  const tempo = Math.round(Math.min(1.15, Math.max(1, raw / target)) * 1000) / 1000;
+  // Làm tròn LÊN: làm tròn xuống (1.1093 → 1.109) tạo phần tràn giả ~0.002s → cảnh bị kéo dài thêm mỗi lần chạy lại
+  const tempo = Math.ceil(Math.min(1.15, Math.max(1, raw / target)) * 1000 - 1e-6) / 1000;
   const overflowSec = Math.round(Math.max(0, raw / tempo - target) * 1000) / 1000;
   return { tempo, overflowSec };
+}
+
+// Không bao giờ cắt lời thoại: tăng tốc tối đa 1.15x; còn tràn thì kéo dài cảnh cho vừa
+// (làm tròn lên 0.1s + 0.25s nghỉ cuối). Trước đây phần tràn bị atrim cắt mất giữa câu.
+export function planSceneFit(rawSec, sceneSec) {
+  const dur = Math.max(1, Number(sceneSec || 4));
+  const { tempo, overflowSec } = computeFitTempo(rawSec, dur);
+  if (overflowSec <= 0) return { durationSec: dur, tempo, extended: false };
+  const durationSec = Math.ceil((Number(rawSec) / tempo + 0.25) * 10) / 10;
+  return { durationSec, tempo, extended: true };
+}
+
+export function applySceneDuration(scene, durationSec) {
+  scene.durationSec = durationSec;
+  if (scene.trimEndSec !== undefined && scene.trimEndSec !== null) {
+    scene.trimEndSec = Math.round((Number(scene.trimStartSec || 0) + durationSec) * 1000) / 1000;
+  }
+  return scene;
+}
+
+// Cache lưu BẢN THU THÔ (phần tốn tiền là gọi TTS); khớp thời lượng bằng FFmpeg luôn làm lại.
+// Bản cũ lưu file đã cắt theo thời lượng nhưng khóa không chứa thời lượng → tái dùng âm thanh bị cắt.
+const RAW_CACHE_KIND = 'raw-pcm-v2';
+
+function toPcmWav(srcPath, outPath) {
+  execFileSync('ffmpeg', ['-y', '-v', 'error', '-i', srcPath, '-c:a', 'pcm_s16le', outPath]);
+  return outPath;
 }
 
 function probeDurationSec(mediaPath) {
@@ -408,7 +436,7 @@ export async function generateCampaignVoiceover(
       const wordCount = text.split(/\s+/).filter(Boolean).length;
       const maxWords = Math.round(dur * 2.8);
       if (wordCount > maxWords) {
-        console.warn(`[Cảnh báo nhịp thoại] Cảnh "${scene.id}" (${dur}s) có ${wordCount} từ (khuyên dùng <= ${maxWords} từ để không bị đọc vội).`);
+        console.log(`[Cảnh báo nhịp thoại] Cảnh "${scene.id}" (${dur}s) có ${wordCount} từ (khuyên dùng <= ${maxWords} từ để không bị đọc vội).`);
       }
       const finalWav = path.join(audioDir, `${scene.id}.wav`);
       const rawBase = path.join(audioDir, `_raw-${scene.id}`);
@@ -433,22 +461,33 @@ export async function generateCampaignVoiceover(
           text: spoken,
           refAudioHash: isLocal ? refAudioHash : ''
         });
-        const cachedPath = getCachedVoice(cacheKey);
-        if (cachedPath) {
-          fs.copyFileSync(cachedPath, finalWav);
-          const meta = getCachedVoiceMeta(cacheKey) || {};
-          result = { engine, cacheKey, fromCache: true, speechSec: meta.speechSec ?? (probeDurationSec(finalWav) || dur), speechStart: meta.speechStart, speechEnd: meta.speechEnd };
-          console.log(`[Cache] Cảnh "${scene.id}" (${dur}s) — ${label}`);
-          break;
-        }
+        const cachedPath = getCachedVoiceMeta(cacheKey)?.kind === RAW_CACHE_KIND ? getCachedVoice(cacheKey) : null;
         try {
-          const rawPath = await synthRaw(engine, spoken, rawBase, dur);
-          if (!rawPath) continue;
-          const fit = fitAndMeasure(rawPath, finalWav, dur, { hasBgm: bgmPresent, sceneId: scene.id });
+          let rawPath = null;
+          if (cachedPath) {
+            rawPath = `${rawBase}.pcm.wav`;
+            fs.copyFileSync(cachedPath, rawPath);
+          } else {
+            const synthPath = await synthRaw(engine, spoken, rawBase, dur);
+            if (!synthPath) continue;
+            rawPath = toPcmWav(synthPath, `${rawBase}.pcm.wav`);
+            if (synthPath !== rawPath) fs.rmSync(synthPath, { force: true });
+            // SAPI/tone là dự phòng local miễn phí, độ dài phụ thuộc cảnh → không cache
+            if (engine !== 'windows-sapi-vi') {
+              putCachedVoice(cacheKey, fs.readFileSync(rawPath), { characterId: campaign.characterId, meta: { kind: RAW_CACHE_KIND } });
+            }
+          }
+          const plan = planSceneFit(probeDurationSec(rawPath) || dur, dur);
+          if (plan.extended) {
+            applySceneDuration(scene, plan.durationSec);
+            console.log(
+              `[Kéo dài cảnh] "${scene.id}" ${dur}s → ${plan.durationSec}s để đọc trọn câu (${wordCount} từ). Muốn giữ ${dur}s thì rút lời thoại còn ≤ ${maxWords} từ.`
+            );
+          }
+          const fit = fitAndMeasure(rawPath, finalWav, plan.durationSec, { hasBgm: bgmPresent, sceneId: scene.id });
           fs.rmSync(rawPath, { force: true });
-          putCachedVoice(cacheKey, fs.readFileSync(finalWav), { characterId: campaign.characterId, meta: fit });
-          result = { engine, cacheKey, ...fit };
-          console.log(`OK [${label}] Cảnh "${scene.id}" (${dur}s)`);
+          result = { engine, cacheKey, fromCache: Boolean(cachedPath), ...fit };
+          console.log(`${cachedPath ? '[Cache]' : `OK [${label}]`} Cảnh "${scene.id}" (${plan.durationSec}s)${cachedPath ? ` — ${label}` : ''}`);
           break;
         } catch (e) {
           console.warn(`[${label} lỗi → thử engine tiếp] Cảnh "${scene.id}": ${e.message}`);
