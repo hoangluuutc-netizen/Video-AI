@@ -377,9 +377,12 @@
           </div>
         </div>
         <div class="field-group">
-          <label style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <label style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
             <span>🧑 Nhân vật của bạn (`assets/characters/`) <span class="tip-badge" tabindex="0" data-tip="Ảnh người mẫu/KOL thật để thay thế nhân vật trong video mẫu. Chọn ảnh chính diện, đủ sáng, rõ mặt ≥ 720px.">?</span></span>
-            <button type="button" class="icon-pill-btn" onclick="openSelectedAssetPath('character')" title="Mở thẳng thư mục hoặc ảnh nhân vật trên máy">📂 Mở đường dẫn</button>
+            <span style="display:flex;gap:6px;">
+              <button type="button" class="icon-pill-btn" onclick="openInKolStudio()" title="Mở và chỉnh sửa nhân vật này trong KOL AI Studio">🌟 KOL Studio</button>
+              <button type="button" class="icon-pill-btn" onclick="openSelectedAssetPath('character')" title="Mở thẳng thư mục hoặc ảnh nhân vật trên máy">📂 Mở đường dẫn</button>
+            </span>
           </label>
           <select id="inp-character" onchange="onProductChange()"></select>
           <div class="mini-dropzone" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="handleMiniDrop(event,'character')" onclick="document.getElementById('mini-file-character').click()" style="margin-top:6px;padding:8px 10px;border:1.5px dashed #CBD5E1;border-radius:8px;background:#F8FAFC;cursor:pointer;font-size:11.5px;line-height:1.4;">

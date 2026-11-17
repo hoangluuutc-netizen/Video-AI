@@ -290,7 +290,30 @@ async function initDashboard() {
   if (savedCamp && Array.isArray(savedCamp.scenes) && savedCamp.scenes.length > 0) {
     loadCampaignFromSelect(true);
   }
+
+  // Nếu đi từ KOL AI Studio sang (?kol=<id>&product=<pid>), tự động nạp đúng KOL đó để làm video quảng cáo ngay
+  const params = new URLSearchParams(window.location.search);
+  const urlKol = params.get('kol');
+  const urlProd = params.get('product');
+  if (urlProd && (appState.products || []).some((p) => p.id === urlProd)) {
+    const pEl = document.getElementById('inp-product');
+    if (pEl) pEl.value = urlProd;
+  }
+  if (urlKol && (appState.characters || []).some((c) => c.id === urlKol)) {
+    const cEl = document.getElementById('inp-character');
+    if (cEl) cEl.value = urlKol;
+    const campInput = document.getElementById('inp-campaign-id');
+    if (campInput) campInput.value = `kol-${urlKol}-ad`;
+    onProductChange();
+    runAllAssistants();
+    logConsole(`🌟 Đã nạp nhân vật KOL AI "${urlKol}" sang Video Ad Studio — sẵn sàng bấm Auto-Pilot hoặc Dựng Video!`);
+  }
   renderSheetTable();
+}
+
+function openInKolStudio() {
+  const charId = document.getElementById('inp-character')?.value || '';
+  window.location.href = charId ? `kol-studio.html?kol=${encodeURIComponent(charId)}` : 'kol-studio.html';
 }
 
 function populateSelectors() {

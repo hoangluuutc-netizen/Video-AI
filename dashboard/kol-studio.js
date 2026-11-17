@@ -40,9 +40,12 @@ function hydrateState(state) {
   }
 
   const kolSel = document.getElementById('kol-select');
+  const urlKol = new URLSearchParams(window.location.search).get('kol');
   const prevKol = kolSel.value;
   kolSel.innerHTML = chars.map((c) => `<option value="${c.id}">${c.name} (${c.id})</option>`).join('');
-  if (prevKol && chars.some((c) => c.id === prevKol)) {
+  if (urlKol && chars.some((c) => c.id === urlKol)) {
+    kolSel.value = urlKol;
+  } else if (prevKol && chars.some((c) => c.id === prevKol)) {
     kolSel.value = prevKol;
   } else if (chars.length > 0) {
     kolSel.value = chars[0].id;
@@ -361,7 +364,12 @@ async function syncKolToStudio() {
 }
 
 function openInAdStudio() {
-  window.location.href = 'index.html#slide-05';
+  const kolId = document.getElementById('kol-id').value.trim() || document.getElementById('kol-select').value;
+  const prodId = document.getElementById('kol-product-select')?.value || '';
+  const qs = new URLSearchParams();
+  if (kolId) qs.set('kol', kolId);
+  if (prodId) qs.set('product', prodId);
+  window.location.href = `index.html?${qs.toString()}#slide-02`;
 }
 
 async function approveKolScript() {
