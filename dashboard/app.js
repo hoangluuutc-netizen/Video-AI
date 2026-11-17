@@ -2642,7 +2642,8 @@ async function loadSystemReadiness() {
   }
 }
 
-async function renderRemotionFromUi(ratio = '9x16') {
+async function renderRemotionFromUi(ratioArg) {
+  const ratio = ratioArg || document.getElementById('remotion-render-ratio')?.value || '9x16';
   const campaignId = getSelectedCampaignId();
   logConsole(`⏳ Đang đồng bộ & render Remotion (${ratio}) cho ${campaignId}...`);
   try {
@@ -2659,6 +2660,45 @@ async function renderRemotionFromUi(ratio = '9x16') {
     logConsole(`❌ ${e.message}`);
     alert(e.message);
   }
+}
+
+async function uploadMusicFile(file) {
+  if (!file) return;
+  if (!/\.(mp3|wav|m4a|ogg)$/i.test(file.name) && !file.type.startsWith('audio/')) {
+    alert('Nhạc nền chỉ tiếp nhận định dạng .mp3, .wav, .m4a hoặc .ogg!');
+    return;
+  }
+  try {
+    logConsole(`⏳ Đang tải nhạc nền "${file.name}" vào assets/music/...`);
+    const dataBase64 = await readFileAsDataUrl(file);
+    const res = await fetch('/api/upload-asset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: 'music', filename: file.name, dataBase64 })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.output || 'Lỗi tải nhạc nền');
+    logConsole(`✅ ${data.output}`);
+    loadSystemReadiness();
+    alert(data.output);
+  } catch (e) {
+    logConsole(`❌ ${e.message}`);
+    alert(e.message);
+  }
+}
+
+function handleMusicDrop(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  if (e.currentTarget) e.currentTarget.classList.remove('dragover');
+  const file = e.dataTransfer?.files?.[0];
+  if (file) uploadMusicFile(file);
+}
+
+function handleMusicFileInput(input) {
+  const file = input?.files?.[0];
+  if (file) uploadMusicFile(file);
+  if (input) input.value = '';
 }
 
 async function openSelectedAssetPath(kind) {

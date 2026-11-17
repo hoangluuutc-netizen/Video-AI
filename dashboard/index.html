@@ -759,6 +759,17 @@
             </div>
           </div>
 
+          <div class="spec-row" style="flex-direction:column;align-items:stretch;gap:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+              <strong>🎵 Nhạc nền Auto-Ducking (`assets/music/`) <span class="tip-badge" tabindex="0" data-tip="Thả file nhạc .mp3/.wav/.m4a vào đây. Khi dựng video, hệ thống tự động hạ nhỏ nhạc nền lúc có tiếng nói.">?</span></strong>
+              <button type="button" class="icon-pill-btn" onclick="openProjectFile('assets/music')">📂 Mở thư mục nhạc</button>
+            </div>
+            <div class="mini-dropzone" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="handleMusicDrop(event)" onclick="document.getElementById('mini-file-music').click()" style="padding:8px 10px;border:1.5px dashed #CBD5E1;border-radius:8px;background:#F8FAFC;cursor:pointer;font-size:12px;">
+              <strong>📥 Kéo thả Nhạc nền vào đây</strong> hoặc bấm chọn file (<code>.mp3, .wav, .m4a, .ogg</code>)
+              <input id="mini-file-music" type="file" accept=".mp3,.wav,.m4a,.ogg,audio/*" style="display:none;" onchange="handleMusicFileInput(this)" />
+            </div>
+          </div>
+
           <div class="btn-row" style="margin-top:8px;">
             <button class="btn btn-outline" onclick="saveCampaignToServer()">💾 1. Lưu `campaign.json`</button>
             <button class="btn" onclick="runFullVoiceoverStep()">🎙️ 2. Sinh Giọng Đọc & Lồng Tiếng</button>
@@ -766,7 +777,14 @@
             <button class="btn" onclick="triggerBackendAction('render-all-ratios')">📐 Xuất 3 Tỷ Lệ (9:16 + 1:1 + 16:9)</button>
             <button class="btn" onclick="triggerBackendAction('export-cutlist')">📋 Xuất Cutlist CapCut</button>
             <button class="btn" onclick="triggerBackendAction('sync-studio')">⚛️ Đồng bộ Remotion</button>
-            <button class="btn btn-outline" onclick="renderRemotionFromUi('9x16')">🎬 Render Remotion MP4 (9:16)</button>
+            <div style="display:inline-flex;gap:6px;align-items:center;">
+              <select id="remotion-render-ratio" style="padding:8px 10px;border-radius:8px;border:1px solid #CBD5E1;font-size:12px;font-weight:700;">
+                <option value="9x16">9:16 (TikTok)</option>
+                <option value="1x1">1:1 (Facebook)</option>
+                <option value="16x9">16:9 (YouTube)</option>
+              </select>
+              <button class="btn btn-outline" onclick="renderRemotionFromUi()">🎬 Render Remotion MP4</button>
+            </div>
           </div>
 
           <div id="action-console" class="console-box">Sẵn sàng. Bấm "🎙️ 2. Sinh Giọng Đọc" hoặc "🎬 3. Dựng Video Có Tiếng (ffmpeg)" để tạo ngay video có lời thoại...</div>

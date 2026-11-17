@@ -573,6 +573,20 @@ const server = http.createServer(async (req, res) => {
         });
       }
 
+      if (kind === 'music') {
+        const musicDir = path.join(ROOT, 'assets', 'music');
+        fs.mkdirSync(musicDir, { recursive: true });
+        const destAbs = path.join(musicDir, cleanName);
+        fs.writeFileSync(destAbs, buffer);
+        const relPath = path.posix.join('assets', 'music', cleanName);
+        return sendJson(res, 200, {
+          ok: true,
+          relPath,
+          output: `Đã lưu nhạc nền Auto-Ducking tại ${relPath}`,
+          state: loadWorkspaceState()
+        });
+      }
+
       return sendJson(res, 400, { ok: false, output: `Loại tài sản không hợp lệ: ${kind}` });
     } catch (e) {
       return sendJson(res, 500, { ok: false, output: e.message });
