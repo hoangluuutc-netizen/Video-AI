@@ -32,7 +32,8 @@ const listMjs = (dir) => fs.readdirSync(path.join(ROOT, dir)).filter((f) => f.en
 const noTsc = !fs.existsSync(TSC) && 'Chưa cài studio/node_modules (npm install trong studio/)';
 
 test('Dashboard (trình duyệt): không gọi tên chưa định nghĩa', { skip: noTsc }, () => {
-  const out = runTsc(['--lib', 'es2022,dom', '--module', 'esnext', 'dashboard/app.js', 'dashboard/kol-studio.js']);
+  // script-template.js nạp trước app.js trong index.html → cùng 1 lượt quét để thấy biến toàn cục ScriptTemplate
+  const out = runTsc(['--lib', 'es2022,dom', '--module', 'esnext', 'dashboard/script-template.js', 'dashboard/app.js', 'dashboard/kol-studio.js']);
   assert.deepEqual(undefinedLines(out), []);
 });
 

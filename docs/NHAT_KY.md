@@ -287,3 +287,33 @@ Chạy từng nút như người dùng thật ở cấu hình $0 (LLM mẫu cụ
 - Bước "✅ Duyệt kịch bản KOL" không chạy thử vì là quyết định của con người.
 - Nút Lip-Sync AI (Veo 3.1 tốn tiền) không bấm thử.
 - `renderKolTalkingVideo` vẫn đồng bộ (treo server khoảng 80s khi dựng video KOL).
+
+## 2026-11-17 — Claude: Rút gọn mẫu kịch bản mặc định — video đọc trọn câu từ ~55s xuống 26s
+**Đo nhịp thật** giọng Google trên 4 bản thu: khoảng **3 âm tiết đọc ra / giây** (chưa tăng tốc). Số và giá đọc ra rất dài: "399.000đ" là 7 âm tiết, tên đầy đủ sản phẩm mẫu là 17.
+
+**Mẫu mới** `dashboard/script-template.js` (script thường, nạp trước `app.js`; test bằng `vm`):
+- **Chỉ dùng dữ liệu `product.json`.**
+  - Tên đọc là tên rút gọn: phần trước thông số, tối đa 4 chữ (ví dụ "Bình Giữ Nhiệt Inox"); có `shortName` thì dùng `shortName`.
+  - Highlight lấy phần trước dấu phẩy. CTA chỉ nói giá có thật; thiếu giá giảm thì dùng giá gốc.
+- **Bỏ nội dung viết cứng cho bình giữ nhiệt** ("đá tan", "chống tràn", "túi xách"…) vốn áp cho *mọi* SKU.
+- **Bỏ số liệu / chứng thực / cam kết bịa:** "90% người mua…", "dân văn phòng truyền tay", "ngang phân khúc tiền triệu", "duy nhất hôm nay", và "giữ trọn hương vị 24 giờ" ở khối Kết quả.
+- 15 hook ngắn (≤ 18 âm tiết), giữ nguyên điểm xếp hạng; các biến thể "đổi góc hook" cũng ngắn.
+- **Thời lượng mỗi khối tính theo số âm tiết** (`estimateSpokenSyllables` khớp đúng `vi-text-normalize.mjs`), không còn cố định 4–5s.
+  - Thời lượng cảnh = tổng các khối (`scenePlan`).
+  - Ô đếm hiện "x/y âm tiết" và "≈ N giây video".
+
+**Lỗi cùng họ đã sửa:**
+- Sửa chữ một khối ở Mục 04 không sang phân cảnh Mục 05, nên giọng vẫn đọc chữ cũ. Nay `applyScriptToScenes` áp tại chỗ theo id cảnh, giữ các chỉnh sửa khác.
+- "Lưu `campaign.json`" xóa mất `keyframeSrc` / `startKeyframeSrc` / `endKeyframeSrc` của Muse pack, làm Remotion mất ảnh khung và `generate-media` bỏ qua cảnh. Nay luôn giữ (`SCENE_MEDIA_KEYS`) và nạp lại từ server sau mỗi thao tác.
+- Ô kịch bản và tiêu đề khối được escape HTML.
+
+**Chiến dịch mẫu** `campaigns/sample-campaign/campaign.json`: chỉ thay lời thoại, thời lượng, `trimEndSec` của 4 cảnh và `hookText` sang mẫu mới; mọi trường khác (keyframe, góc máy…) giữ nguyên.
+
+**Đo thật qua giao diện** (mở trang → Lưu → Sinh giọng → Dựng):
+- `ffmpeg-9x16.mp4` dài **26,0s** (trước: 16s cắt mất khoảng 70% lời, hoặc 55s nếu đọc trọn).
+- **0/4 cảnh phải kéo dài**; lời nói kết thúc trước điểm cắt 0,9–1,6s.
+- QC SSIM đạt, đúng "Minh Anh" và đúng sản phẩm; keyframe còn nguyên sau khi lưu.
+
+**Test mới:** `script-template` (10). Ở đó có các kiểm: ≤ 30s cho cả bình giữ nhiệt lẫn áo thun, không lọt nội dung bình giữ nhiệt sang sản phẩm khác, không số liệu/chứng thực bịa, ước lượng âm tiết khớp bộ chuẩn hóa TTS. `no-undefined-names` nay quét cả `script-template.js`.
+
+**Kiểm định:** `151/151` unit test pass, `validate-assets.mjs` 100%, `studio` `tsc --noEmit` 0 lỗi, `smoke-test.mjs` 100%.

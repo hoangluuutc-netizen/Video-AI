@@ -762,31 +762,31 @@ function buildHookTextFromIdea(h, p, c) {
 
   if (h.angleMode === 'new-pain-point') {
     return {
-      text: `Mua nhầm bình kém chất lượng vừa mất tiền vừa bực mình — xem ngay cách ${p.name} khắc phục hoàn toàn bằng ${h1.toLowerCase()}!`,
+      text: ScriptTemplate.buildAngleHookText(p, 'new-pain-point'),
       visualHookAction: `[Làm khác Video Mẫu - Đổi nỗi đau]: ${c.name} chỉ rõ điểm yếu hàng thường rồi giơ cao ${p.name} nguyên bản.`
     };
   }
   if (h.angleMode === 'reverse-shock') {
     return {
-      text: `Đừng tin bất kỳ lời quảng cáo nào cho tới khi bạn nhìn tận mắt lõi ${h1.toLowerCase()} bên trong ${p.name}!`,
+      text: ScriptTemplate.buildAngleHookText(p, 'reverse-shock'),
       visualHookAction: `[Làm khác Video Mẫu - Đảo ngược tình huống]: Cận cảnh ${c.name} mở nắp ${p.name} khoe trọn cấu tạo thật bên trong.`
     };
   }
   if (h.angleMode === 'live-test-proof') {
     return {
-      text: `Thử thách kiểm chứng trực tiếp trong 3 giây: ${h3} và ${h1} trên ${p.name} có thật sự đỉnh như lời đồn?`,
+      text: ScriptTemplate.buildAngleHookText(p, 'live-test-proof'),
       visualHookAction: `[Làm khác Video Mẫu - Test thực tế 3s đầu]: ${c.name} thực hiện bài test thực tế với ${p.name} ngay giây đầu tiên.`
     };
   }
   if (h.angleMode === 'flash-deal-first') {
     return {
-      text: `Sốc thật sự: ${p.name} chuẩn ${h1.toLowerCase()} đang giảm từ ${p.price} xuống chỉ còn ${sale} duy nhất hôm nay!`,
+      text: ScriptTemplate.buildAngleHookText(p, 'flash-deal-first'),
       visualHookAction: `[Làm khác Video Mẫu - Đập giá sốc đầu video]: Hiển thị ${c.name} cầm ${p.name} kèm bảng giá ${sale} nổi bật ngay cảnh 1.`
     };
   }
   if (h.angleMode === 'custom-idea' && ideaStr) {
     return {
-      text: `${p.name}: ${ideaStr.replace(/^Làm khác video mẫu:\s*/i, '')}`,
+      text: ScriptTemplate.buildAngleHookText(p, 'custom-idea', ideaStr.replace(/^Làm khác video mẫu:\s*/i, '')),
       visualHookAction: `[Ý tưởng riêng khác Video Mẫu]: ${c.name} + ${p.name} thể hiện tình huống: ${ideaStr}`
     };
   }
@@ -799,34 +799,9 @@ function buildHookTextFromIdea(h, p, c) {
 function generate15Hooks() {
   const p = getSelectedProduct();
   const c = getSelectedCharacter();
-  const h1 = p.highlights?.[0] || 'Chất liệu chuẩn cao cấp';
-  const h2 = p.highlights?.[1] || 'Hoàn thiện tỉ mỉ từng chi tiết';
-  const h3 = p.highlights?.[2] || 'Thiết kế tiện lợi mỗi ngày';
-  const name = p.name;
-  const sale = p.salePrice || p.price;
-
-  const rawHooks = [
-    // Cơ chế 1: Cảnh báo (3)
-    { mech: 'Cảnh báo', text: `Đừng mua ${name} nếu bạn chưa kiểm tra 3 chi tiết sống còn này!`, scores: [19, 18, 18, 19, 18] },
-    { mech: 'Cảnh báo', text: `90% người mua bình giữ nhiệt đều mắc sai lầm khiến đá tan chỉ sau 2 tiếng.`, scores: [18, 17, 17, 16, 17] },
-    { mech: 'Cảnh báo', text: `Cẩn thận với các loại bình giữ nhiệt giá rẻ đổ mồ hôi ướt sũng cả túi xách!`, scores: [16, 16, 15, 16, 15] },
-    // Cơ chế 2: Công nhận / Đồng cảm (3)
-    { mech: 'Công nhận', text: `Đi làm cả ngày mà nước đá vẫn lạnh buốt như mới pha — cảm giác thật sự đáng tiền.`, scores: [17, 18, 16, 18, 17] },
-    { mech: 'Công nhận', text: `Ai hay mang đồ uống đi làm chắc chắn từng khó chịu vì vỏ bình trơn trượt, bám vân tay.`, scores: [15, 16, 14, 16, 14] },
-    { mech: 'Công nhận', text: `Một chiếc bình tốt dùng bền cả năm thay vì mua 3 chiếc rẻ tiền rồi bỏ xó.`, scores: [13, 14, 12, 14, 13] },
-    // Cơ chế 3: Tò mò (3)
-    { mech: 'Tò mò', text: `Bên trong lớp vỏ của ${name} có gì mà giữ nhiệt tới 24 giờ?`, scores: [17, 15, 18, 17, 16] },
-    { mech: 'Tò mò', text: `Thử dốc ngược chiếc bình này suốt 5 phút xem nắp chống tràn 360 độ có rỉ 1 giọt nào không?`, scores: [18, 16, 18, 17, 16] },
-    { mech: 'Tò mò', text: `Tại sao dân văn phòng lại truyền tay nhau mẫu ${p.sku || name} này suốt tuần qua?`, scores: [12, 13, 13, 12, 13] },
-    // Cơ chế 4: Đối lập (3)
-    { mech: 'Đối lập', text: `Bề ngoài tối giản gọn nhẹ, nhưng bên trong là lõi ${h1}.`, scores: [16, 15, 15, 17, 15] },
-    { mech: 'Đối lập', text: `Giá đang giảm còn ${sale} nhưng độ hoàn thiện lại ngang ngửa phân khúc tiền triệu.`, scores: [15, 15, 14, 14, 14] },
-    { mech: 'Đối lập', text: `Không cần quảng cáo màu mè, chỉ cần nhìn cận cảnh lớp ${h2.toLowerCase()} này là hiểu.`, scores: [13, 13, 12, 14, 12] },
-    // Cơ chế 5: Lời hứa cụ thể (3)
-    { mech: 'Lời hứa cụ thể', text: `Xem hết 20 giây này, bạn sẽ biết cách chọn đúng bình ${h1} chuẩn xác 100%.`, scores: [17, 16, 16, 18, 16] },
-    { mech: 'Lời hứa cụ thể', text: `3 lý do thực tế giúp ${name} xứng đáng có mặt trên bàn làm việc của bạn hôm nay.`, scores: [14, 14, 12, 15, 13] },
-    { mech: 'Lời hứa cụ thể', text: `Kiểm chứng nhanh trong 15 giây: ${h3} và ưu đãi ${sale} hôm nay.`, scores: [13, 13, 11, 14, 12] }
-  ];
+  // 15 hook ngắn, chỉ dùng dữ liệu product.json (dashboard/script-template.js). Bản cũ viết cứng cho bình giữ nhiệt
+  // ("đá tan", "chống tràn"…) cho MỌI sản phẩm và có số liệu bịa ("90% người mua…") — trái Luật Quảng cáo.
+  const rawHooks = ScriptTemplate.buildHookTemplates(p);
 
   hooksPool = rawHooks
     .map((h, idx) => {
@@ -1055,58 +1030,39 @@ function renderHooksFunnel() {
 function buildSixScriptBlocks() {
   const p = getSelectedProduct();
   const c = getSelectedCharacter();
-  const winner = hooksPool[winnerHookIndex] || { text: 'Đừng mua nếu bạn chưa xem 3 chi tiết này!', angleMode: 'same-as-sample' };
-  const h1 = p.highlights?.[0] || 'Chất liệu chuẩn cao cấp';
-  const h2 = p.highlights?.[1] || 'Bề mặt hoàn thiện chống bám vân tay';
-  const h3 = p.highlights?.[2] || 'Nắp khóa kín khít chống tràn';
-
-  const isDiffFromSample = winner.angleMode && winner.angleMode !== 'same-as-sample';
-  const vanDeText =
-    winner.angleMode === 'new-pain-point'
-      ? `Rất nhiều người mua phải hàng trôi nổi chỉ giữ nhiệt được 1–2 tiếng, vỏ ngoài đọng nước làm ướt sạch túi xách và giấy tờ.`
-      : winner.angleMode === 'live-test-proof'
-      ? `Thông thường các loại bình giá rẻ khi dốc ngược hoặc đựng nước đá cả ngày sẽ bị rỉ nước và mất nhiệt cực nhanh.`
-      : winner.angleMode === 'flash-deal-first'
-      ? `Bình chuẩn ${h1.toLowerCase()} ngoài thị trường thường có giá rất cao khiến nhiều người đắn đo chưa dám xuống tiền.`
-      : `Mang đồ uống đi làm cả ngày mà chỉ vài tiếng đã nguội lạnh, vỏ bình lại trơn trượt bám vân tay gây bất tiện.`;
-
-  const latYText = isDiffFromSample
-    ? `Theo đúng hướng mở đầu mới (${winner.customIdea || ''}): ${c.name} trực tiếp kiểm chứng kết cấu ${h1} kết hợp ${h2.toLowerCase()} trên ${p.name}.`
-    : `Khác biệt của ${p.name} nằm ở kết cấu: ${h1} kết hợp lớp ${h2.toLowerCase()}.`;
-
-  scriptBlocks = [
-    { num: 1, key: 'HOOK', title: 'HOOK', note: isDiffFromSample ? '✨ Theo ý tưởng Hook đã đổi khác mẫu' : '🎯 Theo nhịp mở đầu Video Mẫu', sec: 4, text: winner.text },
-    { num: 2, key: 'VAN_DE', title: 'VẤN ĐỀ', note: 'Nỗi đau người xem nhận ra', sec: 4, text: vanDeText },
-    { num: 3, key: 'LAT_Y', title: 'LẬT Ý', note: 'Đổi cách nhìn trong 15s đầu', sec: 4, text: latYText },
-    { num: 4, key: 'BANG_CHUNG', title: 'BẰNG CHỨNG', note: '2–3 ý đúng dữ liệu product.json', sec: 5, text: `Nhìn cận cảnh ${p.name}: ${h1}; ${h2}; và ${h3}.` },
-    { num: 5, key: 'KET_QUA', title: 'KẾT QUẢ', note: 'Cái người xem nhận được', sec: 4, text: `Cầm chắc tay, nhỏ gọn sang trọng khi mang đi làm mỗi ngày, giữ trọn hương vị đồ uống suốt 24 giờ.` },
-    { num: 6, key: 'CTA', title: 'CTA', note: 'Đúng giá & ưu đãi có thật', sec: 3, text: `Giá gốc ${p.price} giảm chỉ còn ${p.salePrice || p.price} (${p.discountBadge || 'Ưu đãi hôm nay'}) — bấm giỏ hàng đặt ngay!` }
-  ];
-
+  const winner = hooksPool[winnerHookIndex] || { angleMode: 'same-as-sample' };
+  // Mẫu ngắn, chỉ dữ liệu product.json; thời lượng mỗi khối tính theo số âm tiết đọc ra (~3 âm tiết/giây đo thật).
+  // Bản cũ cố định 4–5s/khối nhưng nhét 21–59 chữ → video thật ~55s, hoặc bị cắt cụt lời thoại.
+  scriptBlocks = ScriptTemplate.buildScriptBlocks(p, c, winner);
   renderScriptBlocks();
+}
+
+function scriptBlockBadge(text, sec) {
+  const syl = ScriptTemplate.estimateSpokenSyllables(text);
+  const maxSyl = Math.max(1, Math.floor((Number(sec || 4) - 0.4) * ScriptTemplate.SYLLABLES_PER_SEC));
+  const isOver = syl > maxSyl;
+  return { isOver, label: `${syl}/${maxSyl} âm tiết ${isOver ? '⚠️ Quá dài' : '✓ Chuẩn'} • ${sec}s` };
 }
 
 function renderScriptBlocks() {
   const container = document.getElementById('script-blocks-container');
-  const totalSec = scriptBlocks.reduce((s, b) => s + Number(b.sec || 0), 0);
-  document.getElementById('script-duration-badge').textContent = `${totalSec} giây (trả lời hook ở giây thứ 8–12 ≤ 15s)`;
+  const videoSec = ScriptTemplate.estimateVideoSec(scriptBlocks, getSelectedMode());
+  document.getElementById('script-duration-badge').textContent = `≈ ${videoSec} giây video (đọc trọn câu; mục tiêu ≤ 30s)`;
 
   container.innerHTML = scriptBlocks
     .map((b, idx) => {
-      const words = String(b.text || '').trim().split(/\s+/).filter(Boolean).length;
-      const maxWords = Math.max(1, Math.round(Number(b.sec || 4) * 2.8));
-      const isOver = words > maxWords;
+      const badge = scriptBlockBadge(b.text, b.sec);
       return `
       <div class="script-block ${idx === 0 ? 'first-block' : ''}">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
           <span class="script-num">${b.num}</span>
-          <span id="word-badge-${idx}" style="font-size:11px;font-weight:800;color:${isOver ? '#DC2626' : '#16A34A'};">
-            ${words}/${maxWords} từ ${isOver ? '⚠️ Quá dài' : '✓ Chuẩn'} • ${b.sec}s
+          <span id="word-badge-${idx}" style="font-size:11px;font-weight:800;color:${badge.isOver ? '#DC2626' : '#16A34A'};">
+            ${badge.label}
           </span>
         </div>
-        <div class="script-label">${b.title}</div>
-        <div style="font-size:11px;color:var(--text-muted);">${b.note}</div>
-        <textarea oninput="onScriptWordCount(${idx}, this.value)" onchange="onScriptBlockEdit(${idx}, this.value)" style="margin-top:4px;font-size:12px;min-height:74px;">${b.text}</textarea>
+        <div class="script-label">${escapeHtml(b.title)}</div>
+        <div style="font-size:11px;color:var(--text-muted);">${escapeHtml(b.note)}</div>
+        <textarea oninput="onScriptWordCount(${idx}, this.value)" onchange="onScriptBlockEdit(${idx}, this.value)" style="margin-top:4px;font-size:12px;min-height:74px;">${escapeHtml(b.text)}</textarea>
       </div>
     `;
     })
@@ -1115,13 +1071,12 @@ function renderScriptBlocks() {
 
 function onScriptWordCount(idx, val) {
   const b = scriptBlocks[idx];
-  const badge = document.getElementById(`word-badge-${idx}`);
-  if (!b || !badge) return;
-  const words = String(val || '').trim().split(/\s+/).filter(Boolean).length;
-  const maxWords = Math.max(1, Math.round(Number(b.sec || 4) * 2.8));
-  const isOver = words > maxWords;
-  badge.style.color = isOver ? '#DC2626' : '#16A34A';
-  badge.textContent = `${words}/${maxWords} từ ${isOver ? '⚠️ Quá dài' : '✓ Chuẩn'} • ${b.sec}s`;
+  const badgeEl = document.getElementById(`word-badge-${idx}`);
+  if (!b || !badgeEl) return;
+  // Thời lượng đi theo lời thoại đang gõ (đủ đọc ở nhịp tự nhiên)
+  const badge = scriptBlockBadge(val, ScriptTemplate.estimateSpeechSec(val));
+  badgeEl.style.color = badge.isOver ? '#DC2626' : '#16A34A';
+  badgeEl.textContent = badge.label;
 }
 
 async function importSampleVideoFromUrl() {
@@ -1281,6 +1236,29 @@ function onScriptBlockEdit(idx, val) {
     return;
   }
   scriptBlocks[idx].text = val;
+  scriptBlocks[idx].sec = ScriptTemplate.estimateSpeechSec(val);
+  // Trước đây sửa khối ở Mục 04 không sang được phân cảnh Mục 05 → giọng đọc vẫn đọc chữ cũ
+  applyScriptToScenes();
+  renderScriptBlocks();
+}
+
+// Áp lời thoại + thời lượng từ 6 khối vào đúng cảnh (theo id), giữ nguyên mọi chỉnh sửa khác ở Mục 05
+function applyScriptToScenes({ rerender = true } = {}) {
+  const plan = ScriptTemplate.scenePlan(scriptBlocks, getSelectedMode());
+  let changed = 0;
+  for (const p of plan) {
+    const s = scenesList.find((x) => x.id === p.id);
+    if (!s) continue;
+    s.subtitle = p.subtitle;
+    s.durationSec = p.durationSec;
+    if (s.trimEndSec !== undefined && s.trimEndSec !== null) s.trimEndSec = Number(s.trimStartSec || 0) + p.durationSec;
+    changed++;
+  }
+  if (changed && rerender) {
+    renderScenesTable();
+    updatePhonePreview();
+  }
+  return changed;
 }
 
 // 4. Trợ lý 05: Đạo diễn hình ảnh (Thay thế Sản phẩm & Nhân vật của bạn vào cấu trúc Video Mẫu) & 3 phương án bìa
@@ -1288,6 +1266,7 @@ function syncScriptToScenes() {
   const mode = getSelectedMode();
   const p = getSelectedProduct();
   const c = getSelectedCharacter();
+  const prevScenes = new Map(scenesList.map((s) => [s.id, s]));
   const winner = hooksPool[winnerHookIndex] || {};
   const clips = appState.catalog?.clips || [];
   const sampleClipId = document.getElementById('inp-sample-video')?.value || clips[0]?.id || 'video-m-u';
@@ -1395,6 +1374,8 @@ function syncScriptToScenes() {
     ];
   }
 
+  for (const s of scenesList) copySceneMediaRefs(prevScenes.get(s.id), s);
+  applyScriptToScenes({ rerender: false });
   renderScenesTable();
   renderVeo3StudioCards();
   renderThreeCovers();
@@ -1762,6 +1743,7 @@ function buildCampaignPayload() {
       base.motionLevel = 'none';
       base.videoSrc = '';
     }
+    copySceneMediaRefs(s, base);
     return base;
   });
 
@@ -2202,6 +2184,9 @@ async function triggerBackendAction(action, estSec = 5) {
     if (action === 'generate-voiceover' || action === 'run-optimal-pipeline') {
       const changed = syncSceneTimingFromState(campaignId);
       if (changed) logConsole('⏱️ Đã cập nhật thời lượng cảnh theo lời thoại (Mục 05) — lần dựng tới sẽ đọc trọn câu.');
+    } else {
+      // Thao tác khác: chỉ nạp tham chiếu media server vừa tạo, không đụng thời lượng người dùng đang chỉnh
+      syncSceneTimingFromState(campaignId, SCENE_MEDIA_KEYS);
     }
   }
 
@@ -2238,14 +2223,24 @@ async function triggerBackendAction(action, estSec = 5) {
 
 // Bước giọng đọc có thể kéo dài cảnh để đọc trọn câu → nạp lại thời lượng từ server.
 // Không nạp thì lần "Lưu campaign.json" kế tiếp ghi đè về thời lượng cũ và bước dựng lại cắt tiếng.
-function syncSceneTimingFromState(campaignId) {
+// Tham chiếu media do SERVER tạo (Muse pack / giọng đọc). Giao diện không sửa các trường này, nên luôn giữ
+// khi lưu & khi dựng lại phân cảnh. Trước đây "Lưu campaign.json" xóa mất → Remotion mất ảnh khung,
+// generate-media bỏ qua cảnh vì "thiếu file keyframe hợp lệ".
+const SCENE_MEDIA_KEYS = ['keyframeSrc', 'startKeyframeSrc', 'endKeyframeSrc', 'audioSrc'];
+const SCENE_TIMING_KEYS = ['durationSec', 'trimStartSec', 'trimEndSec'];
+
+function copySceneMediaRefs(from, to) {
+  for (const k of SCENE_MEDIA_KEYS) if (from?.[k] && !to[k]) to[k] = from[k];
+}
+
+function syncSceneTimingFromState(campaignId, keys = [...SCENE_TIMING_KEYS, ...SCENE_MEDIA_KEYS]) {
   const camp = (appState.campaigns || []).find((c) => c.id === campaignId);
   if (!camp) return 0;
   let changed = 0;
   for (const s of scenesList) {
     const srv = (camp.scenes || []).find((x) => x.id === s.id);
     if (!srv) continue;
-    for (const k of ['durationSec', 'trimStartSec', 'trimEndSec', 'audioSrc']) {
+    for (const k of keys) {
       if (srv[k] !== undefined && srv[k] !== s[k]) {
         s[k] = srv[k];
         changed++;
