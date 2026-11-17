@@ -316,6 +316,48 @@ function openInKolStudio() {
   window.location.href = charId ? `kol-studio.html?kol=${encodeURIComponent(charId)}` : 'kol-studio.html';
 }
 
+function toggleNewProductBox(forceState) {
+  const box = document.getElementById('new-product-box');
+  if (!box) return;
+  const show = forceState !== undefined ? forceState : box.style.display === 'none';
+  box.style.display = show ? 'block' : 'none';
+}
+
+async function saveNewProductFromUi() {
+  const name = document.getElementById('new-prod-name')?.value.trim() || '';
+  const price = document.getElementById('new-prod-price')?.value.trim() || '';
+  const salePrice = document.getElementById('new-prod-sale')?.value.trim() || price;
+  const highlights = document.getElementById('new-prod-highlights')?.value.trim() || '';
+  const immutableFeatures = document.getElementById('new-prod-features')?.value.trim() || '';
+  const category = document.getElementById('inp-industry')?.value || 'general';
+
+  try {
+    const res = await fetch('/api/product/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, price, salePrice, highlights, immutableFeatures, category })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.output || 'Lỗi lưu sản phẩm');
+    if (data.state?.products) {
+      appState.products = data.state.products;
+      populateSelectors();
+      const prodSel = document.getElementById('inp-product');
+      if (prodSel) prodSel.value = data.product.id;
+      onProductChange();
+      runAllAssistants();
+    }
+    toggleNewProductBox(false);
+    ['new-prod-name', 'new-prod-price', 'new-prod-sale', 'new-prod-highlights', 'new-prod-features'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    logConsole(`✅ ${data.output} (Hãy kéo thả ảnh sản phẩm vào ô bên dưới để gắn ảnh thật!)`);
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
 function populateSelectors() {
   const prodSel = document.getElementById('inp-product');
   const charSel = document.getElementById('inp-character');

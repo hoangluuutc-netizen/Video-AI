@@ -17,6 +17,7 @@ import {
 import { maskEnvStatus, upsertEnvFile } from './lib/env-keys.mjs';
 import { summarizeCostLedgers, previewBatchCsv } from './lib/batch-dashboard.mjs';
 import { buildSystemReadiness } from './lib/system-readiness.mjs';
+import { saveProductRecord } from './lib/product-store.mjs';
 import { estimateVideoCost, normalizeCostSettings } from './lib/cost-ledger.mjs';
 import { approveCampaignFile } from './kol-approve.mjs';
 import { normalizeToolChoices } from './lib/tool-choices.mjs';
@@ -924,6 +925,20 @@ const server = http.createServer(async (req, res) => {
       });
     } catch (e) {
       return sendJson(res, 500, { ok: false, output: `Lỗi Lip-Sync AI: ${e.message}` });
+    }
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/product/save') {
+    try {
+      const body = await readBody(req);
+      const saved = saveProductRecord(body, { root: ROOT });
+      return sendJson(res, 200, {
+        ...saved,
+        output: `Đã lưu sản phẩm "${saved.product.name}" tại ${saved.relPath}`,
+        state: loadWorkspaceState()
+      });
+    } catch (e) {
+      return sendJson(res, 400, { ok: false, output: e.message });
     }
   }
 

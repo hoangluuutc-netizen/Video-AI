@@ -365,11 +365,28 @@
           </div>
         </div>
         <div class="field-group">
-          <label style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <label style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
             <span>📦 Sản phẩm của bạn (`assets/products/`) <span class="tip-badge" tabindex="0" data-tip="Ảnh sản phẩm thật giữ nguyên 100% logo & bao bì. Nên dùng ảnh PNG đã tách nền trắng để không bị viền trắng.">?</span></span>
-            <button type="button" class="icon-pill-btn" onclick="openSelectedAssetPath('product')" title="Mở thẳng thư mục hoặc ảnh sản phẩm trên máy">📂 Mở đường dẫn</button>
+            <span style="display:flex;gap:6px;">
+              <button type="button" class="icon-pill-btn" onclick="toggleNewProductBox()" title="Tạo nhanh sản phẩm mới ngay trên web">➕ Thêm SP mới</button>
+              <button type="button" class="icon-pill-btn" onclick="openSelectedAssetPath('product')" title="Mở thẳng thư mục hoặc ảnh sản phẩm trên máy">📂 Mở đường dẫn</button>
+            </span>
           </label>
           <select id="inp-product" onchange="onProductChange()"></select>
+          <div id="new-product-box" style="display:none;margin-top:8px;padding:10px;border:1px solid #FDBA74;border-radius:10px;background:#FFFBEB;">
+            <strong style="font-size:12px;color:#9A3412;display:block;margin-bottom:6px;">➕ Tạo Sản Phẩm Mới (`assets/products/&lt;id&gt;/product.json`)</strong>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+              <input type="text" id="new-prod-name" placeholder="Tên sản phẩm (bắt buộc)..." style="grid-column:1 / -1;" />
+              <input type="text" id="new-prod-price" placeholder="Giá gốc (vd: 299.000đ)" />
+              <input type="text" id="new-prod-sale" placeholder="Giá Sale (vd: 199.000đ)" />
+              <input type="text" id="new-prod-highlights" placeholder="Điểm nổi bật (ngăn bởi dấu |)" style="grid-column:1 / -1;" />
+              <input type="text" id="new-prod-features" placeholder="Đặc điểm khóa (màu sắc, logo, chất liệu...)" style="grid-column:1 / -1;" />
+            </div>
+            <div style="display:flex;gap:6px;margin-top:8px;">
+              <button type="button" class="btn btn-primary" style="padding:6px 12px;font-size:12px;" onclick="saveNewProductFromUi()">💾 Lưu Sản Phẩm Mới</button>
+              <button type="button" class="btn btn-outline" style="padding:6px 12px;font-size:12px;" onclick="toggleNewProductBox(false)">Đóng</button>
+            </div>
+          </div>
           <div class="mini-dropzone" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="handleMiniDrop(event,'product')" onclick="document.getElementById('mini-file-product').click()" style="margin-top:6px;padding:8px 10px;border:1.5px dashed #CBD5E1;border-radius:8px;background:#F8FAFC;cursor:pointer;font-size:11.5px;line-height:1.4;">
             <strong>📥 Kéo thả Ảnh sản phẩm vào đây</strong> hoặc bấm chọn file
             <div style="color:#64748B;">• Định dạng: <code>.png, .jpg, .webp</code> • Yêu cầu: ≥ 720px, rõ logo/bao bì; ưu tiên PNG tách nền.</div>
