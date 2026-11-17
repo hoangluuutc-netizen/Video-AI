@@ -324,3 +324,32 @@ Chạy từng nút như người dùng thật ở cấu hình $0 (LLM mẫu cụ
 - **T3 (`dashboard/app.js`):** Sửa toàn bộ 12 chỗ gọi sai `finishJobProgress(t0, ...)` thành `finishJobProgress(true, ..., t0)` ở nhánh thành công và `finishJobProgress(false, ..., t0)` ở nhánh lỗi/catch (`grep "finishJobProgress(t0"` trả 0 dòng).
 - **T4 (`scripts/dashboard-server.mjs`):** Cho phép phương thức `HEAD` (chỉ trả header + `Content-Length`, không gửi body) cho route `/assets/` và `/campaigns/`, giữ nguyên kiểm tra bảo mật `isServableAssetPath` (`/assets/private/README.md` vẫn trả `404`).
 - **Kiểm định:** `node --check` các file sửa đạt, `node --test scripts/tests/*.test.mjs` **154/154 PASS** (gồm 3 test mới trong `scripts/tests/kol-studio.test.mjs`), `validate-assets.mjs` 100%, `smoke-test.mjs` 100%. Dữ liệu thử `campaigns/kol-sample-kol/` đã được dọn sạch.
+
+## 2026-11-17 — Claude: Rà soát bàn giao T1–T4 của Antigravity + sửa T2 (nút Lip-Sync AI)
+**Kiểm lại phần Antigravity** (commit `2d79320`):
+- T1 đạt: đo thật, trong lúc dựng video KOL 43s, `/api/state` vẫn trả lời sau 0,2s.
+- T3 đạt: 12 chỗ `finishJobProgress` đúng `true`/`false`.
+- T4 đạt: HEAD trả 200; `assets/private` vẫn 404.
+- T2 còn lỗi, xem bên dưới.
+
+**T2 — nút "✨ Tạo Clip Lip-Sync AI" chưa từng tạo được clip:**
+- Lệnh cũ `generate-media --selective` thiếu `--mode`, nên luôn thoát lỗi "Cách dùng". Bản vá `--mode keyframe` thì chỉ tạo ảnh, không tạo clip, mà vẫn báo "đã gửi yêu cầu tạo clip".
+- Với mô hình ảnh mặc định `ffmpeg-real-composite`, bước keyframe gửi đúng tên đó sang Gemini (không có model này), nên lỗi ngay sau khi người dùng đã xác nhận chi phí.
+- Ước tính luôn tính 5s (không truyền `sceneSec`). Veo 3.1 clip 8s thật ra $3,20, không phải $2,00.
+- Cảnh `pending` bị cổng QC của `processSceneVideo` bỏ qua.
+- Lời thoại ghi vào `voiceover`, nhưng `prompt-builder` đọc `subtitle`, nên Veo nhận prompt không có câu thoại.
+- "Không gắn sản phẩm" vẫn lấy ảnh `sample-product` làm tham chiếu.
+
+**Sửa:** thêm `scripts/lib/kol-lipsync.mjs` (`planLipSync`, `pickPortrait`), là hàm thuần dùng chung cho chạy thử và chạy thật.
+- Ảnh khung = **ảnh chân dung gốc** của KOL, copy nguyên byte ($0, không AI vẽ lại khuôn mặt), nên đạt QC ảnh khung. Không bao giờ lấy ảnh 4 góc do AI vẽ.
+- Ước tính theo đúng số giây clip (Fal Kling tính tròn 5s/10s).
+- Chặn trước khi tốn tiền khi: vượt ngân sách, model video $0, chưa chọn sản phẩm, thiếu ảnh gốc, hoặc KOL người thật (mode clone) chưa có văn bản đồng ý còn hiệu lực.
+- Lời thoại vào `subtitle`, prompt lip-sync vào `visualAction`; chiến dịch riêng `kol-<id>-lipsync`.
+- Server chạy `generate-media --mode video`. Chỉ báo thành công khi thật sự có `videoSrc`, kèm `mediaUrl` để phát ngay.
+- Giao diện: bước 1 chạy thử trên server (cùng kế hoạch), bước 2 người dùng xác nhận chi phí, bước 3 chạy thật. Bỏ cách tự ước tính ở trình duyệt (cũ, sai số giây).
+
+**Kiểm (không gọi API tốn tiền):**
+- `generate-media --mode video --dry-run` với Veo 3.1: cảnh không bị bỏ qua, ảnh khung giống ảnh gốc từng byte, prompt có câu thoại, ước tính $3,2 cho 8s. Bước tạo video còn tự chặn thêm theo ngân sách $0,5.
+- Trên giao diện, 2 ca bị chặn chỉ gửi yêu cầu chạy thử và báo đúng lý do.
+- `161/161` unit test pass (thêm `kol-lipsync` 7 test), `validate-assets.mjs` 100%, `smoke-test.mjs` 100%.
+- Chưa chạy thật 1 lần với Veo/Fal vì tốn phí; cần người dùng tự bấm khi đã chọn model và có key.

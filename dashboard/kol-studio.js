@@ -305,57 +305,44 @@ async function generateLipSyncAi() {
     setStatus('Vui lòng chọn hoặc lưu hồ sơ KOL trước.');
     return;
   }
+  const payload = {
+    characterId: kolId,
+    productId: document.getElementById('kol-product-select').value,
+    voiceText: document.getElementById('kol-voice-text').value.trim(),
+    hookTitle: document.getElementById('kol-hook-title').value.trim(),
+    durationSec: Number(document.getElementById('kol-duration').value),
+    veoLipSyncPrompt: document.getElementById('kol-veo-prompt').textContent.trim()
+  };
+  const post = (body) =>
+    fetch('/api/kol/lipsync-ai', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(async (r) => ({
+      httpOk: r.ok,
+      ...(await r.json())
+    }));
   try {
-    setStatus('🔍 Đang kiểm tra ước tính chi phí & ngân sách...');
-    const stateRes = await fetch('/api/state');
-    const st = await stateRes.json();
-    const cfg = st.aiConfig || {};
-    const estRes = await fetch('/api/cost-estimate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        imageModel: cfg.imageModel,
-        videoModel: cfg.videoModel,
-        ttsModel: cfg.ttsModel,
-        aiSceneCount: 1,
-        maxCostUsdPerVideo: cfg.maxCostUsdPerVideo
-      })
-    });
-    const est = await estRes.json();
-    if (!est.withinBudget) {
-      const msg = `Vượt ngân sách: ước tính $${est.totalUsd} > $${est.maxUsd} / video (model ${cfg.videoModel || ''}).`;
-      setStatus(`⛔ ${msg}`);
-      alert(msg);
+    // 1) Chạy thử trên server: cùng 1 kế hoạch với lần chạy thật (đúng số giây clip, đúng chốt chặn) — không tốn phí
+    setStatus('🔍 Đang kiểm tra chi phí & điều kiện tạo clip...');
+    const plan = await post({ ...payload, dryRun: true });
+    if (!plan.ok) {
+      setStatus(`⛔ ${plan.output}`);
+      alert(plan.output);
       return;
     }
-    if (est.totalUsd > 0) {
-      const ok = confirm(
-        `Xác nhận chạy Lip-Sync AI?\n\n` +
-        `• Model ảnh: ${cfg.imageModel}\n` +
-        `• Model video: ${cfg.videoModel}\n` +
+    // 2) Người dùng duyệt chi phí — luôn hỏi vì bước sau gọi dịch vụ video AI bên ngoài
+    const est = plan.estimate || {};
+    const ok = confirm(
+      `Xác nhận tạo clip Lip-Sync AI?\n\n` +
+        `• ${plan.output}\n` +
+        `• Ảnh khung: ảnh chân dung gốc của KOL ($0, không AI vẽ lại)\n` +
         `• Chi phí ước tính: $${est.totalUsd} / ngân sách tối đa $${est.maxUsd}\n\n` +
-        `Bấm OK để tiếp tục, Cancel để hủy.`
-      );
-      if (!ok) {
-        setStatus('Đã hủy tạo Clip Lip-Sync AI (chưa tốn phí).');
-        return;
-      }
+        `OK để gọi dịch vụ (tốn phí), Cancel để hủy.`
+    );
+    if (!ok) {
+      setStatus('Đã hủy tạo clip Lip-Sync AI (chưa tốn phí).');
+      return;
     }
-
-    setStatus('✨ Đang gửi yêu cầu tạo Clip Lip-Sync AI...');
-    const res = await fetch('/api/kol/lipsync-ai', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        characterId: kolId,
-        productId: document.getElementById('kol-product-select').value,
-        voiceText: document.getElementById('kol-voice-text').value.trim(),
-        hookTitle: document.getElementById('kol-hook-title').value.trim(),
-        durationSec: Number(document.getElementById('kol-duration').value),
-        veoLipSyncPrompt: document.getElementById('kol-veo-prompt').textContent.trim()
-      })
-    });
-    const data = await res.json();
+    // 3) Chạy thật
+    setStatus('✨ Đang tạo clip Lip-Sync AI (có thể mất vài phút)...');
+    const data = await post(payload);
     if (data.missingKey) {
       setStatus(`⚠️ ${data.output}`);
       if (confirm(`${data.output}\n\nMở ngay trang Cài đặt Bộ não & API Key?`)) {
@@ -363,8 +350,17 @@ async function generateLipSyncAi() {
       }
       return;
     }
-    if (!res.ok || !data.ok) throw new Error(data.output || `HTTP ${res.status}`);
+    if (!data.httpOk || !data.ok) throw new Error(data.output || 'Không tạo được clip.');
     setStatus(data.output);
+    if (data.mediaUrl) {
+      const videoEl = document.getElementById('kol-video-player');
+      if (videoEl) {
+        videoEl.src = data.mediaUrl;
+        videoEl.style.display = 'block';
+        const ph = document.getElementById('kol-video-placeholder');
+        if (ph) ph.style.display = 'none';
+      }
+    }
   } catch (e) {
     setStatus(`Lỗi Lip-Sync AI: ${e.message}`);
   }

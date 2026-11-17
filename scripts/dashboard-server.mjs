@@ -19,7 +19,7 @@ import { maskEnvStatus, upsertEnvFile } from './lib/env-keys.mjs';
 import { summarizeCostLedgers, previewBatchCsv } from './lib/batch-dashboard.mjs';
 import { buildSystemReadiness } from './lib/system-readiness.mjs';
 import { saveProductRecord } from './lib/product-store.mjs';
-import { assertWithinBudget, estimateVideoCost, normalizeCostSettings } from './lib/cost-ledger.mjs';
+import { estimateVideoCost, normalizeCostSettings } from './lib/cost-ledger.mjs';
 import { approveCampaignFile } from './kol-approve.mjs';
 import {
   checkApiRequest,
@@ -36,6 +36,7 @@ import { prepareForHeavyPhase } from './lib/resource-gate.mjs';
 import { normalizeReelRow } from './lib/reel-sheet.mjs';
 import { createJobQueue } from './lib/job-queue.mjs';
 import { recordReelSheet } from './run-optimal-pipeline.mjs';
+import { planLipSync } from './lib/kol-lipsync.mjs';
 
 const execFileAsync = promisify(execFile);
 const ROOT = process.cwd();
@@ -954,88 +955,60 @@ const server = http.createServer(async (req, res) => {
     try {
       const body = await readBody(req);
       const aiConfig = loadAiConfig();
-      const dur = Math.min(8, Math.max(4, Number(body.durationSec || 5)));
-      const estimate = estimateVideoCost({
-        imageModel: aiConfig.imageModel,
-        videoModel: aiConfig.videoModel,
-        ttsModel: aiConfig.ttsModel,
-        aiSceneCount: 1,
-        maxUsd: aiConfig.maxCostUsdPerVideo
-      });
-
-      try {
-        assertWithinBudget(estimate, estimate.maxUsd);
-      } catch (budgetErr) {
-        return sendJson(res, 400, {
-          ok: false,
-          overBudget: true,
-          estimate,
-          output: budgetErr.message
-        });
-      }
-
       const state = loadWorkspaceState();
       const character = state.characters.find((c) => c.id === body.characterId);
-      if (!character) throw new Error('Không tìm thấy hồ sơ KOL.');
-      const campId = `kol-${character.id}-lipsync`;
+      const product = body.productId ? state.products.find((p) => p.id === body.productId) : null;
+      // Kế hoạch + mọi chốt chặn (ngân sách theo đúng số giây, model $0, sản phẩm, ảnh gốc, đồng ý KOL thật)
+      const plan = planLipSync({ character, product, aiConfig, body, root: ROOT });
+      const campId = plan.campaign.id;
 
+      if (!plan.ok) {
+        return sendJson(res, 400, { ok: false, overBudget: plan.overBudget, estimate: plan.estimate, campaignId: campId, output: plan.errors.join('\n') });
+      }
+      // Chạy thử: chỉ trả ước tính để giao diện hỏi xác nhận — không ghi file, không gọi API
       if (body.dryRun) {
         return sendJson(res, 200, {
           ok: true,
           dryRun: true,
           campaignId: campId,
-          estimate,
-          output: `Ước tính Lip-Sync AI (${aiConfig.videoModel}): $${estimate.totalUsd} / ngân sách $${estimate.maxUsd}.`
+          estimate: plan.estimate,
+          output: `Ước tính clip Lip-Sync ${plan.billedSec}s (${aiConfig.videoModel}): $${plan.estimate.totalUsd} / ngân sách $${plan.estimate.maxUsd}.`
         });
       }
-
-      if (aiConfig.videoModel === 'ffmpeg-bokeh-cinema') {
-        return sendJson(res, 400, {
-          ok: false,
-          output: 'Đang chọn công cụ $0 (FFmpeg Bokeh Cinema). Hãy chọn model Video AI (như Wan 2.2 hoặc Veo 3.1) trong "⚙️ Cài đặt Bộ não" trước khi tạo Lip-Sync AI.'
-        });
-      }
-
-      if (!aiConfig.hasGeminiKey && !aiConfig.hasFalKey) {
+      const usesFal = String(aiConfig.videoModel || '').startsWith('fal-');
+      if (usesFal ? !aiConfig.hasFalKey : !aiConfig.hasGeminiKey) {
         return sendJson(res, 400, {
           ok: false,
           missingKey: true,
-          output: 'Chưa có GEMINI_API_KEY hoặc FAL_KEY. Vui lòng nhập API Key tại "⚙️ Cài đặt Bộ não" trước khi gọi Veo 3.1 / Omni 1.2 / Kling.'
+          output: `Chưa có ${usesFal ? 'FAL_KEY' : 'GEMINI_API_KEY'} cho model ${aiConfig.videoModel}. Nhập tại "⚙️ Bộ não & chi phí".`
         });
       }
 
+      // Ảnh khung = ảnh chân dung gốc, copy nguyên byte (không AI vẽ lại khuôn mặt)
       const campDir = path.join(CAMPAIGNS_DIR, campId);
+      const keyframeAbs = path.join(campDir, plan.campaign.scenes[0].keyframeSrc);
+      fs.mkdirSync(path.dirname(keyframeAbs), { recursive: true });
+      fs.copyFileSync(plan.portraitAbs, keyframeAbs);
       const campPath = path.join(campDir, 'campaign.json');
-      fs.mkdirSync(campDir, { recursive: true });
-      const camp = {
-        id: campId,
-        title: `KOL AI Lip-Sync: ${character.name}`,
-        productId: body.productId || 'sample-product',
-        characterId: character.id,
-        hook: body.hookTitle || character.name,
-        scenes: [
-          {
-            id: 'scene-1',
-            type: 'ai-experience',
-            durationSec: dur,
-            caption: body.hookTitle || character.name,
-            voiceover: body.voiceText || character.catchphrase || '',
-            customPrompt: body.veoLipSyncPrompt || '',
-            qcStatus: 'pending'
-          }
-        ]
-      };
-      fs.writeFileSync(campPath, JSON.stringify(camp, null, 2) + '\n', 'utf8');
+      fs.writeFileSync(campPath, JSON.stringify(plan.campaign, null, 2) + '\n', 'utf8');
+
       const campRel = path.posix.join('campaigns', campId, 'campaign.json');
-      const result = await runScript('scripts/generate-media.mjs', [campRel, '--mode', 'keyframe', '--selective']);
-      if (!result.ok) {
-        return sendJson(res, 500, { ok: false, campaignId: campId, output: `Lỗi Lip-Sync AI: ${result.output}` });
+      const result = await runScript('scripts/generate-media.mjs', [campRel, '--mode', 'video']);
+      const after = readJsonSafe(campPath, plan.campaign);
+      const clipRel = after.scenes?.[0]?.videoSrc || '';
+      if (!result.ok || !clipRel) {
+        return sendJson(res, 500, {
+          ok: false,
+          campaignId: campId,
+          output: `Chưa tạo được clip Lip-Sync AI.\n${result.output}`
+        });
       }
       return sendJson(res, 200, {
         ok: true,
         campaignId: campId,
-        estimate,
-        output: result.output || `Đã gửi yêu cầu tạo clip Lip-Sync AI cho ${character.name}.`
+        estimate: plan.estimate,
+        mediaUrl: `/campaigns/${campId}/${clipRel}?t=${Date.now()}`,
+        output: `Đã tạo clip Lip-Sync AI ${plan.billedSec}s cho ${character.name}: campaigns/${campId}/${clipRel}\n${result.output}`
       });
     } catch (e) {
       return sendJson(res, 500, { ok: false, output: `Lỗi Lip-Sync AI: ${e.message}` });
