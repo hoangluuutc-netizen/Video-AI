@@ -1,7 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { generateOllamaJson, normalizeOllamaModel } from './ollama-client.mjs';
+
+const execFileAsync = promisify(execFile);
 import { generateJson, DEFAULT_MODEL } from './gemini-client.mjs';
 
 const ROOT = process.cwd();
@@ -290,7 +293,7 @@ export async function renderKolTalkingVideo({ character, product = null, voiceTe
 
   // Sinh giọng đọc + phụ đề .srt/.ass bằng script sẵn có của hệ thống
   const campRel = path.posix.join('campaigns', campId, 'campaign.json');
-  execFileSync('node', ['scripts/generate-voiceover.mjs', campRel], { cwd: ROOT, stdio: 'pipe' });
+  await execFileAsync(process.execPath, ['scripts/generate-voiceover.mjs', campRel], { cwd: ROOT, maxBuffer: 10 * 1024 * 1024 });
 
   const voiceCandidates = [
     path.join(audioDir, 'voiceover-full.mp3'),
@@ -306,10 +309,10 @@ export async function renderKolTalkingVideo({ character, product = null, voiceTe
   let finalDur = dur;
   if (voiceWav) {
     try {
-      const probe = execFileSync('ffprobe', [
+      const { stdout: probe } = await execFileAsync('ffprobe', [
         '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', voiceWav
-      ], { encoding: 'utf8' }).trim();
-      const audioDur = parseFloat(probe);
+      ], { encoding: 'utf8' });
+      const audioDur = parseFloat(String(probe || '').trim());
       if (Number.isFinite(audioDur) && audioDur > 1) finalDur = Math.ceil(audioDur + 0.6);
     } catch {
       // giữ finalDur
@@ -319,11 +322,11 @@ export async function renderKolTalkingVideo({ character, product = null, voiceTe
   const targetFps = 60;
   const totalFrames = Math.max(60, Math.round(finalDur * targetFps));
   const bgBlurPng = path.join(mediaDir, 'bg-blur.png');
-  execFileSync('ffmpeg', [
+  await execFileAsync('ffmpeg', [
     '-y', '-v', 'error', '-i', portraitAbs,
     '-vf', 'scale=1080:1920:flags=lanczos:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=36:6',
     '-frames:v', '1', bgBlurPng
-  ], { cwd: ROOT, stdio: 'pipe' });
+  ], { cwd: ROOT, maxBuffer: 10 * 1024 * 1024 });
 
   const inputs = [
     '-y', '-v', 'error',
@@ -361,7 +364,7 @@ export async function renderKolTalkingVideo({ character, product = null, voiceTe
   }
   args.push('-c:v', 'libx264', '-preset', 'veryfast', '-crf', '19', '-pix_fmt', 'yuv420p', '-r', String(targetFps), '-fps_mode', 'cfr', '-movflags', '+faststart', '-t', String(finalDur), outMp4);
 
-  execFileSync('ffmpeg', args, { cwd: ROOT, stdio: 'pipe' });
+  await execFileAsync('ffmpeg', args, { cwd: ROOT, maxBuffer: 20 * 1024 * 1024 });
 
   // Dọn các file video cũ nếu không bị trình duyệt giữ lock
   for (const f of fs.readdirSync(outDir)) {
@@ -372,7 +375,7 @@ export async function renderKolTalkingVideo({ character, product = null, voiceTe
 
   let integrity = { ok: fs.existsSync(outMp4), width: 1080, height: 1920, fps: targetFps, hasAudio: Boolean(voiceWav), durationSec: finalDur };
   try {
-    const probeJson = execFileSync('ffprobe', [
+    const { stdout: probeJson } = await execFileAsync('ffprobe', [
       '-v', 'error', '-show_entries', 'stream=codec_type,width,height,r_frame_rate', '-show_entries', 'format=duration', '-of', 'json', outMp4
     ], { encoding: 'utf8' });
     const parsed = JSON.parse(probeJson);

@@ -1101,7 +1101,7 @@ async function importSampleVideoFromUrl() {
     });
     const data = await res.json();
     if (!data.ok) {
-      finishJobProgress(t0, data.output || 'Không tải được video từ link.');
+      finishJobProgress(false, data.output || 'Không tải được video từ link.', t0);
       alert(data.output || 'Không tải được video từ link.');
       return;
     }
@@ -1112,9 +1112,9 @@ async function importSampleVideoFromUrl() {
       if (sel && data.clipId) sel.value = data.clipId;
       renderSampleAnalysisCard();
     }
-    finishJobProgress(t0, data.output || 'Đã tải và phân tích video từ link!');
+    finishJobProgress(true, data.output || 'Đã tải và phân tích video từ link!', t0);
   } catch (e) {
-    finishJobProgress(t0, `Lỗi tải link: ${e.message}`);
+    finishJobProgress(false, `Lỗi tải link: ${e.message}`, t0);
   }
 }
 
@@ -1146,16 +1146,16 @@ async function triggerGeminiXray() {
     });
     const data = await res.json();
     if (!data.ok) {
-      finishJobProgress(t0, data.output || 'Giải phẫu Gemini thất bại.');
+      finishJobProgress(false, data.output || 'Giải phẫu Gemini thất bại.', t0);
       alert(data.output || 'Giải phẫu Gemini thất bại.');
       return;
     }
     if (data.state) appState = data.state;
     else if (data.sampleAnalysis) appState.sampleAnalysis = data.sampleAnalysis;
     renderSampleAnalysisCard();
-    finishJobProgress(t0, data.output || 'Đã giải phẫu sâu Gemini xong!');
+    finishJobProgress(true, data.output || 'Đã giải phẫu sâu Gemini xong!', t0);
   } catch (e) {
-    finishJobProgress(t0, `Lỗi Giải phẫu Gemini: ${e.message}`);
+    finishJobProgress(false, `Lỗi Giải phẫu Gemini: ${e.message}`, t0);
   }
 }
 
@@ -1174,15 +1174,15 @@ async function generateCharacterSheetUi() {
     });
     const data = await res.json();
     if (!data.ok) {
-      finishJobProgress(t0, data.output || 'Lỗi tạo Character Sheet.');
+      finishJobProgress(false, data.output || 'Lỗi tạo Character Sheet.', t0);
       alert(data.output || 'Lỗi tạo Character Sheet.');
       return;
     }
     if (data.state) appState = data.state;
     if (typeof renderTruthLockSummary === 'function') renderTruthLockSummary();
-    finishJobProgress(t0, data.output || 'Đã tạo Bộ Ảnh Nhân Vật 4 Góc!');
+    finishJobProgress(true, data.output || 'Đã tạo Bộ Ảnh Nhân Vật 4 Góc!', t0);
   } catch (e) {
-    finishJobProgress(t0, `Lỗi tạo Character Sheet: ${e.message}`);
+    finishJobProgress(false, `Lỗi tạo Character Sheet: ${e.message}`, t0);
   }
 }
 
@@ -1204,7 +1204,7 @@ async function applyRemakeToHooksAndScript() {
     });
     const data = await res.json();
     if (!data.ok || !data.remake) {
-      finishJobProgress(t0, data.output || 'Không áp được công thức.');
+      finishJobProgress(false, data.output || 'Không áp được công thức.', t0);
       alert(data.output || 'Không áp được công thức.');
       return;
     }
@@ -1222,10 +1222,10 @@ async function applyRemakeToHooksAndScript() {
     }
     renderHooksFunnel();
     renderScriptBlocks();
-    finishJobProgress(t0, data.output || 'Đã áp công thức sang Mục 03 & 04!');
+    finishJobProgress(true, data.output || 'Đã áp công thức sang Mục 03 & 04!', t0);
     scrollToSlide('slide-03');
   } catch (e) {
-    finishJobProgress(t0, `Lỗi áp công thức: ${e.message}`);
+    finishJobProgress(false, `Lỗi áp công thức: ${e.message}`, t0);
   }
 }
 

@@ -306,7 +306,43 @@ async function generateLipSyncAi() {
     return;
   }
   try {
-    setStatus('✨ Đang gửi yêu cầu tạo Clip Lip-Sync AI (Veo 3.1 / Omni 1.2)...');
+    setStatus('🔍 Đang kiểm tra ước tính chi phí & ngân sách...');
+    const stateRes = await fetch('/api/state');
+    const st = await stateRes.json();
+    const cfg = st.aiConfig || {};
+    const estRes = await fetch('/api/cost-estimate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imageModel: cfg.imageModel,
+        videoModel: cfg.videoModel,
+        ttsModel: cfg.ttsModel,
+        aiSceneCount: 1,
+        maxCostUsdPerVideo: cfg.maxCostUsdPerVideo
+      })
+    });
+    const est = await estRes.json();
+    if (!est.withinBudget) {
+      const msg = `Vượt ngân sách: ước tính $${est.totalUsd} > $${est.maxUsd} / video (model ${cfg.videoModel || ''}).`;
+      setStatus(`⛔ ${msg}`);
+      alert(msg);
+      return;
+    }
+    if (est.totalUsd > 0) {
+      const ok = confirm(
+        `Xác nhận chạy Lip-Sync AI?\n\n` +
+        `• Model ảnh: ${cfg.imageModel}\n` +
+        `• Model video: ${cfg.videoModel}\n` +
+        `• Chi phí ước tính: $${est.totalUsd} / ngân sách tối đa $${est.maxUsd}\n\n` +
+        `Bấm OK để tiếp tục, Cancel để hủy.`
+      );
+      if (!ok) {
+        setStatus('Đã hủy tạo Clip Lip-Sync AI (chưa tốn phí).');
+        return;
+      }
+    }
+
+    setStatus('✨ Đang gửi yêu cầu tạo Clip Lip-Sync AI...');
     const res = await fetch('/api/kol/lipsync-ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -19,7 +19,7 @@ import { maskEnvStatus, upsertEnvFile } from './lib/env-keys.mjs';
 import { summarizeCostLedgers, previewBatchCsv } from './lib/batch-dashboard.mjs';
 import { buildSystemReadiness } from './lib/system-readiness.mjs';
 import { saveProductRecord } from './lib/product-store.mjs';
-import { estimateVideoCost, normalizeCostSettings } from './lib/cost-ledger.mjs';
+import { assertWithinBudget, estimateVideoCost, normalizeCostSettings } from './lib/cost-ledger.mjs';
 import { approveCampaignFile } from './kol-approve.mjs';
 import {
   checkApiRequest,
@@ -914,14 +914,16 @@ const server = http.createServer(async (req, res) => {
       const state = loadWorkspaceState();
       const character = state.characters.find((c) => c.id === body.characterId);
       const product = body.productId ? state.products.find((p) => p.id === body.productId) : null;
-      const rendered = await renderKolTalkingVideo({
-        character,
-        product,
-        voiceText: body.voiceText,
-        hookTitle: body.hookTitle,
-        durationSec: body.durationSec,
-        subtitleStyle: body.subtitleStyle || 'word-highlight'
-      });
+      const rendered = await heavyJobs.run(() =>
+        renderKolTalkingVideo({
+          character,
+          product,
+          voiceText: body.voiceText,
+          hookTitle: body.hookTitle,
+          durationSec: body.durationSec,
+          subtitleStyle: body.subtitleStyle || 'word-highlight'
+        })
+      );
       return sendJson(res, 200, {
         ...rendered,
         output: `Đã dựng xong Video KOL AI 9:16 (${rendered.durationSec}s)!`
@@ -952,6 +954,48 @@ const server = http.createServer(async (req, res) => {
     try {
       const body = await readBody(req);
       const aiConfig = loadAiConfig();
+      const dur = Math.min(8, Math.max(4, Number(body.durationSec || 5)));
+      const estimate = estimateVideoCost({
+        imageModel: aiConfig.imageModel,
+        videoModel: aiConfig.videoModel,
+        ttsModel: aiConfig.ttsModel,
+        aiSceneCount: 1,
+        maxUsd: aiConfig.maxCostUsdPerVideo
+      });
+
+      try {
+        assertWithinBudget(estimate, estimate.maxUsd);
+      } catch (budgetErr) {
+        return sendJson(res, 400, {
+          ok: false,
+          overBudget: true,
+          estimate,
+          output: budgetErr.message
+        });
+      }
+
+      const state = loadWorkspaceState();
+      const character = state.characters.find((c) => c.id === body.characterId);
+      if (!character) throw new Error('Không tìm thấy hồ sơ KOL.');
+      const campId = `kol-${character.id}-lipsync`;
+
+      if (body.dryRun) {
+        return sendJson(res, 200, {
+          ok: true,
+          dryRun: true,
+          campaignId: campId,
+          estimate,
+          output: `Ước tính Lip-Sync AI (${aiConfig.videoModel}): $${estimate.totalUsd} / ngân sách $${estimate.maxUsd}.`
+        });
+      }
+
+      if (aiConfig.videoModel === 'ffmpeg-bokeh-cinema') {
+        return sendJson(res, 400, {
+          ok: false,
+          output: 'Đang chọn công cụ $0 (FFmpeg Bokeh Cinema). Hãy chọn model Video AI (như Wan 2.2 hoặc Veo 3.1) trong "⚙️ Cài đặt Bộ não" trước khi tạo Lip-Sync AI.'
+        });
+      }
+
       if (!aiConfig.hasGeminiKey && !aiConfig.hasFalKey) {
         return sendJson(res, 400, {
           ok: false,
@@ -959,41 +1003,38 @@ const server = http.createServer(async (req, res) => {
           output: 'Chưa có GEMINI_API_KEY hoặc FAL_KEY. Vui lòng nhập API Key tại "⚙️ Cài đặt Bộ não" trước khi gọi Veo 3.1 / Omni 1.2 / Kling.'
         });
       }
-      const state = loadWorkspaceState();
-      const character = state.characters.find((c) => c.id === body.characterId);
-      if (!character) throw new Error('Không tìm thấy hồ sơ KOL.');
-      const campId = `kol-${character.id}`;
+
       const campDir = path.join(CAMPAIGNS_DIR, campId);
       const campPath = path.join(campDir, 'campaign.json');
       fs.mkdirSync(campDir, { recursive: true });
-      const camp = readJsonSafe(campPath, {
+      const camp = {
         id: campId,
         title: `KOL AI Lip-Sync: ${character.name}`,
         productId: body.productId || 'sample-product',
         characterId: character.id,
         hook: body.hookTitle || character.name,
-        scenes: []
-      });
-      camp.scenes = [
-        {
-          id: 'scene-1',
-          type: 'ai-experience',
-          durationSec: Math.min(8, Math.max(4, Number(body.durationSec || 5))),
-          caption: body.hookTitle || character.name,
-          voiceover: body.voiceText || character.catchphrase || '',
-          customPrompt: body.veoLipSyncPrompt || '',
-          qcStatus: 'pending'
-        }
-      ];
+        scenes: [
+          {
+            id: 'scene-1',
+            type: 'ai-experience',
+            durationSec: dur,
+            caption: body.hookTitle || character.name,
+            voiceover: body.voiceText || character.catchphrase || '',
+            customPrompt: body.veoLipSyncPrompt || '',
+            qcStatus: 'pending'
+          }
+        ]
+      };
       fs.writeFileSync(campPath, JSON.stringify(camp, null, 2) + '\n', 'utf8');
       const campRel = path.posix.join('campaigns', campId, 'campaign.json');
-      const result = await runScript('scripts/generate-media.mjs', [campRel, '--selective']);
+      const result = await runScript('scripts/generate-media.mjs', [campRel, '--mode', 'keyframe', '--selective']);
       if (!result.ok) {
         return sendJson(res, 500, { ok: false, campaignId: campId, output: `Lỗi Lip-Sync AI: ${result.output}` });
       }
       return sendJson(res, 200, {
         ok: true,
         campaignId: campId,
+        estimate,
         output: result.output || `Đã gửi yêu cầu tạo clip Lip-Sync AI cho ${character.name}.`
       });
     } catch (e) {
@@ -1186,28 +1227,43 @@ const server = http.createServer(async (req, res) => {
   }
 
   // Serve files under /assets/ and /campaigns/ for live video/audio/image preview
-  if (req.method === 'GET' && url.pathname.startsWith('/assets/')) {
+  const isGetOrHead = req.method === 'GET' || req.method === 'HEAD';
+  if (isGetOrHead && url.pathname.startsWith('/assets/')) {
     const assetRel = decodeURIComponent(url.pathname.replace(/^\/assets\//, ''));
     const safeAsset = path.normalize(path.join(ASSETS_DIR, assetRel));
     // Không phục vụ assets/private (giọng KOL, văn bản đồng ý), voice-cache, ai-config.json (có API key), file ẩn
     if (!isServableAssetPath(assetRel)) {
       res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-      return res.end('Không tìm thấy.');
+      return res.end(req.method === 'HEAD' ? undefined : 'Không tìm thấy.');
     }
-    if (safeAsset.startsWith(ASSETS_DIR + path.sep) && fs.existsSync(safeAsset) && !fs.statSync(safeAsset).isDirectory()) {
-      const ext = path.extname(safeAsset).toLowerCase();
-      res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] || 'application/octet-stream' });
-      return fs.createReadStream(safeAsset).pipe(res);
+    if (safeAsset.startsWith(ASSETS_DIR + path.sep) && fs.existsSync(safeAsset)) {
+      const st = fs.statSync(safeAsset);
+      if (!st.isDirectory()) {
+        const ext = path.extname(safeAsset).toLowerCase();
+        res.writeHead(200, {
+          'Content-Type': MIME_TYPES[ext] || 'application/octet-stream',
+          'Content-Length': st.size
+        });
+        if (req.method === 'HEAD') return res.end();
+        return fs.createReadStream(safeAsset).pipe(res);
+      }
     }
   }
 
-  if (req.method === 'GET' && url.pathname.startsWith('/campaigns/')) {
+  if (isGetOrHead && url.pathname.startsWith('/campaigns/')) {
     const campRel = decodeURIComponent(url.pathname.replace(/^\/campaigns\//, ''));
     const safeCamp = path.normalize(path.join(CAMPAIGNS_DIR, campRel));
-    if (safeCamp.startsWith(CAMPAIGNS_DIR) && fs.existsSync(safeCamp) && !fs.statSync(safeCamp).isDirectory()) {
-      const ext = path.extname(safeCamp).toLowerCase();
-      res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] || 'application/octet-stream' });
-      return fs.createReadStream(safeCamp).pipe(res);
+    if (safeCamp.startsWith(CAMPAIGNS_DIR + path.sep) && fs.existsSync(safeCamp)) {
+      const st = fs.statSync(safeCamp);
+      if (!st.isDirectory()) {
+        const ext = path.extname(safeCamp).toLowerCase();
+        res.writeHead(200, {
+          'Content-Type': MIME_TYPES[ext] || 'application/octet-stream',
+          'Content-Length': st.size
+        });
+        if (req.method === 'HEAD') return res.end();
+        return fs.createReadStream(safeCamp).pipe(res);
+      }
     }
   }
 

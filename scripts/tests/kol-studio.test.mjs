@@ -7,8 +7,10 @@ import {
   listInstalledSkills,
   saveKolCharacter,
   generateKolPersona,
-  generateKolScript
+  generateKolScript,
+  renderKolTalkingVideo
 } from '../lib/kol-studio.mjs';
+import { estimateVideoCost, assertWithinBudget } from '../lib/cost-ledger.mjs';
 
 test('listInstalledSkills đọc được các skill KOL AI trong .agents/skills', () => {
   const skills = listInstalledSkills();
@@ -50,4 +52,28 @@ test('generateKolScript giữ nhịp thoại hợp lý và sinh veoLipSyncPrompt
   assert.ok(s.wordCount > 10);
   assert.match(s.veoLipSyncPrompt, /60fps/);
   assert.match(s.veoLipSyncPrompt, /Vietnamese woman, 23yo/);
+});
+
+test('renderKolTalkingVideo không dùng execFileSync đồng bộ và kiểm tra đầu vào', async () => {
+  const src = fs.readFileSync(path.join(process.cwd(), 'scripts', 'lib', 'kol-studio.mjs'), 'utf8');
+  assert.equal(/\bexecFileSync\b/.test(src), false);
+  await assert.rejects(() => renderKolTalkingVideo({}), /Chưa chọn hồ sơ KOL AI/);
+});
+
+test('Lip-Sync AI: Veo 3.1 5s ($2.00) bị chặn vượt ngân sách $0.50', () => {
+  const est = estimateVideoCost({
+    imageModel: 'ffmpeg-real-composite',
+    videoModel: 'veo-3.1-generate-001',
+    ttsModel: 'google-vi-natural',
+    aiSceneCount: 1,
+    maxUsd: 0.5
+  });
+  assert.equal(est.totalUsd, 2);
+  assert.equal(est.withinBudget, false);
+  assert.throws(() => assertWithinBudget(est, 0.5), /Vượt ngân sách/);
+});
+
+test('dashboard/app.js không còn lời gọi sai finishJobProgress(t0', () => {
+  const appJs = fs.readFileSync(path.join(process.cwd(), 'dashboard', 'app.js'), 'utf8');
+  assert.equal(/finishJobProgress\(t0/.test(appJs), false);
 });
