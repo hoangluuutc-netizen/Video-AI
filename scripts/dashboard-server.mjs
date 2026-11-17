@@ -1,7 +1,8 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { execFileSync, spawn } from 'node:child_process';
+import { execFile, execFileSync, spawn } from 'node:child_process';
+import { promisify } from 'node:util';
 import { analyzeSampleVideo } from './analyze-sample-video.mjs';
 import { generateCharacterSheet } from './generate-character-sheet.mjs';
 import { uploadVideo, DEFAULT_MODEL } from './lib/gemini-client.mjs';
@@ -20,13 +21,26 @@ import { buildSystemReadiness } from './lib/system-readiness.mjs';
 import { saveProductRecord } from './lib/product-store.mjs';
 import { estimateVideoCost, normalizeCostSettings } from './lib/cost-ledger.mjs';
 import { approveCampaignFile } from './kol-approve.mjs';
+import {
+  checkApiRequest,
+  isLoopbackHost,
+  isServableAssetPath,
+  publicAiConfig,
+  safeSlug,
+  remotionCompositionId
+} from './lib/dashboard-security.mjs';
 import { normalizeToolChoices } from './lib/tool-choices.mjs';
 import { getLocalToolsStatus } from './lib/local-tools-status.mjs';
 import { analyzeSpeechTrack } from './lib/video-analyzer.mjs';
 import { prepareForHeavyPhase } from './lib/resource-gate.mjs';
 
+const execFileAsync = promisify(execFile);
 const ROOT = process.cwd();
 const PORT = Number(process.env.PORT || 4173);
+// Chỉ nghe trên máy này. Muốn cho máy khác trong LAN dùng thì tự đặt DASHBOARD_HOST=0.0.0.0 (chấp nhận rủi ro).
+const HOST = process.env.DASHBOARD_HOST || '127.0.0.1';
+const LAN_MODE = !['127.0.0.1', 'localhost', '::1'].includes(HOST);
+const MAX_BODY_BYTES = 400 * 1024 * 1024; // đủ cho video mẫu base64
 const DASHBOARD_DIR = path.join(ROOT, 'dashboard');
 const ASSETS_DIR = path.join(ROOT, 'assets');
 const CAMPAIGNS_DIR = path.join(ROOT, 'campaigns');
@@ -143,7 +157,8 @@ function loadWorkspaceState() {
   const musePackPath = path.join(ROOT, 'campaigns', 'sample-campaign', 'muse-ai-pack.json');
   const museAiPack = fs.existsSync(musePackPath) ? readJsonSafe(musePackPath, null) : null;
 
-  return { brand, aiConfig, products, characters, catalog, campaigns, sheet, sampleAnalysis, veo3PromptsPack, museAiPack };
+  // Không gửi API key về trình duyệt — giao diện chỉ cần cờ has*/envStatus
+  return { brand, aiConfig: publicAiConfig(aiConfig), products, characters, catalog, campaigns, sheet, sampleAnalysis, veo3PromptsPack, museAiPack };
 }
 
 function sendJson(res, status, payload) {
@@ -154,7 +169,16 @@ function sendJson(res, status, payload) {
 function readBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
-    req.on('data', (chunk) => chunks.push(chunk));
+    let size = 0;
+    req.on('data', (chunk) => {
+      size += chunk.length;
+      if (size > MAX_BODY_BYTES) {
+        reject(new Error(`Dữ liệu gửi lên quá lớn (> ${Math.round(MAX_BODY_BYTES / 1048576)} MB).`));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
     req.on('end', () => {
       try {
         const raw = Buffer.concat(chunks).toString('utf8');
@@ -258,6 +282,15 @@ function buildLocalKeyframesFromRealImages(campaignRel) {
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://localhost:${PORT}`);
+
+  // Chặn máy lạ / trang web lạ / DNS rebinding trước mọi xử lý (scripts/lib/dashboard-security.mjs)
+  if (url.pathname.startsWith('/api/')) {
+    const guard = checkApiRequest({ method: req.method, headers: req.headers, port: PORT, allowAnyHost: LAN_MODE });
+    if (!guard.ok) return sendJson(res, guard.status, { ok: false, output: guard.reason });
+  } else if (!LAN_MODE && !isLoopbackHost(req.headers.host, PORT)) {
+    res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+    return res.end('Từ chối: chỉ truy cập qua localhost.');
+  }
 
   if (req.method === 'GET' && url.pathname === '/api/state') {
     return sendJson(res, 200, loadWorkspaceState());
@@ -382,16 +415,25 @@ const server = http.createServer(async (req, res) => {
       if (!fs.existsSync(path.join(ROOT, campRel))) {
         return sendJson(res, 404, { ok: false, output: `Không tìm thấy chiến dịch ${cid}.` });
       }
-      runNodeScript('scripts/sync-studio.mjs', [campRel]);
-      const compId = `ProductAdVideo-${ratio}`;
+      // runScript không ném lỗi → phải tự kiểm ok (trước đây gọi runNodeScript không tồn tại → endpoint luôn hỏng)
+      const synced = runScript('scripts/sync-studio.mjs', [campRel]);
+      if (!synced.ok) return sendJson(res, 500, { ok: false, output: `Đồng bộ Remotion lỗi: ${synced.output}` });
+      // Id phải khớp <Composition> trong studio/src/Root.tsx (TikTok-9x16 / Facebook-1x1 / Web-16x9)
+      const compId = remotionCompositionId(ratio);
       const outDir = path.join(CAMPAIGNS_DIR, cid, 'out');
       fs.mkdirSync(outDir, { recursive: true });
       const outMp4 = path.join(outDir, `remotion-${ratio}.mp4`);
-      const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-      execFileSync(npxCmd, ['remotion', 'render', compId, outMp4], {
+      // Chạy thẳng CLI bằng node: từ Node 18.20/20.12 (CVE-2024-27980) execFile('npx.cmd') trên Windows báo EINVAL
+      const remotionCli = path.join(ROOT, 'studio', 'node_modules', '@remotion', 'cli', 'remotion-cli.js');
+      if (!fs.existsSync(remotionCli)) {
+        return sendJson(res, 400, { ok: false, output: 'Chưa cài Remotion — chạy "npm install" trong thư mục studio/.' });
+      }
+      // Bất đồng bộ: render có thể mất vài phút, execFileSync sẽ treo cả Dashboard trong lúc đó
+      await execFileAsync(process.execPath, [remotionCli, 'render', 'src/index.ts', compId, outMp4], {
         cwd: path.join(ROOT, 'studio'),
-        stdio: 'pipe',
-        timeout: 1000 * 60 * 5
+        timeout: 1000 * 60 * 10,
+        maxBuffer: 32 * 1024 * 1024,
+        windowsHide: true
       });
       return sendJson(res, 200, {
         ok: true,
@@ -499,8 +541,12 @@ const server = http.createServer(async (req, res) => {
       const base64Payload = dataBase64.includes(',') ? dataBase64.split(',')[1] : dataBase64;
       const buffer = Buffer.from(base64Payload, 'base64');
 
+      // targetId thành tên thư mục → chỉ nhận slug an toàn (chặn ../ ghi ra ngoài assets/)
+      if (targetId !== undefined && targetId !== null && targetId !== '' && !safeSlug(targetId)) {
+        return sendJson(res, 400, { ok: false, output: `Mã đích không hợp lệ: "${targetId}" (chỉ chữ thường, số, "-", "_").` });
+      }
       if (kind === 'product') {
-        const pid = targetId || 'sample-product';
+        const pid = safeSlug(targetId) || 'sample-product';
         const prodDir = path.join(ROOT, 'assets', 'products', pid);
         fs.mkdirSync(prodDir, { recursive: true });
         const destAbs = path.join(prodDir, cleanName);
@@ -523,7 +569,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       if (kind === 'character') {
-        const cid = targetId || 'sample-kol';
+        const cid = safeSlug(targetId) || 'sample-kol';
         const charDir = path.join(ROOT, 'assets', 'characters', cid);
         fs.mkdirSync(charDir, { recursive: true });
         const destAbs = path.join(charDir, cleanName);
@@ -885,7 +931,8 @@ const server = http.createServer(async (req, res) => {
       if (!fs.existsSync(path.join(ROOT, campRel))) {
         throw new Error(`Chưa có chiến dịch kol-${kolId}. Hãy bấm "Dựng Video KOL AI" trước khi đồng bộ.`);
       }
-      const result = runNodeScript('scripts/sync-studio.mjs', [campRel]);
+      const result = runScript('scripts/sync-studio.mjs', [campRel]);
+      if (!result.ok) throw new Error(`Đồng bộ Remotion lỗi: ${result.output}`);
       return sendJson(res, 200, { ok: true, output: result.output || `Đã đồng bộ kol-${kolId} sang Remotion Studio.` });
     } catch (e) {
       return sendJson(res, 400, { ok: false, output: e.message });
@@ -931,7 +978,10 @@ const server = http.createServer(async (req, res) => {
       ];
       fs.writeFileSync(campPath, JSON.stringify(camp, null, 2) + '\n', 'utf8');
       const campRel = path.posix.join('campaigns', campId, 'campaign.json');
-      const result = runNodeScript('scripts/generate-media.mjs', [campRel, '--selective']);
+      const result = runScript('scripts/generate-media.mjs', [campRel, '--selective']);
+      if (!result.ok) {
+        return sendJson(res, 500, { ok: false, campaignId: campId, output: `Lỗi Lip-Sync AI: ${result.output}` });
+      }
       return sendJson(res, 200, {
         ok: true,
         campaignId: campId,
@@ -979,8 +1029,12 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === 'POST' && url.pathname === '/api/run-action') {
     try {
-      const { action, campaignId } = await readBody(req);
-      const cid = campaignId || 'sample-campaign';
+      const { action, campaignId, museStyle } = await readBody(req);
+      // campaignId thành tên thư mục → chặn ../
+      if (campaignId && !safeSlug(campaignId)) {
+        return sendJson(res, 400, { ok: false, output: `Mã chiến dịch không hợp lệ: "${campaignId}".` });
+      }
+      const cid = safeSlug(campaignId) || 'sample-campaign';
       const campRel = path.posix.join('campaigns', cid, 'campaign.json');
       let result;
       let mediaUrl = '';
@@ -1012,7 +1066,7 @@ const server = http.createServer(async (req, res) => {
           };
         }
       } else if (action === 'generate-prompts' || action === 'generate-veo3-pack' || action === 'generate-muse-pack') {
-        const styleArg = body.museStyle || '';
+        const styleArg = String(museStyle || '');
         if (styleArg) {
           runScript('scripts/generate-muse-pack.mjs', [campRel, styleArg]);
         }
@@ -1103,7 +1157,7 @@ const server = http.createServer(async (req, res) => {
       const args = [path.posix.join('assets', 'products', 'batch-template.csv')];
       if (body.runPipeline) args.push('--run');
       if (body.resume !== false) args.push('--resume');
-      const result = runNodeScript('scripts/batch-from-csv.mjs', args);
+      const result = runScript('scripts/batch-from-csv.mjs', args);
       const aiCfg = loadAiConfig();
       const csvText = fs.existsSync(csvPath) ? fs.readFileSync(csvPath, 'utf8') : '';
       return sendJson(res, 200, {
@@ -1121,7 +1175,12 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' && url.pathname.startsWith('/assets/')) {
     const assetRel = decodeURIComponent(url.pathname.replace(/^\/assets\//, ''));
     const safeAsset = path.normalize(path.join(ASSETS_DIR, assetRel));
-    if (safeAsset.startsWith(ASSETS_DIR) && fs.existsSync(safeAsset) && !fs.statSync(safeAsset).isDirectory()) {
+    // Không phục vụ assets/private (giọng KOL, văn bản đồng ý), voice-cache, ai-config.json (có API key), file ẩn
+    if (!isServableAssetPath(assetRel)) {
+      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+      return res.end('Không tìm thấy.');
+    }
+    if (safeAsset.startsWith(ASSETS_DIR + path.sep) && fs.existsSync(safeAsset) && !fs.statSync(safeAsset).isDirectory()) {
       const ext = path.extname(safeAsset).toLowerCase();
       res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] || 'application/octet-stream' });
       return fs.createReadStream(safeAsset).pipe(res);
@@ -1151,9 +1210,12 @@ const server = http.createServer(async (req, res) => {
   fs.createReadStream(safePath).pipe(res);
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, HOST, () => {
   console.log(`==========================================================`);
   console.log(` Đội Làm Video A.I. (7 Trợ Lý) đang chạy tại:`);
   console.log(` -> http://localhost:${PORT}`);
+  if (LAN_MODE) {
+    console.warn(` [CẢNH BÁO] DASHBOARD_HOST=${HOST}: máy khác trong mạng truy cập được Dashboard (API ghi .env, chạy pipeline).`);
+  }
   console.log(`==========================================================`);
 });

@@ -358,6 +358,24 @@ async function saveNewProductFromUi() {
   }
 }
 
+// Mã chiến dịch đang chọn ở Mục 01 (dùng chung cho các nút render/đồng bộ)
+function getSelectedCampaignId() {
+  return (document.getElementById('inp-campaign-id')?.value || 'sample-campaign').trim();
+}
+
+function populateSampleVideoSelect() {
+  const sampleSel = document.getElementById('inp-sample-video');
+  if (!sampleSel) return;
+  const clips = appState.catalog?.clips || [];
+  if (clips.length > 0) {
+    sampleSel.innerHTML = clips
+      .map((c) => `<option value="${c.id}">${c.id} — ${c.filePath} (${c.durationSec}s, ${c.width}×${c.height})</option>`)
+      .join('');
+  } else {
+    sampleSel.innerHTML = `<option value="video-mau-tham-chieu">Video mẫu mặc định (Kéo thả video mẫu mới ở Mục 05)</option>`;
+  }
+}
+
 function populateSelectors() {
   const prodSel = document.getElementById('inp-product');
   const charSel = document.getElementById('inp-character');
@@ -384,17 +402,7 @@ function populateSelectors() {
       .join('');
   }
 
-  const sampleSel = document.getElementById('inp-sample-video');
-  if (sampleSel) {
-    const clips = appState.catalog?.clips || [];
-    if (clips.length > 0) {
-      sampleSel.innerHTML = clips
-        .map((c) => `<option value="${c.id}">${c.id} — ${c.filePath} (${c.durationSec}s, ${c.width}×${c.height})</option>`)
-        .join('');
-    } else {
-      sampleSel.innerHTML = `<option value="video-mau-tham-chieu">Video mẫu mặc định (Kéo thả video mẫu mới ở Mục 05)</option>`;
-    }
-  }
+  populateSampleVideoSelect();
 
   renderExistingAssetPreviews();
   renderSampleAnalysisCard();
@@ -1252,7 +1260,7 @@ async function applyRemakeToHooksAndScript() {
         if (mapped.durationSec) scriptBlocks[i].sec = Math.max(1, Math.round(mapped.durationSec));
       }
     }
-    if (typeof renderHooks === 'function') renderHooks();
+    renderHooksFunnel();
     renderScriptBlocks();
     finishJobProgress(t0, data.output || 'Đã áp công thức sang Mục 03 & 04!');
     scrollToSlide('slide-03');
@@ -2032,86 +2040,9 @@ function setupCostControls() {
     if (el.type === 'number') el.addEventListener('input', scheduleCostEstimate);
   }
   refreshBrainSummary();
-  updateKeyBadges(cfg);
+  // Trước đây gọi updateKeyBadges(cfg) với biến cfg không tồn tại → ReferenceError chặn luôn initDashboard
+  updateKeyBadges(appState.aiConfig || {});
   scheduleCostEstimate();
-}
-
-function updateKeyBadges(cfg = {}) {
-  const es = cfg.envStatus || {};
-  const setBadge = (id, ok) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.textContent = ok ? '✅ Đã có trong .env' : '⚪ Chưa có';
-    el.style.color = ok ? '#15803D' : '#64748B';
-    el.style.fontWeight = ok ? '800' : '600';
-  };
-  setBadge('badge-gemini-key', Boolean(cfg.hasGeminiKey || es.GEMINI_API_KEY));
-  setBadge('badge-fal-key', Boolean(cfg.hasFalKey || es.FAL_KEY));
-  setBadge('badge-vbee-key', Boolean(cfg.hasVbeeKey || es.VBEE_API_KEY));
-  setBadge('badge-fpt-key', Boolean(cfg.hasFptKey || es.FPT_API_KEY));
-}
-
-function toggleKeyVisibility(inputId) {
-  const el = document.getElementById(inputId);
-  if (el) el.type = el.type === 'password' ? 'text' : 'password';
-}
-
-function applyBrainPreset(mode) {
-  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
-  if (mode === 'free') {
-    setVal('cfg-llm-model', 'local-ecommerce-director');
-    setVal('cfg-image-model', 'ffmpeg-real-composite');
-    setVal('cfg-video-model', 'ffmpeg-bokeh-cinema');
-    setVal('cfg-tts-model', 'google-vi-natural');
-    setVal('cfg-subtitle-align', 'heuristic-silence');
-    setVal('cfg-subtitle-style', 'box');
-  } else if (mode === 'plan1') {
-    setVal('cfg-llm-model', 'ollama:qwen3.5:9b');
-    setVal('cfg-image-model', 'ffmpeg-real-composite');
-    setVal('cfg-video-model', 'ffmpeg-bokeh-cinema');
-    setVal('cfg-tts-model', 'vbee-vi');
-    setVal('cfg-subtitle-align', 'faster-whisper-local');
-    setVal('cfg-subtitle-style', 'word-highlight');
-  } else if (mode === 'cloud') {
-    setVal('cfg-llm-model', 'gemini-3.1-pro-preview');
-    setVal('cfg-image-model', 'fal-flux-kontext');
-    setVal('cfg-video-model', 'fal-wan-i2v');
-    setVal('cfg-tts-model', 'vbee-vi');
-    setVal('cfg-subtitle-align', 'faster-whisper-local');
-    setVal('cfg-subtitle-style', 'word-highlight');
-  }
-  refreshBrainSummary();
-  saveAiConfigFromUi();
-}
-
-async function saveEnvKeysOnly() {
-  const payload = {
-    GEMINI_API_KEY: document.getElementById('cfg-gemini-key')?.value.trim() || '',
-    FAL_KEY: document.getElementById('cfg-fal-key')?.value.trim() || '',
-    VBEE_API_KEY: document.getElementById('cfg-vi-tts-key')?.value.trim() || '',
-    VBEE_APP_ID: document.getElementById('cfg-vbee-app-id')?.value.trim() || '',
-    FPT_API_KEY: document.getElementById('cfg-fpt-key')?.value.trim() || ''
-  };
-  try {
-    const res = await fetch('/api/save-env-keys', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-    if (!res.ok || !data.ok) throw new Error(data.output || 'Lỗi lưu key');
-    if (data.state) {
-      appState = data.state;
-      updateKeyBadges(appState.aiConfig);
-    }
-    ['cfg-gemini-key', 'cfg-fal-key', 'cfg-vi-tts-key', 'cfg-vbee-app-id', 'cfg-fpt-key'].forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) el.value = '';
-    });
-    alert(data.output);
-  } catch (e) {
-    alert(`Lỗi lưu API Key: ${e.message}`);
-  }
 }
 
 // Preset tiết kiệm: Ollama local + 1 cảnh AI (FLUX Kontext + Wan 5s) + Vbee ≈ $0.30, ngân sách $0.50.
@@ -2194,7 +2125,7 @@ async function runFullAutoPilot() {
   await saveCampaignToServer(true);
   await triggerBackendAction('run-optimal-pipeline', 18);
   renderVeo3StudioCards();
-  renderReelSheet();
+  renderSheetTable();
   scrollToSlide('slide-06');
 }
 
@@ -2752,9 +2683,14 @@ function handleMiniFileInput(input, kind) {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  setupCommandBar();
-  setupCostControls();
-  initDashboard();
-  loadBatchStatus();
-  loadSystemReadiness();
+  // Mỗi bước khởi tạo chạy độc lập: một bước phụ lỗi không được chặn initDashboard (đã xảy ra thật ở d2ceeb5)
+  const steps = { setupCommandBar, setupCostControls, initDashboard, loadBatchStatus, loadSystemReadiness };
+  for (const [name, fn] of Object.entries(steps)) {
+    try {
+      const r = fn();
+      if (r && typeof r.catch === 'function') r.catch((e) => console.error(`[Khởi tạo] ${name} lỗi:`, e));
+    } catch (e) {
+      console.error(`[Khởi tạo] ${name} lỗi:`, e);
+    }
+  }
 });

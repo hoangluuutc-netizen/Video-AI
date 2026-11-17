@@ -194,3 +194,45 @@
 - Bổ sung kết nối 2 chiều **KOL AI Studio ↔ Video Ad Studio** (`dashboard/kol-studio.html`, `dashboard/kol-studio.js`, `dashboard/index.html`, `dashboard/app.js`): nút **🎬 Dùng KOL này làm Video Quảng Cáo** truyền `?kol=<id>&product=<pid>` để tự động nạp nhân vật KOL AI vào Video Ad Studio, kèm nút **🌟 KOL Studio** ngay cạnh ô chọn nhân vật.
 - Bổ sung tính năng **➕ Thêm Sản Phẩm Mới trực tiếp trên Web App**: tạo `scripts/lib/product-store.mjs` (kèm TDD `scripts/tests/product-store.test.mjs`), API `POST /api/product/save` trong `scripts/dashboard-server.mjs`, và hộp nhập nhanh ngay tại Mục `02 / 08` trên `dashboard/index.html` / `app.js` (`113/113` unit tests pass, `smoke-test.mjs` đạt 100%).
 - Bổ sung tại Mục `06 / 08` (`dashboard/index.html`, `dashboard/app.js`, `scripts/dashboard-server.mjs`): hỗ trợ kéo & thả nhạc nền Auto-Ducking (`kind: 'music'` vào `assets/music/`), nút mở thư mục nhạc, và bộ chọn tỷ lệ Render Remotion (`9:16` | `1:1` | `16:9`).
+
+## 2026-11-17 — Claude: Rà soát sau Giai đoạn 1–6 — gia cố bảo mật Dashboard + sửa 10 chỗ gọi hàm/biến không tồn tại
+**Bảo mật Dashboard** (`scripts/lib/dashboard-security.mjs` mới, nối vào `scripts/dashboard-server.mjs`). Dashboard có API ghi `.env`, chạy pipeline tốn tiền và đọc `assets/private/`, nên đã chặn:
+- Chỉ nghe `127.0.0.1` (muốn mở LAN thì tự đặt `DASHBOARD_HOST`, có cảnh báo). Kiểm `Host` loopback để chống DNS rebinding.
+- Chống CSRF: `/api/*` không phải GET bắt buộc `Content-Type: application/json` (415), `Origin` lạ bị chặn (403), preflight `OPTIONS` trả 405.
+- Route `/assets/` không phục vụ `private/`, `voice-cache/`, `brand-kit/ai-config.json` hay file ẩn (chặn cả đổi hoa/thường và `\`).
+- `/api/state` không còn trả API key / app id (chỉ còn cờ `has*`).
+- Giới hạn body 400 MB.
+- `targetId` (upload) và `campaignId` (`/api/run-action`) phải qua `safeSlug`, chặn `../`.
+
+**Lỗi chức năng tìm được bằng quét `tsc --checkJs` (TS2304 "Cannot find name") — `node --check` không bắt được, chỉ nổ khi bấm nút:**
+- `dashboard/app.js` `setupCostControls()` gọi `updateKeyBadges(cfg)` với `cfg` không tồn tại. Lỗi ném ra trong `DOMContentLoaded` nên **`initDashboard()` không bao giờ chạy**: Dashboard mở lên trống, không nạp sản phẩm/chiến dịch (có từ `d2ceeb5`).
+  - Đã sửa, và xóa khối hàm trùng lặp y hệt (`updateKeyBadges`, `toggleKeyVisibility`, `applyBrainPreset`, `saveEnvKeysOnly`).
+  - Khâu khởi tạo giờ chạy từng bước trong `try/catch`, nên một bước phụ hỏng không kéo theo cả trang.
+- `scripts/dashboard-server.mjs` gọi `runNodeScript` (không tồn tại) ở 4 endpoint, cả 4 luôn lỗi: `/api/studio/render`, `/api/kol/sync-studio`, `/api/kol/lipsync-ai`, `/api/batch/run`.
+  - Đổi sang `runScript`, kèm kiểm `ok` vì `runScript` không ném lỗi.
+- `/api/run-action` đọc `body.museStyle` với `body` chưa khai báo, nên 3 action `generate-prompts` / `generate-veo3-pack` / `generate-muse-pack` luôn lỗi.
+- `dashboard/app.js`:
+  - `getSelectedCampaignId` chưa có, nên **nút Render Remotion chưa từng chạy được**.
+  - `renderReelSheet` (chưa có) → `renderSheetTable`: Auto-Pilot chạy xong nhưng ném lỗi, không cuộn tới Mục 06.
+  - `populateSampleVideoSelect` chưa có, nên tải video mẫu xong thì lỗi. Đã tách thành hàm thật.
+  - `renderHooks` (chưa có) → `renderHooksFunnel`: bảng Hook không cập nhật câu hook mới sau khi áp công thức.
+- Render Remotion:
+  - `execFileSync('npx.cmd')` báo EINVAL trên Node ≥18.20 (CVE-2024-27980), nên đổi sang chạy thẳng `remotion-cli.js` bằng `process.execPath`.
+  - Id composition sai, nên đổi sang `TikTok-9x16` / `Facebook-1x1` / `Web-16x9` khớp `studio/src/Root.tsx`.
+  - Chuyển sang `execFile` bất đồng bộ để Dashboard không treo tới 10 phút trong lúc render.
+
+**Chống tái phát:**
+- `scripts/tests/dashboard-security.test.mjs`: 10 test.
+- `scripts/tests/no-undefined-names.test.mjs`: 4 test.
+  - Quét `tsc` TS2304/TS2552 toàn bộ `dashboard/*.js` và `scripts/**/*.mjs`.
+  - Kiểm mọi `onclick`/`onchange` trong `index.html` và `kol-studio.html` trỏ tới hàm có thật.
+  - Tự bỏ qua nếu chưa `npm install` trong `studio/`.
+
+**Kiểm định:**
+- `127/127` unit test pass, `validate-assets.mjs` 100%, `studio` `tsc --noEmit` 0 lỗi.
+- Kiểm trực tiếp trên server thật:
+  - Giọng riêng / `ai-config.json` → 404. Origin lạ → 403. `text/plain` → 415. Host lạ → 403.
+  - `/api/state` không chứa key. Cổng 4173 chỉ nghe 127.0.0.1.
+  - Dashboard nạp lên "Đã kết nối" với 1 sản phẩm, 2 chiến dịch.
+  - **Render Remotion bấm từ nút trên Dashboard chạy thành công lần đầu:** `campaigns/sample-campaign/out/remotion-9x16.mp4`, `1080×1920`, 30fps, H.264 + AAC, 16s, mất khoảng 3 phút 20 giây.
+  - Trong lúc render, `/api/state` vẫn trả 200 sau 42 ms, tức server không còn bị treo.
